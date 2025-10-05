@@ -1,0 +1,162 @@
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding-top: 64px; 
+  font: 14px/1.4 sans-serif;
+  background: #fff;
+}
+
+
+.top{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 64px;            
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--bg-top);
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+  border: 1px solid black;
+}
+.left, .right { position: relative; }
+.left h1, .right h1 { margin: 0; font-size: 18px; font-weight: 600; }
+.right-row { display: flex; gap: 8px; align-items: center; }
+
+.menubtn-row { display: flex; gap: 8px; margin-top: 6px; }
+
+.menubtn, .sharebtn, .widget-item, .widget-btn, .sidebar button {
+  border: 1px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+
+.dropdown { position: relative; }
+.dropdown-content{
+  display: none;
+  position: absolute;
+  top: 100%; left: 0;
+  min-width: 160px;
+  padding: 8px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 20;
+}
+.dropdown:hover .dropdown-content,
+.dropdown:focus-within .dropdown-content {
+  display: block;
+}
+.dropdown-content a{
+  display: block;
+  padding: 6px 8px;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+
+.sidebar{
+  position: fixed;
+  top: 64px;
+  left: 0;
+  bottom: 0;
+  width: 20vw;
+  min-width: 240px;
+  max-width: 420px;
+  border-right: 1px;
+  padding: 12px 10px;
+  overflow: auto;
+  z-index: 5;
+  border: 1px solid black;
+
+}
+
+.sidebar h2 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.widget-list{
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 8px;
+}
+
+.mainBoard{
+  margin-left: 20vw;
+  max-width: calc(100vw - 20vw);
+  min-height: calc(100vh - 64px);
+  padding: 0px;
+}
+
+@media (min-width: 1600px){
+  .mainBoard{
+    margin-left: 420px;
+    max-width: calc(100vw - 420px);
+  }
+}
+@media (max-width: 1200px){
+  .mainBoard{
+    margin-left: 240px;
+    max-width: calc(100vw - 240px);
+  }
+}
+
+.hidden { display: none !important; }
+.center { display: grid; place-items: center; }
+
+@media (max-width: 500px){
+  :root{ --top-h: 72px; }
+}
+
+    .toolbar {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .wrap {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 64px - 44px);
+      overflow: hidden;       /* we’ll do our own panning */
+      background: #fff;
+      cursor: default;
+    }
+
+    /* The board is what we pan/zoom via CSS transforms */
+    .board {
+        top: 0;               /* anchor top-left */
+        left: 0;
+        width: 8000px;        /* ← hard-code your exact board width */
+        height: 8000px;       /* ← hard-code your exact board height */
+        transform-origin: 0 0;
+        
+        /* Grid lines for a 48px cell: */
+        background-image:
+        linear-gradient(#000 1px, transparent 1px),
+        linear-gradient(90deg, #000 1px, transparent 1px);
+        background-size: 40px 40px, 40px 40px;   /* ← hard-code cell size */
+        background-position: 0 0;
+        position: absolute;
+}
+
+
+    .hint {
+      color: #666;
+      font-size: 13px;
+    }
+    .badge {
+      border: 1px solid #ccc;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+    }
