@@ -295,85 +295,110 @@
   function escapeHtml(t){ return t.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   // ===== Token widget (simple circular token with resize handle) =====
-  Widget.builders.token = function(props={}){
-    const token = document.createElement('div');
-    token.className = 'token';
-    token.textContent = props.label || 'Token';
-    token.style.width = (props.size||40) + 'px';
-    token.style.height = (props.size||40) + 'px';
+  // ===== Token widget (with working rename + close "×") =====
+Widget.builders.token = function(props = {}) {
+  const token = document.createElement('div');
+  token.className = 'token';
 
-    const handle = document.createElement('div');
-    handle.className = 'resize-handle';
-    token.appendChild(handle);
+  // size & initial label
+  const size = props.size || 40;
+  token.style.width  = size + 'px';
+  token.style.height = size + 'px';
+  token.textContent  = (props.label || 'Token'); // put text node first
 
-    const close = document.createElement('button');
-    close.className = 'close';
-    close.innerHTML = '&times;';
-    token.appendChild(close);
-    close.addEventListener('click', (e) => {
-    e.stopPropagation();      // don’t trigger drag/select
+  // resize handle
+  const handle = document.createElement('div');
+  handle.className = 'resize-handle';
+  token.appendChild(handle);
+
+  // close (×) button
+  const close = document.createElement('button');
+  close.className = 'close';
+  close.innerHTML = '&times;';
+  token.appendChild(close);
+  close.addEventListener('click', (e) => {
+    e.stopPropagation();   // don’t start drag/select
     token.remove();
   });
-    // dragging
-    makeDraggable(token, token);
 
-    // resizing
-    let resizing = false, start={x:0,y:0}, baseSize = parseFloat(token.style.width)||40;
-    handle.addEventListener('mousedown', (e)=>{
-      e.stopPropagation(); // don’t start a drag
-      resizing = true;
-      start = toBoardCoords(e.clientX, e.clientY);
-      baseSize = parseFloat(token.style.width);
-      e.preventDefault();
-    });
-    window.addEventListener('mousemove', (e)=>{
-      if (!resizing) return;
-      const cur = toBoardCoords(e.clientX, e.clientY);
-      const delta = Math.max(cur.x - start.x, cur.y - start.y);
-      const newSize = Math.max(24, baseSize + delta);
-      token.style.width = newSize + 'px';
-      token.style.height = newSize + 'px';
-      token.style.fontSize = Math.max(10, newSize/3) + 'px';
-    });
-    window.addEventListener('mouseup', ()=>{
-      if (!resizing) return;
-      resizing = false;
-      // (optional) snap size to cell
-      const size = parseFloat(token.style.width);
-      const snapped = Math.max(CELL, snap(size));
-      token.style.width = snapped + 'px';
-      token.style.height = snapped + 'px';
-    });
+  // dragging (use the whole token as handle)
+  makeDraggable(token, token);
 
-    // rename on double click
-    token.addEventListener('dblclick', ()=>{
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = token.textContent;
-      input.className = 'rename';
-      token.textContent = '';
-      token.appendChild(input);
-      token.appendChild(handle);
-      input.focus();
-      input.addEventListener('blur', ()=>{
-        token.textContent = input.value || 'Token';
-        token.appendChild(handle);
-      });
-      input.addEventListener('keydown', e=>{ if (e.key==='Enter') input.blur(); });
-    });
+  // ----- resizing -----
+  let resizing = false, start = {x:0, y:0}, baseSize = size;
+  handle.addEventListener('mousedown', (e) => {
+    e.stopPropagation();                 // don’t start a drag
+    resizing = true;
+    start = toBoardCoords(e.clientX, e.clientY);
+    baseSize = parseFloat(token.style.width) || size;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!resizing) return;
+    const cur = toBoardCoords(e.clientX, e.clientY);
+    const delta = Math.max(cur.x - start.x, cur.y - start.y);
+    const newSize = Math.max(24, baseSize + delta);
+    token.style.width  = newSize + 'px';
+    token.style.height = newSize + 'px';
+    token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!resizing) return;
+    resizing = false;
+    // snap size to grid
+    const s = parseFloat(token.style.width);
+    const snapped = Math.max(CELL, snap(s));
+    token.style.width  = snapped + 'px';
+    token.style.height = snapped + 'px';
+  });
 
-    // selection outline
-    token.addEventListener('click', (e)=>{
+  // ----- rename on double-click (quick patch version) -----
+  token.addEventListener('dblclick', () => {
+    // get current label text WITHOUT the × (read the first text node if present)
+    let currentLabel = '';
+    if (token.firstChild && token.firstChild.nodeType === Node.TEXT_NODE) {
+      currentLabel = token.firstChild.nodeValue;
+    } else {
+      currentLabel = token.textContent.replace('×', '').trim();
+    }
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentLabel || 'Token';
+    input.className = 'rename';
+
+    // Clearing textContent removes ALL children (including handle/close),
+    // so we will re-append them immediately after adding the input.
+    token.textContent = '';
+    token.appendChild(input);
+    token.appendChild(handle);  // re-attach
+    token.appendChild(close);   // re-attach
+
+    input.focus();
+    input.addEventListener('blur', () => {
+      token.textContent = input.value || 'Token'; // put label back as text node
+      token.appendChild(handle);                  // re-attach again
+      token.appendChild(close);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') input.blur();
       e.stopPropagation();
-      document.querySelectorAll('.token.selected').forEach(t=>t.classList.remove('selected'));
-      token.classList.add('selected');
     });
-    board.addEventListener('click', ()=>{
-      document.querySelectorAll('.token.selected').forEach(t=>t.classList.remove('selected'));
-    });
+  });
 
-    return token;
-  };
+  // ----- selection outline -----
+  token.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+    token.classList.add('selected');
+  });
+  board.addEventListener('click', () => {
+    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+  });
+
+  return token;
+};
+
 
   // ===== Hook the sidebar buttons =====
   diceBtn.addEventListener('click', ()=> Widget.create('dice', 0, 0));
