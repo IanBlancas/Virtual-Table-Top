@@ -1,0 +1,479 @@
+
+
+<!doctype html>
+
+<head>
+    {% load static %}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="{% static 'board/layoutStyle.css' %}">
+    <link rel="stylesheet" href="{% static 'board/widgets/widgets.css' %}">
+
+    <title>FlatTop — Board</title>
+</head>
+
+<body>
+    <header class="top">
+        <div class="left">
+            <h1>Lobby Name: NAME</h1>
+
+            <div class="menubtn-row">
+                <div class="file dropdown">
+                    <button class="menubtn">File</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">4th</a>
+                    </div>
+                </div>
+
+                <div class="file dropdown">
+                    <button class="menubtn">Lobby</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">4th</a>
+                    </div>
+                </div>
+
+                <div class="file dropdown">
+                    <button class="menubtn">Insert</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">4th</a>
+                    </div>
+                </div>
+
+                <div class="file dropdown">
+                    <button class="menubtn">View</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">4th</a>
+                    </div>
+                </div>
+
+                <div class="file dropdown">
+                    <button class="menubtn">Help</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">4th</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right">
+            <div class="right-row">
+                <h1>Lobby Code: 123456</h1>
+                <button class="sharebtn">Share</button>
+            </div>
+        </div>
+    </header>
+
+    <aside class="sidebar">
+        <h2>Widgets</h2>
+        <div class="widget-list">
+            <button id = "diceBtn">Dice</button>
+            <button id = "cardsBtn">Cards</button>
+            <button id = "tokenBtn">Tokens</button>
+            <button>Boards</button>
+            <button>Rules</button>
+            <button>Favorites</button>
+        </div>
+    </aside>
+
+    <main class="mainBoard">
+        <div class="toolbar">
+    <span class="badge">Pan: Middle-mouse drag</span>
+    <span class="badge">Zoom: Mouse wheel</span>
+    <span class="badge">Reset</span>
+    <button id="resetBtn">Reset view</button>
+    <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
+  </div>
+
+  <div class="wrap" id="wrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <script>
+    // --- minimal pan & zoom controller ---
+    const wrap  = document.getElementById('wrap');
+    const board = document.getElementById('board');
+    const resetBtn = document.getElementById('resetBtn');
+    const diceBtn = document.getElementById('diceBtn')
+    const tokenBtn = document.getElementById('tokenBtn')
+    const cardsBtn = document.getElementById('cardsBtn');
+
+    let scale = 1;     // zoom factor
+    let panX  = 0;     // translation in px
+    let panY  = 0;
+
+    function applyTransform() {
+      board.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+    }
+    function resetView() {
+      scale = 1; panX = 0; panY = 0; applyTransform();
+    }
+    resetBtn.addEventListener('click', resetView);
+    applyTransform();
+
+    // Mouse wheel zoom around cursor
+    wrap.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = board.getBoundingClientRect();
+      // Cursor position relative to board’s current transform
+      const cx = (e.clientX - rect.left) / scale;
+      const cy = (e.clientY - rect.top)  / scale;
+
+      const direction = Math.sign(e.deltaY);        // -1 up (zoom in), +1 down (zoom out)
+      const factor = direction > 0 ? 0.9 : 1.1;     // zoom step
+      const newScale = Math.min(3, Math.max(0.2, scale * factor));
+      if (newScale === scale) return;
+
+      // Keep cursor “anchored” by adjusting pan as we zoom
+      panX = e.clientX - cx * newScale;
+      panY = e.clientY - cy * newScale;
+      scale = newScale;
+      applyTransform();
+    }, { passive: false });
+
+    // Middle-mouse panning (button === 1)
+    let panning = false;
+    let startX = 0, startY = 0;
+    let basePanX = 0, basePanY = 0;
+
+    wrap.addEventListener('mousedown', (e) => {
+      if (e.button !== 1) return;      // only middle button
+      panning = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      basePanX = panX;
+      basePanY = panY;
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!panning) return;
+      panX = basePanX + (e.clientX - startX);
+      panY = basePanY + (e.clientY - startY);
+      applyTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      panning = false;
+    });
+
+    // Optional: Spacebar to toggle temporary panning with left mouse
+    // (handy trackpad mode—comment out if you don’t want it)
+    let spacePan = false;
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space') spacePan = true; });
+    window.addEventListener('keyup',   (e) => { if (e.code === 'Space') spacePan = false; });
+
+    wrap.addEventListener('mousedown', (e) => {
+      if (!(spacePan && e.button === 0)) return;  // left click with Space held
+      panning = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      basePanX = panX;
+      basePanY = panY;
+      e.preventDefault();
+    }, true);
+  </script>
+  <script>
+  // ===== Shared constants/helpers =====
+  const CELL = 40; // match your CSS grid size in layoutStyle.css
+  function toBoardCoords(clientX, clientY) {
+    const rect = board.getBoundingClientRect();
+    return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
+  }
+  function snap(v) { return Math.round(v / CELL) * CELL; }
+
+  // Bring-to-front when grabbing (optional)
+  let zTop = 1;
+
+  // Generic drag handler you can reuse for any widget
+  function makeDraggable(el, handle) {
+    let dragging = false, start = {x:0,y:0}, origin = {x:0,y:0};
+    handle.addEventListener('mousedown', (e)=>{
+      if (e.button !== 0) return;
+      dragging = true;
+      el.style.zIndex = ++zTop;
+      const b = toBoardCoords(e.clientX, e.clientY);
+      start = b;
+      origin = { x: parseFloat(el.style.left)||0, y: parseFloat(el.style.top)||0 };
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e)=>{
+      if (!dragging) return;
+      const b = toBoardCoords(e.clientX, e.clientY);
+      el.style.left = (origin.x + (b.x - start.x)) + 'px';
+      el.style.top  = (origin.y + (b.y - start.y)) + 'px';
+    });
+    window.addEventListener('mouseup', ()=>{
+      if (!dragging) return;
+      dragging = false;
+      el.style.left = snap(parseFloat(el.style.left)) + 'px';
+      el.style.top  = snap(parseFloat(el.style.top))  + 'px';
+    });
+  }
+
+  // Tiny widget “registry”
+  const Widget = {
+    builders: {},
+    create(type, x=0, y=0, props={}) {
+      if (!this.builders[type]) throw new Error(`Unknown widget: ${type}`);
+      const el = this.builders[type](props);
+      el.style.position = 'absolute';
+      el.style.left = snap(x) + 'px';
+      el.style.top  = snap(y) + 'px';
+      // common close button behavior if present
+      el.querySelector?.('.close')?.addEventListener('click', ()=> el.remove());
+      board.appendChild(el);
+      return el;
+    }
+  };
+
+  // ===== Dice Roller widget =====
+  Widget.builders.dice = function(props={}){
+    const el = document.createElement('div');
+    el.className = 'widget';
+    el.innerHTML = `
+      <div class="header">
+        <div>🎲 Dice Roller</div>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+      <div class="body">
+        <div class="row">
+          <input type="text" class="expr" placeholder="Ex: d20, 3d6+2, 2d8-1" value="${props.expr||''}" />
+          <button class="roll">Roll</button>
+        </div>
+        <div class="results"><div class="muted">No rolls yet.</div></div>
+      </div>
+    `;
+    makeDraggable(el, el.querySelector('.header'));
+    const input = el.querySelector('.expr');
+    const rollBt = el.querySelector('.roll');
+    const out = el.querySelector('.results');
+
+    rollBt.addEventListener('click', ()=>{
+      const text = (input.value||'d20').trim();
+      const spec = parseDice(text);
+      if (!spec) {
+        out.insertAdjacentHTML('afterbegin', `<div>⚠️ Invalid: <code>${escapeHtml(text)}</code></div>`);
+        return;
+      }
+      const rolls = roll(spec.n, spec.sides);
+      const total = rolls.reduce((a,b)=>a+b,0) + spec.mod;
+      if (out.firstElementChild?.classList.contains('muted')) out.firstElementChild.remove();
+      const ts = new Date().toLocaleTimeString();
+      const detail = `${spec.n}d${spec.sides}${spec.mod? (spec.mod>0?`+${spec.mod}`:`${spec.mod}`):''}`;
+      out.insertAdjacentHTML('afterbegin', `<div>[${ts}] <b>${detail}</b> → <b>${total}</b> <span class="muted">(rolls: ${rolls.join(', ')})</span></div>`);
+    });
+    input.addEventListener('keydown', e=>{ if (e.key==='Enter') rollBt.click(); });
+
+    return el;
+  };
+
+  function parseDice(s){
+    const m = /^\s*(\d*)\s*[dD]\s*(\d+)\s*([+-]\s*\d+)?\s*$/.exec(s);
+    if (!m) return null;
+    const n = m[1]? parseInt(m[1],10):1;
+    const sides = parseInt(m[2],10);
+    const mod = m[3]? parseInt(m[3].replace(/\s+/g,''),10):0;
+    if (!(n>0 && sides>0)) return null;
+    return { n, sides, mod };
+  }
+  function roll(n, sides){ const out=[]; for(let i=0;i<n;i++) out.push(1+Math.floor(Math.random()*sides)); return out; }
+  function escapeHtml(t){ return t.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ===== Token widget (simple circular token with resize handle) =====
+  Widget.builders.token = function(props={}){
+    const token = document.createElement('div');
+    token.className = 'token';
+    token.textContent = props.label || 'Token';
+    token.style.width = (props.size||40) + 'px';
+    token.style.height = (props.size||40) + 'px';
+
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    token.appendChild(handle);
+
+    const close = document.createElement('button');
+    close.className = 'close';
+    close.innerHTML = '&times;';
+    token.appendChild(close);
+    close.addEventListener('click', (e) => {
+    e.stopPropagation();      // don’t trigger drag/select
+    token.remove();
+  });
+    // dragging
+    makeDraggable(token, token);
+
+    // resizing
+    let resizing = false, start={x:0,y:0}, baseSize = parseFloat(token.style.width)||40;
+    handle.addEventListener('mousedown', (e)=>{
+      e.stopPropagation(); // don’t start a drag
+      resizing = true;
+      start = toBoardCoords(e.clientX, e.clientY);
+      baseSize = parseFloat(token.style.width);
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e)=>{
+      if (!resizing) return;
+      const cur = toBoardCoords(e.clientX, e.clientY);
+      const delta = Math.max(cur.x - start.x, cur.y - start.y);
+      const newSize = Math.max(24, baseSize + delta);
+      token.style.width = newSize + 'px';
+      token.style.height = newSize + 'px';
+      token.style.fontSize = Math.max(10, newSize/3) + 'px';
+    });
+    window.addEventListener('mouseup', ()=>{
+      if (!resizing) return;
+      resizing = false;
+      // (optional) snap size to cell
+      const size = parseFloat(token.style.width);
+      const snapped = Math.max(CELL, snap(size));
+      token.style.width = snapped + 'px';
+      token.style.height = snapped + 'px';
+    });
+
+    // rename on double click
+    token.addEventListener('dblclick', ()=>{
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = token.textContent;
+      input.className = 'rename';
+      token.textContent = '';
+      token.appendChild(input);
+      token.appendChild(handle);
+      input.focus();
+      input.addEventListener('blur', ()=>{
+        token.textContent = input.value || 'Token';
+        token.appendChild(handle);
+      });
+      input.addEventListener('keydown', e=>{ if (e.key==='Enter') input.blur(); });
+    });
+
+    // selection outline
+    token.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      document.querySelectorAll('.token.selected').forEach(t=>t.classList.remove('selected'));
+      token.classList.add('selected');
+    });
+    board.addEventListener('click', ()=>{
+      document.querySelectorAll('.token.selected').forEach(t=>t.classList.remove('selected'));
+    });
+
+    return token;
+  };
+
+  // ===== Hook the sidebar buttons =====
+  diceBtn.addEventListener('click', ()=> Widget.create('dice', 0, 0));
+  tokenBtn.addEventListener('click', ()=> Widget.create('token', 0, 0));
+  cardsBtn.addEventListener('click', () => Widget.create('cards', 0, 0));
+
+  // ===== Cards widget (deck draw / shuffle / reset) =====
+Widget.builders.cards = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget cards-widget';
+  el.innerHTML = `
+    <div class="header">
+      <div>🃏 Cards</div>
+      <button class="close" title="Remove">&times;</button>
+    </div>
+    <div class="body">
+      <div class="btnrow">
+        <button class="draw">Draw</button>
+        <button class="shuffle">Shuffle</button>
+        <button class="reset">Reset</button>
+        <button class="flip">Flip</button>
+      </div>
+      <div class="count"></div>
+      <div class="playing-card back" aria-label="card"></div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  // --- deck model ---
+  const SUITS = [
+    { sym: "♠", color: "black" },
+    { sym: "♥", color: "red"   },
+    { sym: "♣", color: "black" },
+    { sym: "♦", color: "red"   },
+  ];
+  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]; // :contentReference[oaicite:3]{index=3}
+  function buildDeck(){ const d=[]; for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s.sym, color:s.color}); return d; }
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+  let deck = shuffle(buildDeck());
+  let discard = [];
+  let showBack = true;
+
+  const cardEl = el.querySelector('.playing-card');
+  const countEl = el.querySelector('.count');
+
+  function renderTop() {
+    countEl.textContent = `Deck: ${deck.length}  |  Discard: ${discard.length}`;
+    if (showBack) {
+      cardEl.classList.add('back');
+      cardEl.textContent = '';
+      cardEl.classList.remove('red');
+      return;
+    }
+    cardEl.classList.remove('back');
+    if (discard.length === 0) { cardEl.textContent = ''; cardEl.classList.remove('red'); return; }
+    const top = discard[discard.length - 1];
+    cardEl.textContent = `${top.rank}${top.suit}`;
+    cardEl.classList.toggle('red', top.color === 'red'); // hearts/diamonds in red :contentReference[oaicite:4]{index=4}
+  }
+
+  // buttons
+  el.querySelector('.draw').addEventListener('click', () => {
+    if (deck.length === 0) return; // empty
+    const card = deck.pop();
+    discard.push(card);
+    showBack = false;
+    renderTop();
+  });
+
+  el.querySelector('.shuffle').addEventListener('click', () => {
+    // shuffle remaining deck in place
+    deck = shuffle(deck);
+    renderTop();
+  });
+
+  el.querySelector('.reset').addEventListener('click', () => {
+    deck = shuffle(buildDeck());
+    discard = [];
+    showBack = true;
+    renderTop();
+  });
+
+  el.querySelector('.flip').addEventListener('click', () => {
+    showBack = !showBack;
+    renderTop();
+  });
+
+  // click card to draw (nice UX)
+  cardEl.addEventListener('click', () => el.querySelector('.draw').click());
+
+  renderTop();
+  return el;
+};
+
+</script>
+
+    </main>
+
+</body>
+
+</html>
