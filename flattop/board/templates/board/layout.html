@@ -406,6 +406,7 @@ Widget.builders.token = function(props = {}) {
   cardsBtn.addEventListener('click', () => Widget.create('cards', 0, 0));
 
   // ===== Cards widget (deck draw / shuffle / reset) =====
+
 Widget.builders.cards = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
@@ -422,7 +423,11 @@ Widget.builders.cards = function(props = {}) {
         <button class="flip">Flip</button>
       </div>
       <div class="count"></div>
-      <div class="playing-card back" aria-label="card"></div>
+      <div class="card-history" style="display: flex; flex-direction: row; gap: 8px; margin-top: 8px; justify-content: flex-start;">
+        <div class="playing-card" style="width:40px;height:60px;display:flex;align-items:center;justify-content:center;border:1px solid #aaa;border-radius:4px;font-size:1.2em;background:#fff;"></div>
+        <div class="playing-card" style="width:40px;height:60px;display:flex;align-items:center;justify-content:center;border:1px solid #aaa;border-radius:4px;font-size:1.2em;background:#fff;"></div>
+        <div class="playing-card" style="width:40px;height:60px;display:flex;align-items:center;justify-content:center;border:1px solid #aaa;border-radius:4px;font-size:1.2em;background:#fff;"></div>
+      </div>
     </div>
   `;
 
@@ -435,7 +440,7 @@ Widget.builders.cards = function(props = {}) {
     { sym: "♣", color: "black" },
     { sym: "♦", color: "red"   },
   ];
-  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]; // :contentReference[oaicite:3]{index=3}
+  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
   function buildDeck(){ const d=[]; for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s.sym, color:s.color}); return d; }
   function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 
@@ -443,35 +448,66 @@ Widget.builders.cards = function(props = {}) {
   let discard = [];
   let showBack = true;
 
-  const cardEl = el.querySelector('.playing-card');
+  const cardEls = el.querySelectorAll('.card-history .playing-card');
   const countEl = el.querySelector('.count');
 
   function renderTop() {
     countEl.textContent = `Deck: ${deck.length}  |  Discard: ${discard.length}`;
-    if (showBack) {
-      cardEl.classList.add('back');
-      cardEl.textContent = '';
-      cardEl.classList.remove('red');
-      return;
+    // Show last 3 cards, most recent on the left
+    for (let i = 0; i < 3; i++) {
+      const idx = discard.length - 1 - i;
+      const cardEl = cardEls[i];
+      if (showBack || idx < 0) {
+        cardEl.textContent = '';
+        cardEl.classList.remove('red');
+        cardEl.classList.add('back');
+      } else {
+        const card = discard[idx];
+        cardEl.textContent = `${card.rank}${card.suit}`;
+        cardEl.classList.toggle('red', card.color === 'red');
+        cardEl.classList.remove('back');
+      }
     }
-    cardEl.classList.remove('back');
-    if (discard.length === 0) { cardEl.textContent = ''; cardEl.classList.remove('red'); return; }
-    const top = discard[discard.length - 1];
-    cardEl.textContent = `${top.rank}${top.suit}`;
-    cardEl.classList.toggle('red', top.color === 'red'); // hearts/diamonds in red :contentReference[oaicite:4]{index=4}
+  }
+
+  // Helper to create a draggable card on the board
+  function createDraggableCard(card, x, y) {
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'playing-card draggable';
+    cardDiv.textContent = `${card.rank}${card.suit}`;
+    cardDiv.style.position = 'absolute';
+    cardDiv.style.left = snap(x) + 'px';
+    cardDiv.style.top = snap(y) + 'px';
+    cardDiv.style.width = '40px';
+    cardDiv.style.height = '60px';
+    cardDiv.style.display = 'flex';
+    cardDiv.style.alignItems = 'center';
+    cardDiv.style.justifyContent = 'center';
+    cardDiv.style.border = '1px solid #aaa';
+    cardDiv.style.borderRadius = '4px';
+    cardDiv.style.fontSize = '1.2em';
+    cardDiv.style.background = '#fff';
+    if (card.color === 'red') cardDiv.classList.add('red');
+    makeDraggable(cardDiv, cardDiv);
+    board.appendChild(cardDiv);
   }
 
   // buttons
   el.querySelector('.draw').addEventListener('click', () => {
     if (deck.length === 0) return; // empty
     const card = deck.pop();
+    // Get widget position relative to board
+    const widgetRect = el.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+    const x = widgetRect.left - boardRect.left + 100; // offset so card doesn't overlap widget
+    const y = widgetRect.top - boardRect.top;
+    createDraggableCard(card, x, y);
     discard.push(card);
     showBack = false;
     renderTop();
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
-    // shuffle remaining deck in place
     deck = shuffle(deck);
     renderTop();
   });
@@ -488,8 +524,8 @@ Widget.builders.cards = function(props = {}) {
     renderTop();
   });
 
-  // click card to draw (nice UX)
-  cardEl.addEventListener('click', () => el.querySelector('.draw').click());
+  // click any card in history to draw (nice UX)
+  cardEls.forEach(cardEl => cardEl.addEventListener('click', () => el.querySelector('.draw').click()));
 
   renderTop();
   return el;
