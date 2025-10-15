@@ -478,19 +478,27 @@ Widget.builders.cards = function(props = {}) {
     cardDiv.style.position = 'absolute';
     cardDiv.style.left = snap(x) + 'px';
     cardDiv.style.top = snap(y) + 'px';
-    cardDiv.style.width = '40px';
-    cardDiv.style.height = '60px';
-    cardDiv.style.display = 'flex';
-    cardDiv.style.alignItems = 'center';
-    cardDiv.style.justifyContent = 'center';
-    cardDiv.style.border = '1px solid #aaa';
-    cardDiv.style.borderRadius = '4px';
-    cardDiv.style.fontSize = '1.2em';
-    cardDiv.style.background = '#fff';
     if (card.color === 'red') cardDiv.classList.add('red');
     makeDraggable(cardDiv, cardDiv);
+    // Selection logic
+    cardDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+      cardDiv.classList.add('selected');
+    });
+    // Deselect on board click
+    board.addEventListener('click', () => {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+    });
     board.appendChild(cardDiv);
   }
+
+  // Global keydown for delete
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Delete') {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
+    }
+  });
 
   // buttons
   el.querySelector('.draw').addEventListener('click', () => {

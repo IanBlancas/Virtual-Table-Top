@@ -1,3 +1,29 @@
+/* Draggable playing card (spawned from deck) */
+.playing-card.draggable {
+  width: 40px;
+  height: 60px;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+  font-weight: 700;
+  user-select: none;
+  cursor: grab;
+  color: #111;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.playing-card.draggable.red {
+  color: #d00;
+}
+.playing-card.draggable.selected {
+  box-shadow: 0 0 0 4px #ffb700, 0 6px 18px rgba(0,0,0,0.25);
+  z-index: 1000;
+  transform: scale(1.08);
+}
 /* Dice & Token widget styles */
 .widget{
   position: absolute;          
@@ -30,7 +56,7 @@
 /* Token */
 .token{
   position: absolute;          
-  width: 40px;                 /* JS will update these */
+  width: 40px;                 
   height: 40px;
   border-radius: 50%;
   background: rgba(0,128,255,0.75);
@@ -40,10 +66,47 @@
   display:flex; align-items:center; justify-content:center;
   color:#fff; font-weight:bold; user-select:none;
 }
-.token.selected{ outline:3px dashed #ff3b30; outline-offset:2px; }
-.token .resize-handle{
-  position:absolute; bottom:-5px; right:-5px; width:12px; height:12px;
-  background:#004080; border:2px solid #fff; border-radius:2px; cursor:se-resize;
+
+.token .close,
+.token .resize-handle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+}
+
+/* Resize bar/handle for token when selected */
+.token .resize-handle {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  width: 8px;
+  height: 8px;
+  background: #ffb700;
+  border-radius: 4px;
+  border: 1px solid #b88a00;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+  cursor: se-resize;
+}
+.token.selected .resize-handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Pop effect for selected token */
+.token.selected {
+  outline: 3px #ffb700;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #ffb700, 0 6px 18px rgba(0,0,0,0.25);
+  z-index: 1000;
+  transform: scale(1.08);
+}
+.token.selected .close,
+.token.selected .resize-handle {
+  opacity: 1;
+  pointer-events: auto;
 }
 .token input.rename{
   position:absolute; bottom:-26px; left:50%; transform:translateX(-50%);
@@ -66,7 +129,7 @@
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
-.token:hover .close{ opacity: 1; }
+/*.token:hover .close{ opacity: 1; }*/
 
 /* Cards widget container (reuses .widget box style) */
 .cards-widget .btnrow { display:flex; gap:8px; margin-bottom:8px; }
