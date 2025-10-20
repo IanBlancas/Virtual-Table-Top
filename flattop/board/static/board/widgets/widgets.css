@@ -19,6 +19,19 @@
 .playing-card.draggable.red {
   color: #d00;
 }
+/* Show card back visually for both deck and spawned cards */
+.playing-card.back {
+  background: repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #003f7f 10px, #003f7f 20px);
+  color: transparent;
+  border: 2px solid #002f5f;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+}
+.playing-card.draggable.back {
+  background: repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #003f7f 10px, #003f7f 20px);
+  color: transparent;
+  border: 2px solid #002f5f;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+}
 .playing-card.draggable.selected {
   box-shadow: 0 0 0 4px #ffb700, 0 6px 18px rgba(0,0,0,0.25);
   z-index: 1000;
@@ -82,7 +95,7 @@
   width: 8px;
   height: 8px;
   background: #ffb700;
-  border-radius: 4px;
+  border-radius: 0px;
   border: 1px solid #b88a00;
   box-shadow: 0 1px 3px rgba(0,0,0,0.18);
   opacity: 0;

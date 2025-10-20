@@ -136,8 +136,8 @@ body {
     .board {
         top: 0;               /* anchor top-left */
         left: 0;
-        width: 8000px;        /* ← hard-code your exact board width */
-        height: 8000px;       /* ← hard-code your exact board height */
+        width: 8000px;        /* ← hard-code exact board width */
+        height: 8000px;       /* ← hard-code exact board height */
         transform-origin: 0 0;
         
         /* Grid lines for a 48px cell: */

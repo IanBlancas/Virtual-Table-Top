@@ -405,7 +405,7 @@ Widget.builders.token = function(props = {}) {
   tokenBtn.addEventListener('click', ()=> Widget.create('token', 0, 0));
   cardsBtn.addEventListener('click', () => Widget.create('cards', 0, 0));
 
-  // ===== Cards widget (deck draw / shuffle / reset) =====
+  // ===== Cards widget =====
 
 Widget.builders.cards = function(props = {}) {
   const el = document.createElement('div');
@@ -423,10 +423,9 @@ Widget.builders.cards = function(props = {}) {
         <button class="flip">Flip</button>
       </div>
       <div class="count"></div>
-      <div class="card-history" style="display: flex; flex-direction: row; gap: 8px; margin-top: 8px; justify-content: flex-start;">
-        <div class="playing-card" style="width:40px;height:60px;display:flex;align-items:center;justify-content:center;border:1px solid #aaa;border-radius:4px;font-size:1.2em;background:#fff;"></div>
-        <div class="playing-card" style="width:40px;height:60px;display:flex;align-items:center;justify-content:center;border:1px solid #aaa;border-radius:4px;font-size:1.2em;background:#fff;"></div>
-        <div class="playing-card" style="width:40px;height:60px;display:flex;align-items:center;justify-content:center;border:1px solid #aaa;border-radius:4px;font-size:1.2em;background:#fff;"></div>
+      <div class="playing-card back" aria-label="card" style="width:80px;height:120px;"></div>
+      <div class="widget-footer-note muted">
+        Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
       </div>
     </div>
   `;
@@ -448,24 +447,23 @@ Widget.builders.cards = function(props = {}) {
   let discard = [];
   let showBack = true;
 
-  const cardEls = el.querySelectorAll('.card-history .playing-card');
+  const cardEl = el.querySelector('.playing-card');
   const countEl = el.querySelector('.count');
 
   function renderTop() {
-    countEl.textContent = `Deck: ${deck.length}  |  Discard: ${discard.length}`;
-    // Show last 3 cards, most recent on the left
-    for (let i = 0; i < 3; i++) {
-      const idx = discard.length - 1 - i;
-      const cardEl = cardEls[i];
-      if (showBack || idx < 0) {
+    countEl.textContent = `Deck: ${deck.length}`;
+    if (showBack) {
+      cardEl.classList.add('back');
+      cardEl.textContent = '';
+      cardEl.classList.remove('red');
+    } else {
+      cardEl.classList.remove('back');
+      if (deck.length === 0) {
         cardEl.textContent = '';
         cardEl.classList.remove('red');
-        cardEl.classList.add('back');
       } else {
-        const card = discard[idx];
-        cardEl.textContent = `${card.rank}${card.suit}`;
-        cardEl.classList.toggle('red', card.color === 'red');
-        cardEl.classList.remove('back');
+        cardEl.textContent = 'A♠'; // Default face for deck (front)
+        cardEl.classList.remove('red');
       }
     }
   }
@@ -474,11 +472,27 @@ Widget.builders.cards = function(props = {}) {
   function createDraggableCard(card, x, y) {
     const cardDiv = document.createElement('div');
     cardDiv.className = 'playing-card draggable';
-    cardDiv.textContent = `${card.rank}${card.suit}`;
     cardDiv.style.position = 'absolute';
     cardDiv.style.left = snap(x) + 'px';
     cardDiv.style.top = snap(y) + 'px';
-    if (card.color === 'red') cardDiv.classList.add('red');
+    cardDiv.style.width = '40px';
+    cardDiv.style.height = '60px';
+    // Store card data and flip state on the element
+    cardDiv._cardData = card;
+    cardDiv._flipped = showBack;
+    function renderCardFace() {
+      if (cardDiv._flipped) {
+        cardDiv.classList.add('back');
+        cardDiv.textContent = '';
+        cardDiv.classList.remove('red');
+      } else {
+        cardDiv.classList.remove('back');
+        cardDiv.textContent = `${card.rank}${card.suit}`;
+        if (card.color === 'red') cardDiv.classList.add('red');
+        else cardDiv.classList.remove('red');
+      }
+    }
+    renderCardFace();
     makeDraggable(cardDiv, cardDiv);
     // Selection logic
     cardDiv.addEventListener('click', (e) => {
@@ -490,13 +504,23 @@ Widget.builders.cards = function(props = {}) {
     board.addEventListener('click', () => {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
     });
+    // Flip on 'f' key
+    cardDiv.flipCard = function() {
+      cardDiv._flipped = !cardDiv._flipped;
+      renderCardFace();
+    };
     board.appendChild(cardDiv);
   }
 
-  // Global keydown for delete
+  // Global keydown for delete and flip
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Delete') {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
+        if (typeof c.flipCard === 'function') c.flipCard();
+      });
     }
   });
 
@@ -511,8 +535,7 @@ Widget.builders.cards = function(props = {}) {
     const y = widgetRect.top - boardRect.top;
     createDraggableCard(card, x, y);
     discard.push(card);
-    showBack = false;
-    renderTop();
+    renderTop(); // keep showBack state
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
@@ -532,8 +555,8 @@ Widget.builders.cards = function(props = {}) {
     renderTop();
   });
 
-  // click any card in history to draw (nice UX)
-  cardEls.forEach(cardEl => cardEl.addEventListener('click', () => el.querySelector('.draw').click()));
+  // click card to draw
+  cardEl.addEventListener('click', () => el.querySelector('.draw').click());
 
   renderTop();
   return el;
