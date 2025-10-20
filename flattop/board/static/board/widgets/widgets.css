@@ -37,6 +37,7 @@
   z-index: 1000;
   transform: scale(1.08);
 }
+
 /* Dice & Token widget styles */
 .widget{
   position: absolute;          
@@ -69,7 +70,7 @@
 /* Token */
 .token{
   position: absolute;          
-  width: 40px;                 
+  width: 40px;                 /* JS will update these */
   height: 40px;
   border-radius: 50%;
   background: rgba(0,128,255,0.75);
@@ -79,47 +80,13 @@
   display:flex; align-items:center; justify-content:center;
   color:#fff; font-weight:bold; user-select:none;
 }
-
-.token .close,
-.token .resize-handle {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.1s;
-}
-
-/* Resize bar/handle for token when selected */
-.token .resize-handle {
-  position: absolute;
-  bottom: -8px;
-  right: -8px;
-  width: 8px;
-  height: 8px;
-  background: #ffb700;
-  border-radius: 0px;
-  border: 1px solid #b88a00;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.1s;
-  cursor: se-resize;
-}
-.token.selected .resize-handle {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Pop effect for selected token */
-.token.selected {
-  outline: 3px #ffb700;
-  outline-offset: 2px;
+.token.selected{ 
   box-shadow: 0 0 0 4px #ffb700, 0 6px 18px rgba(0,0,0,0.25);
-  z-index: 1000;
   transform: scale(1.08);
 }
-.token.selected .close,
-.token.selected .resize-handle {
-  opacity: 1;
-  pointer-events: auto;
+.token .resize-handle{
+  position:absolute; bottom:-5px; right:-5px; width:12px; height:12px;
+  background:#004080; border:2px solid #fff; border-radius:2px; cursor:se-resize;
 }
 .token input.rename{
   position:absolute; bottom:-26px; left:50%; transform:translateX(-50%);
@@ -142,11 +109,260 @@
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
-/*.token:hover .close{ opacity: 1; }*/
+.token:hover .close{ opacity: 1; }
 
 /* Cards widget container (reuses .widget box style) */
 .cards-widget .btnrow { display:flex; gap:8px; margin-bottom:8px; }
 .cards-widget .count { font-size:12px; color:#555; margin-bottom:6px; }
+
+/* A single playing card (inspired by stnd_card_widget.css) */
+.cards-widget .playing-card{
+  width: 80px; height: 120px;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 10px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+  display:flex; align-items:center; justify-content:center;
+  font-size: 28px; font-weight: 700;
+  user-select:none;
+}
+.cards-widget .playing-card.red{ color: #d00; }
+
+/* optional “back” state */
+.cards-widget .playing-card.back{
+  background: repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #003f7f 10px, #003f7f 20px);
+  color: transparent; border: 2px solid #002f5f;
+}
+/* ===== Image widget ===== */
+.image-widget{
+  position:absolute;
+  display:block;
+  background:#fff;
+  border:1px solid #aaa;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  overflow:visible;           /* clip image to rounded corners */
+  user-select:none;
+}
+.image-widget .image{
+  width:100%;
+  height:100%;
+  object-fit: contain;       /* preserve aspect within the box */
+  display:block;
+  pointer-events:none;       /* let dragging catch clicks */
+}
+.image-widget .resize-handle{
+  position:absolute;
+  bottom:-6px; right:-6px;
+  width:14px; height:14px;
+  background:#004080;
+  border:2px solid #fff;
+  border-radius:2px;
+  cursor:se-resize;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.image-widget .close{
+  position:absolute;
+  top:-8px; right:-8px;
+  width:18px; height:18px;
+  border-radius:50%;
+  border:1px solid #004080;
+  background:#fff;
+  color:#004080;
+  font-size:12px;
+  line-height:16px;
+  text-align:center;
+  padding:0;
+  cursor:pointer;
+  box-shadow:0 1px 3px rgba(0,0,0,0.25);
+}
+.image-widget:hover .close{ opacity:1; }
+/* Rotate 90° button, placed just to the left of the close button */
+.image-widget .rotate{
+  position:absolute;
+  top:-8px;
+  right:-30px;               /* outside the box, left of the × (which is at -8px) */
+  width:18px; height:18px;
+  border-radius:50%;
+  border:1px solid #004080;
+  background:#fff;
+  color:#004080;
+  font-size:12px;
+  line-height:16px;
+  text-align:center;
+  padding:0;
+  cursor:pointer;
+  box-shadow:0 1px 3px rgba(0,0,0,0.25);
+  z-index:5;
+}
+
+/* keep it visible when hovering the widget, like the close button */
+.image-widget:hover .rotate{ opacity:1; }
+
+
+/* soundboard widget styling */
+/* ===== Soundboard Widget Styling ===== */
+.soundboard-widget {
+  background: #ffffff;
+  color: #f8f8f8;
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+  width: 320px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+  font-family: sans-serif;
+}
+
+.soundboard-widget .header {
+  background: #2c2c2c;
+  border-bottom: 1px solid #2c2c2c;
+  border-radius: 8px 8px 0 0;
+  padding: 6px 10px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.soundboard-widget .body {
+  padding: 8px;
+  max-height: 300px;   /* fixed height */
+  overflow-y: auto;    /* scroll inside */
+  scrollbar-width: thin;
+  scrollbar-color: #555 #1e1e1e;
+}
+
+.soundboard-widget .controls {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.soundboard-widget .controls button {
+  background: #b93b3b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.soundboard-widget .controls button:hover {
+  background: #d64545;
+}
+
+.soundboard-widget .soundboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.soundboard-widget .sound {
+  background: #ffffff;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.soundboard-widget .sound h4 {
+  margin: 2px 0;
+  font-size: 0.9em;
+  color: #000000;
+}
+
+.soundboard-widget .sound button {
+  background: #f8f8f8;
+  color: rgb(0, 0, 0);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 0.8em;
+  width: 90%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.soundboard-widget .sound button:hover {
+  background: #5b5b5b;
+}
+
+.soundboard-widget .sound input[type="range"] {
+  width: 90%;
+  accent-color: #42c0fa; /* green slider */
+}
+
+/* ===== Counters widget ===== */
+.counters-widget { width: 360px; } /* a bit wider than default .widget */
+.counters-widget .header { display: flex; justify-content: space-between; align-items: center; }
+.counters-widget .header .header-actions { display: flex; gap: 6px; }
+.counters-widget .header .add-row,
+.counters-widget .header .close {
+  border: 1px solid #999; background: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer;
+}
+
+.counters-widget .rows { display: flex; flex-direction: column; gap: 8px; }
+.counters-widget .counter-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 6px;
+  background: #fff;
+}
+
+.counters-widget .counter-row .name {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.counters-widget .counter-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto; /* name | value | trash */
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 6px;
+  background: #fff;
+}
+
+.counters-widget .counter-row .name {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.counters-widget .counter-row .value {
+  width: 84px;
+  text-align: right;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+
+.counters-widget .counter-row .trash {
+  border: 1px solid #c33;
+  background: #fff;
+  color: #c33;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.counters-widget .small-hint { font-size: 12px; color: #666; margin-top: 6px; }
 
 /* A single playing card (inspired by stnd_card_widget.css) */
 .cards-widget .playing-card{

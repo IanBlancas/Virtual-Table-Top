@@ -84,6 +84,8 @@
             <button id = "diceBtn">Dice</button>
             <button id = "cardsBtn">Cards</button>
             <button id = "tokenBtn">Tokens</button>
+            <button id = "counterBtn">Counters</button>
+            <button id = "soundBtn">Soundboard</button>
             <button>Boards</button>
             <button>Rules</button>
             <button>Favorites</button>
@@ -111,6 +113,9 @@
     const diceBtn = document.getElementById('diceBtn')
     const tokenBtn = document.getElementById('tokenBtn')
     const cardsBtn = document.getElementById('cardsBtn');
+    const counterBtn = document.getElementById('counterBtn');
+    counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
+
 
     let scale = 1;     // zoom factor
     let panX  = 0;     // translation in px
@@ -294,8 +299,7 @@
   function roll(n, sides){ const out=[]; for(let i=0;i<n;i++) out.push(1+Math.floor(Math.random()*sides)); return out; }
   function escapeHtml(t){ return t.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-  // ===== Token widget (simple circular token with resize handle) =====
-  // ===== Token widget (with working rename + close "×") =====
+  // ===== Token widget (simple circular token with resize handle and x) =====
 Widget.builders.token = function(props = {}) {
   const token = document.createElement('div');
   token.className = 'token';
@@ -404,9 +408,10 @@ Widget.builders.token = function(props = {}) {
   diceBtn.addEventListener('click', ()=> Widget.create('dice', 0, 0));
   tokenBtn.addEventListener('click', ()=> Widget.create('token', 0, 0));
   cardsBtn.addEventListener('click', () => Widget.create('cards', 0, 0));
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
 
-  // ===== Cards widget =====
-
+  // ===== Cards widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
@@ -477,6 +482,7 @@ Widget.builders.cards = function(props = {}) {
     cardDiv.style.top = snap(y) + 'px';
     cardDiv.style.width = '40px';
     cardDiv.style.height = '60px';
+    cardDiv.style.zIndex = 9999;
     // Store card data and flip state on the element
     cardDiv._cardData = card;
     cardDiv._flipped = showBack;
@@ -562,9 +568,241 @@ Widget.builders.cards = function(props = {}) {
   return el;
 };
 
+// ===== Counters widget (multi named counters with +/-1, +/-5, type-to-edit) =====
+Widget.builders.counters = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget counters-widget';
+  el.innerHTML = `
+    <div class="header">
+      <div>🔢 Counters</div>
+      <div class="header-actions">
+        <button class="add-row" title="Add counter">＋</button>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+    </div>
+    <div class="body">
+      <div class="rows"></div>
+      <div class="muted small-hint">Tip: type a value, press Enter; use ArrowUp/ArrowDown to change by 1 (hold Shift for 5).</div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  const rows = el.querySelector('.rows');
+  const addBtn = el.querySelector('.add-row');
+  const close  = el.querySelector('.close');
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+
+  // helpers
+  const clampInt = (v) => {
+    // allow negative; limit to 32-bit-ish range
+    if (Number.isNaN(v)) return 0;
+    return Math.max(-2147483648, Math.min(2147483647, v|0));
+  };
+
+  function createRow(data = {}) {
+    const row = document.createElement('div');
+    row.className = 'counter-row';
+    row.innerHTML = `
+    <input class="name" type="text" placeholder="Name" value="${data.name ?? ''}" />
+    <input class="value" type="number" inputmode="numeric" value="${clampInt(+data.value || 0)}" />
+    <button class="trash" title="Delete counter">🗑</button>
+    `;
+
+
+    const valueInput = row.querySelector('.value');
+
+    function n() { return clampInt(parseInt(valueInput.value, 10)); }
+    function set(v) { valueInput.value = clampInt(v); }
+
+    
+
+    // typing: commit on Enter / blur; sanitize on input
+    valueInput.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') valueInput.blur();
+      // Arrow controls: ±1; hold Shift for ±5
+      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+      e.stopPropagation();
+    });
+    valueInput.addEventListener('blur', ()=> set(n()));
+    valueInput.addEventListener('input', ()=>{
+      // live-clean non-digits except leading '-'
+      const m = valueInput.value.match(/^-?\d*/);
+      valueInput.value = m ? m[0] : '0';
+    });
+
+    // delete this row
+    row.querySelector('.trash').addEventListener('click', (e)=> {
+      e.stopPropagation();
+      row.remove();
+    });
+
+    rows.appendChild(row);
+  }
+
+  // initial rows (if provided); else one empty row
+  const initial = Array.isArray(props.counters) && props.counters.length ? props.counters : [{}];
+  initial.forEach(c => createRow(c));
+
+  addBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    createRow({});
+  });
+
+  return el;
+};
+
+
+
+
+// ===== Image widget (draggable, resizable, deletable) =====
+Widget.builders.image = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'image-widget';
+  el.style.width  = (props.width  ?? 200) + 'px';
+  el.style.height = (props.height ?? 200) + 'px';
+  el.style.position = 'absolute';
+
+  // inner elements
+  const img = document.createElement('img');
+  img.className = 'image';
+  img.draggable = false; // prevent native browser drag
+  img.src = props.src || '';
+  el.appendChild(img);
+
+  const handle = document.createElement('div');
+  handle.className = 'resize-handle';
+  el.appendChild(handle);
+
+  const close = document.createElement('button');
+  close.className = 'close';
+  close.innerHTML = '&times;';
+  close.title = 'Remove';
+  el.appendChild(close);
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+
+  // place on board (Widget.create handles left/top normally)
+  makeDraggable(el, el); // drag anywhere on the image widget
+
+  // ----- resizing (keep aspect if Shift is held) -----
+  let resizing = false, start={x:0,y:0}, baseW=0, baseH=0, aspect=1;
+  img.addEventListener('load', ()=>{ if (img.naturalWidth && img.naturalHeight) aspect = img.naturalWidth / img.naturalHeight; });
+  handle.addEventListener('mousedown', (e)=>{
+    e.stopPropagation();
+    resizing = true;
+    const p = toBoardCoords(e.clientX, e.clientY);
+    start = p;
+    baseW = parseFloat(getComputedStyle(el).width);
+    baseH = parseFloat(getComputedStyle(el).height);
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if (!resizing) return;
+    const cur = toBoardCoords(e.clientX, e.clientY);
+    let dx = cur.x - start.x;
+    let dy = cur.y - start.y;
+
+    // size proposal
+    let newW = Math.max(40, baseW + dx);
+    let newH = Math.max(40, baseH + dy);
+
+    // keep aspect while Shift is held
+    if (e.shiftKey) {
+      if (newW / newH > aspect) newW = newH * aspect; else newH = newW / aspect;
+    }
+    el.style.width  = newW + 'px';
+    el.style.height = newH + 'px';
+  });
+  window.addEventListener('mouseup', ()=>{
+    if (!resizing) return;
+    resizing = false;
+    // snap size to grid
+    const w = parseFloat(getComputedStyle(el).width);
+    const h = parseFloat(getComputedStyle(el).height);
+    el.style.width  = Math.max(CELL, snap(w)) + 'px';
+    el.style.height = Math.max(CELL, snap(h)) + 'px';
+  });
+  // ROTATE 90° button (next to the close button)
+const rotateBtn = document.createElement('button');
+rotateBtn.className = 'rotate';
+rotateBtn.innerHTML = '⟳';
+rotateBtn.title = 'Rotate 90°';
+el.appendChild(rotateBtn);
+
+let rotation = props.rotation ? (props.rotation % 360) : 0;
+img.style.transformOrigin = 'center center';
+img.style.transform = `rotate(${rotation}deg)`;
+
+rotateBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  rotation = (rotation + 90) % 360;
+  img.style.transform = `rotate(${rotation}deg)`;
+
+  
+});
+
+  return el;
+};
+
+
+// ===== Drag-and-drop images onto the board =====
+
+// Prevent default to allow drop
+['dragenter','dragover'].forEach(evt =>
+  wrap.addEventListener(evt, e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }, { passive:false })
+);
+wrap.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  // Drop position in BOARD coords
+  const { x, y } = toBoardCoords(e.clientX, e.clientY);
+
+  // 1) If we got files (local images)
+  const files = Array.from(e.dataTransfer.files || []);
+  const imageFiles = files.filter(f => f.type && f.type.startsWith('image/'));
+  if (imageFiles.length > 0) {
+    for (const file of imageFiles) {
+      const dataUrl = await fileToDataURL(file);
+      const el = Widget.create('image', x, y, { src: dataUrl, width: 240, height: 240 });
+      // small offset so multiple files don’t stack exactly
+      el.style.left = snap((parseFloat(el.style.left)||0) + 10) + 'px';
+      el.style.top  = snap((parseFloat(el.style.top)||0) + 10) + 'px';
+    }
+    return;
+  }
+
+  // 2) Otherwise, check for a URL (dragged from another tab)
+  // Prefer 'text/uri-list'; fall back to plain text or HTML.
+  const dt = e.dataTransfer;
+  let url = dt.getData('text/uri-list') || dt.getData('text/plain');
+
+  // If HTML was dragged (e.g., an <img>), try to extract the first <img src>
+  if ((!url || !/^https?:/i.test(url)) && dt.types.includes('text/html')) {
+    const html = dt.getData('text/html');
+    const m = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+    if (m) url = m[1];
+  }
+
+  if (url && /^https?:/i.test(url)) {
+    // Create an image widget that hot-links the remote asset
+    Widget.create('image', x, y, { src: url, width: 320, height: 220 });
+  }
+});
+
+// helper: file -> data URL
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
 </script>
 
     </main>
+<script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
 </body>
 
