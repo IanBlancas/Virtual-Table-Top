@@ -84,6 +84,8 @@
             <button id = "diceBtn">Dice</button>
             <button id = "cardsBtn">Cards</button>
             <button id = "tokenBtn">Tokens</button>
+            <button id = "counterBtn">Counters</button>
+            <button id = "soundBtn">Soundboard</button>
             <button>Boards</button>
             <button>Rules</button>
             <button>Favorites</button>
@@ -111,6 +113,9 @@
     const diceBtn = document.getElementById('diceBtn')
     const tokenBtn = document.getElementById('tokenBtn')
     const cardsBtn = document.getElementById('cardsBtn');
+    const counterBtn = document.getElementById('counterBtn');
+    counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
+
 
     let scale = 1;     // zoom factor
     let panX  = 0;     // translation in px
@@ -403,6 +408,8 @@ Widget.builders.token = function(props = {}) {
   diceBtn.addEventListener('click', ()=> Widget.create('dice', 0, 0));
   tokenBtn.addEventListener('click', ()=> Widget.create('token', 0, 0));
   cardsBtn.addEventListener('click', () => Widget.create('cards', 0, 0));
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
 
   // ===== Cards widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
@@ -494,6 +501,94 @@ Widget.builders.cards = function(props = {}) {
   return el;
 };
 
+// ===== Counters widget (multi named counters with +/-1, +/-5, type-to-edit) =====
+Widget.builders.counters = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget counters-widget';
+  el.innerHTML = `
+    <div class="header">
+      <div>🔢 Counters</div>
+      <div class="header-actions">
+        <button class="add-row" title="Add counter">＋</button>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+    </div>
+    <div class="body">
+      <div class="rows"></div>
+      <div class="muted small-hint">Tip: type a value, press Enter; use ArrowUp/ArrowDown to change by 1 (hold Shift for 5).</div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  const rows = el.querySelector('.rows');
+  const addBtn = el.querySelector('.add-row');
+  const close  = el.querySelector('.close');
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+
+  // helpers
+  const clampInt = (v) => {
+    // allow negative; limit to 32-bit-ish range
+    if (Number.isNaN(v)) return 0;
+    return Math.max(-2147483648, Math.min(2147483647, v|0));
+  };
+
+  function createRow(data = {}) {
+    const row = document.createElement('div');
+    row.className = 'counter-row';
+    row.innerHTML = `
+    <input class="name" type="text" placeholder="Name" value="${data.name ?? ''}" />
+    <input class="value" type="number" inputmode="numeric" value="${clampInt(+data.value || 0)}" />
+    <button class="trash" title="Delete counter">🗑</button>
+    `;
+
+
+    const valueInput = row.querySelector('.value');
+
+    function n() { return clampInt(parseInt(valueInput.value, 10)); }
+    function set(v) { valueInput.value = clampInt(v); }
+
+    
+
+    // typing: commit on Enter / blur; sanitize on input
+    valueInput.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') valueInput.blur();
+      // Arrow controls: ±1; hold Shift for ±5
+      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+      e.stopPropagation();
+    });
+    valueInput.addEventListener('blur', ()=> set(n()));
+    valueInput.addEventListener('input', ()=>{
+      // live-clean non-digits except leading '-'
+      const m = valueInput.value.match(/^-?\d*/);
+      valueInput.value = m ? m[0] : '0';
+    });
+
+    // delete this row
+    row.querySelector('.trash').addEventListener('click', (e)=> {
+      e.stopPropagation();
+      row.remove();
+    });
+
+    rows.appendChild(row);
+  }
+
+  // initial rows (if provided); else one empty row
+  const initial = Array.isArray(props.counters) && props.counters.length ? props.counters : [{}];
+  initial.forEach(c => createRow(c));
+
+  addBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    createRow({});
+  });
+
+  return el;
+};
+
+
+
+
 // ===== Image widget (draggable, resizable, deletable) =====
 Widget.builders.image = function(props = {}) {
   const el = document.createElement('div');
@@ -583,6 +678,7 @@ rotateBtn.addEventListener('click', (e) => {
   return el;
 };
 
+
 // ===== Drag-and-drop images onto the board =====
 
 // Prevent default to allow drop
@@ -639,6 +735,7 @@ function fileToDataURL(file) {
 </script>
 
     </main>
+<script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
 </body>
 

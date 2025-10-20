@@ -155,3 +155,169 @@
 
 /* keep it visible when hovering the widget, like the close button */
 .image-widget:hover .rotate{ opacity:1; }
+
+
+/* soundboard widget styling */
+/* ===== Soundboard Widget Styling ===== */
+.soundboard-widget {
+  background: #ffffff;
+  color: #f8f8f8;
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+  width: 320px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+  font-family: sans-serif;
+}
+
+.soundboard-widget .header {
+  background: #2c2c2c;
+  border-bottom: 1px solid #2c2c2c;
+  border-radius: 8px 8px 0 0;
+  padding: 6px 10px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.soundboard-widget .body {
+  padding: 8px;
+  max-height: 300px;   /* fixed height */
+  overflow-y: auto;    /* scroll inside */
+  scrollbar-width: thin;
+  scrollbar-color: #555 #1e1e1e;
+}
+
+.soundboard-widget .controls {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.soundboard-widget .controls button {
+  background: #b93b3b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.soundboard-widget .controls button:hover {
+  background: #d64545;
+}
+
+.soundboard-widget .soundboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.soundboard-widget .sound {
+  background: #ffffff;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.soundboard-widget .sound h4 {
+  margin: 2px 0;
+  font-size: 0.9em;
+  color: #000000;
+}
+
+.soundboard-widget .sound button {
+  background: #f8f8f8;
+  color: rgb(0, 0, 0);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 0.8em;
+  width: 90%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.soundboard-widget .sound button:hover {
+  background: #5b5b5b;
+}
+
+.soundboard-widget .sound input[type="range"] {
+  width: 90%;
+  accent-color: #42c0fa; /* green slider */
+}
+
+/* ===== Counters widget ===== */
+.counters-widget { width: 360px; } /* a bit wider than default .widget */
+.counters-widget .header { display: flex; justify-content: space-between; align-items: center; }
+.counters-widget .header .header-actions { display: flex; gap: 6px; }
+.counters-widget .header .add-row,
+.counters-widget .header .close {
+  border: 1px solid #999; background: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer;
+}
+
+.counters-widget .rows { display: flex; flex-direction: column; gap: 8px; }
+.counters-widget .counter-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 6px;
+  background: #fff;
+}
+
+.counters-widget .counter-row .name {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.counters-widget .counter-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto; /* name | value | trash */
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 6px;
+  background: #fff;
+}
+
+.counters-widget .counter-row .name {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.counters-widget .counter-row .value {
+  width: 84px;
+  text-align: right;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+
+.counters-widget .counter-row .trash {
+  border: 1px solid #c33;
+  background: #fff;
+  color: #c33;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.counters-widget .small-hint { font-size: 12px; color: #666; margin-top: 6px; }
+
