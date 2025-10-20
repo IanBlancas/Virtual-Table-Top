@@ -428,7 +428,10 @@ Widget.builders.cards = function(props = {}) {
         <button class="flip">Flip</button>
       </div>
       <div class="count"></div>
-      <div class="playing-card back" aria-label="card"></div>
+      <div class="playing-card back" aria-label="card" style="width:80px;height:120px;"></div>
+      <div class="widget-footer-note muted">
+        Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
+      </div>
     </div>
   `;
 
@@ -441,7 +444,7 @@ Widget.builders.cards = function(props = {}) {
     { sym: "♣", color: "black" },
     { sym: "♦", color: "red"   },
   ];
-  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]; // :contentReference[oaicite:3]{index=3}
+  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
   function buildDeck(){ const d=[]; for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s.sym, color:s.color}); return d; }
   function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 
@@ -453,31 +456,95 @@ Widget.builders.cards = function(props = {}) {
   const countEl = el.querySelector('.count');
 
   function renderTop() {
-    countEl.textContent = `Deck: ${deck.length}  |  Discard: ${discard.length}`;
+    countEl.textContent = `Deck: ${deck.length}`;
     if (showBack) {
       cardEl.classList.add('back');
       cardEl.textContent = '';
       cardEl.classList.remove('red');
-      return;
+    } else {
+      cardEl.classList.remove('back');
+      if (deck.length === 0) {
+        cardEl.textContent = '';
+        cardEl.classList.remove('red');
+      } else {
+        cardEl.textContent = 'A♠'; // Default face for deck (front)
+        cardEl.classList.remove('red');
+      }
     }
-    cardEl.classList.remove('back');
-    if (discard.length === 0) { cardEl.textContent = ''; cardEl.classList.remove('red'); return; }
-    const top = discard[discard.length - 1];
-    cardEl.textContent = `${top.rank}${top.suit}`;
-    cardEl.classList.toggle('red', top.color === 'red'); // hearts/diamonds in red :contentReference[oaicite:4]{index=4}
   }
+
+  // Helper to create a draggable card on the board
+  function createDraggableCard(card, x, y) {
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'playing-card draggable';
+    cardDiv.style.position = 'absolute';
+    cardDiv.style.left = snap(x) + 'px';
+    cardDiv.style.top = snap(y) + 'px';
+    cardDiv.style.width = '40px';
+    cardDiv.style.height = '60px';
+    cardDiv.style.zIndex = 9999;
+    // Store card data and flip state on the element
+    cardDiv._cardData = card;
+    cardDiv._flipped = showBack;
+    function renderCardFace() {
+      if (cardDiv._flipped) {
+        cardDiv.classList.add('back');
+        cardDiv.textContent = '';
+        cardDiv.classList.remove('red');
+      } else {
+        cardDiv.classList.remove('back');
+        cardDiv.textContent = `${card.rank}${card.suit}`;
+        if (card.color === 'red') cardDiv.classList.add('red');
+        else cardDiv.classList.remove('red');
+      }
+    }
+    renderCardFace();
+    makeDraggable(cardDiv, cardDiv);
+    // Selection logic
+    cardDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+      cardDiv.classList.add('selected');
+    });
+    // Deselect on board click
+    board.addEventListener('click', () => {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+    });
+    // Flip on 'f' key
+    cardDiv.flipCard = function() {
+      cardDiv._flipped = !cardDiv._flipped;
+      renderCardFace();
+    };
+    board.appendChild(cardDiv);
+  }
+
+  // Global keydown for delete and flip
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Delete') {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
+        if (typeof c.flipCard === 'function') c.flipCard();
+      });
+    }
+  });
 
   // buttons
   el.querySelector('.draw').addEventListener('click', () => {
     if (deck.length === 0) return; // empty
     const card = deck.pop();
+    // Get widget position relative to board
+    const widgetRect = el.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+    const x = widgetRect.left - boardRect.left + 100; // offset so card doesn't overlap widget
+    const y = widgetRect.top - boardRect.top;
+    createDraggableCard(card, x, y);
     discard.push(card);
-    showBack = false;
-    renderTop();
+    renderTop(); // keep showBack state
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
-    // shuffle remaining deck in place
     deck = shuffle(deck);
     renderTop();
   });
@@ -494,7 +561,7 @@ Widget.builders.cards = function(props = {}) {
     renderTop();
   });
 
-  // click card to draw (nice UX)
+  // click card to draw
   cardEl.addEventListener('click', () => el.querySelector('.draw').click());
 
   renderTop();
