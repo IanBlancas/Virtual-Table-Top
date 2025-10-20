@@ -1,3 +1,7 @@
+
+// Global sound tracker shared by all widgets
+const GLOBAL_SOUNDS = new Set();
+
 // ===== Soundboard widget (HTML/JS only, draggable & resizable) =====
 Widget.builders.soundboard = function (props = {}) {
   const el = document.createElement("div");
@@ -49,6 +53,8 @@ Widget.builders.soundboard = function (props = {}) {
   el.querySelectorAll(".sound").forEach((container) => {
     const audio = new Audio(container.dataset.sound);
     sounds.push(audio);
+    GLOBAL_SOUNDS.add(audio);
+    audio.addEventListener("ended", () => GLOBAL_SOUNDS.delete(audio));
 
     const playBtn = container.querySelector(".play");
     const loopBtn = container.querySelector(".loop");
@@ -73,12 +79,27 @@ Widget.builders.soundboard = function (props = {}) {
     });
   });
 
-  el.querySelector(".stopAll").addEventListener("click", () => {
-    sounds.forEach((a) => {
-      a.pause();
-      a.currentTime = 0;
-    });
+el.querySelector(".stopAll").addEventListener("click", () => {
+  GLOBAL_SOUNDS.forEach((a) => {
+    a.pause();
+    a.currentTime = 0;
+    a.loop = false;
   });
+});
+
+
+el.querySelector(".close").addEventListener("click", () => {
+  // Stop and remove any active sounds from this widget
+  sounds.forEach((a) => {
+    a.pause();
+    a.currentTime = 0;
+    a.loop = false;
+    GLOBAL_SOUNDS.delete(a);
+  });
+  el.remove();
+});
+
+
 
   return el;
 };
