@@ -411,8 +411,7 @@ Widget.builders.token = function(props = {}) {
   const soundBtn = document.getElementById('soundBtn');
   soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
 
-  // ===== Cards widget =====
-
+  // ===== Cards widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
@@ -429,10 +428,7 @@ Widget.builders.cards = function(props = {}) {
         <button class="flip">Flip</button>
       </div>
       <div class="count"></div>
-      <div class="playing-card back" aria-label="card" style="width:80px;height:120px;"></div>
-      <div class="widget-footer-note muted">
-        Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
-      </div>
+      <div class="playing-card back" aria-label="card"></div>
     </div>
   `;
 
@@ -445,7 +441,7 @@ Widget.builders.cards = function(props = {}) {
     { sym: "♣", color: "black" },
     { sym: "♦", color: "red"   },
   ];
-  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]; // :contentReference[oaicite:3]{index=3}
   function buildDeck(){ const d=[]; for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s.sym, color:s.color}); return d; }
   function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 
@@ -457,94 +453,31 @@ Widget.builders.cards = function(props = {}) {
   const countEl = el.querySelector('.count');
 
   function renderTop() {
-    countEl.textContent = `Deck: ${deck.length}`;
+    countEl.textContent = `Deck: ${deck.length}  |  Discard: ${discard.length}`;
     if (showBack) {
       cardEl.classList.add('back');
       cardEl.textContent = '';
       cardEl.classList.remove('red');
-    } else {
-      cardEl.classList.remove('back');
-      if (deck.length === 0) {
-        cardEl.textContent = '';
-        cardEl.classList.remove('red');
-      } else {
-        cardEl.textContent = 'A♠'; // Default face for deck (front)
-        cardEl.classList.remove('red');
-      }
+      return;
     }
+    cardEl.classList.remove('back');
+    if (discard.length === 0) { cardEl.textContent = ''; cardEl.classList.remove('red'); return; }
+    const top = discard[discard.length - 1];
+    cardEl.textContent = `${top.rank}${top.suit}`;
+    cardEl.classList.toggle('red', top.color === 'red'); // hearts/diamonds in red :contentReference[oaicite:4]{index=4}
   }
-
-  // Helper to create a draggable card on the board
-  function createDraggableCard(card, x, y) {
-    const cardDiv = document.createElement('div');
-    cardDiv.className = 'playing-card draggable';
-    cardDiv.style.position = 'absolute';
-    cardDiv.style.left = snap(x) + 'px';
-    cardDiv.style.top = snap(y) + 'px';
-    cardDiv.style.width = '40px';
-    cardDiv.style.height = '60px';
-    // Store card data and flip state on the element
-    cardDiv._cardData = card;
-    cardDiv._flipped = showBack;
-    function renderCardFace() {
-      if (cardDiv._flipped) {
-        cardDiv.classList.add('back');
-        cardDiv.textContent = '';
-        cardDiv.classList.remove('red');
-      } else {
-        cardDiv.classList.remove('back');
-        cardDiv.textContent = `${card.rank}${card.suit}`;
-        if (card.color === 'red') cardDiv.classList.add('red');
-        else cardDiv.classList.remove('red');
-      }
-    }
-    renderCardFace();
-    makeDraggable(cardDiv, cardDiv);
-    // Selection logic
-    cardDiv.addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
-      cardDiv.classList.add('selected');
-    });
-    // Deselect on board click
-    board.addEventListener('click', () => {
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
-    });
-    // Flip on 'f' key
-    cardDiv.flipCard = function() {
-      cardDiv._flipped = !cardDiv._flipped;
-      renderCardFace();
-    };
-    board.appendChild(cardDiv);
-  }
-
-  // Global keydown for delete and flip
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Delete') {
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
-    }
-    if (e.key === 'f' || e.key === 'F') {
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
-        if (typeof c.flipCard === 'function') c.flipCard();
-      });
-    }
-  });
 
   // buttons
   el.querySelector('.draw').addEventListener('click', () => {
     if (deck.length === 0) return; // empty
     const card = deck.pop();
-    // Get widget position relative to board
-    const widgetRect = el.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-    const x = widgetRect.left - boardRect.left + 100; // offset so card doesn't overlap widget
-    const y = widgetRect.top - boardRect.top;
-    createDraggableCard(card, x, y);
     discard.push(card);
-    renderTop(); // keep showBack state
+    showBack = false;
+    renderTop();
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
+    // shuffle remaining deck in place
     deck = shuffle(deck);
     renderTop();
   });
@@ -561,12 +494,98 @@ Widget.builders.cards = function(props = {}) {
     renderTop();
   });
 
-  // click card to draw
+  // click card to draw (nice UX)
   cardEl.addEventListener('click', () => el.querySelector('.draw').click());
 
   renderTop();
   return el;
 };
+
+// ===== Counters widget (multi named counters with +/-1, +/-5, type-to-edit) =====
+Widget.builders.counters = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget counters-widget';
+  el.innerHTML = `
+    <div class="header">
+      <div>🔢 Counters</div>
+      <div class="header-actions">
+        <button class="add-row" title="Add counter">＋</button>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+    </div>
+    <div class="body">
+      <div class="rows"></div>
+      <div class="muted small-hint">Tip: type a value, press Enter; use ArrowUp/ArrowDown to change by 1 (hold Shift for 5).</div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  const rows = el.querySelector('.rows');
+  const addBtn = el.querySelector('.add-row');
+  const close  = el.querySelector('.close');
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+
+  // helpers
+  const clampInt = (v) => {
+    // allow negative; limit to 32-bit-ish range
+    if (Number.isNaN(v)) return 0;
+    return Math.max(-2147483648, Math.min(2147483647, v|0));
+  };
+
+  function createRow(data = {}) {
+    const row = document.createElement('div');
+    row.className = 'counter-row';
+    row.innerHTML = `
+    <input class="name" type="text" placeholder="Name" value="${data.name ?? ''}" />
+    <input class="value" type="number" inputmode="numeric" value="${clampInt(+data.value || 0)}" />
+    <button class="trash" title="Delete counter">🗑</button>
+    `;
+
+
+    const valueInput = row.querySelector('.value');
+
+    function n() { return clampInt(parseInt(valueInput.value, 10)); }
+    function set(v) { valueInput.value = clampInt(v); }
+
+    
+
+    // typing: commit on Enter / blur; sanitize on input
+    valueInput.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') valueInput.blur();
+      // Arrow controls: ±1; hold Shift for ±5
+      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+      e.stopPropagation();
+    });
+    valueInput.addEventListener('blur', ()=> set(n()));
+    valueInput.addEventListener('input', ()=>{
+      // live-clean non-digits except leading '-'
+      const m = valueInput.value.match(/^-?\d*/);
+      valueInput.value = m ? m[0] : '0';
+    });
+
+    // delete this row
+    row.querySelector('.trash').addEventListener('click', (e)=> {
+      e.stopPropagation();
+      row.remove();
+    });
+
+    rows.appendChild(row);
+  }
+
+  // initial rows (if provided); else one empty row
+  const initial = Array.isArray(props.counters) && props.counters.length ? props.counters : [{}];
+  initial.forEach(c => createRow(c));
+
+  addBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    createRow({});
+  });
+
+  return el;
+};
+
 
 
 
