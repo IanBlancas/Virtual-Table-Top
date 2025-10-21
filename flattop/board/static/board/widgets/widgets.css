@@ -140,6 +140,7 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   overflow:visible;           /* clip image to rounded corners */
   user-select:none;
+  z-index:1;
 }
 .image-widget .image{
   width:100%;

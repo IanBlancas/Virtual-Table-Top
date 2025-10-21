@@ -131,24 +131,35 @@
     applyTransform();
 
     // Mouse wheel zoom around cursor
-    wrap.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const rect = board.getBoundingClientRect();
-      // Cursor position relative to board’s current transform
-      const cx = (e.clientX - rect.left) / scale;
-      const cy = (e.clientY - rect.top)  / scale;
+    // Replace your current wheel handler with this:
+wrap.addEventListener('wheel', (e) => {
+  e.preventDefault();
 
-      const direction = Math.sign(e.deltaY);        // -1 up (zoom in), +1 down (zoom out)
-      const factor = direction > 0 ? 0.9 : 1.1;     // zoom step
-      const newScale = Math.min(3, Math.max(0.2, scale * factor));
-      if (newScale === scale) return;
+  // clamp zoom step
+  const direction = Math.sign(e.deltaY);        // -1 in, +1 out
+  const factor    = direction > 0 ? 0.9 : 1.1;
+  const newScale  = Math.min(3, Math.max(0.2, scale * factor));
+  if (newScale === scale) return;
 
-      // Keep cursor “anchored” by adjusting pan as we zoom
-      panX = e.clientX - cx * newScale;
-      panY = e.clientY - cy * newScale;
-      scale = newScale;
-      applyTransform();
-    }, { passive: false });
+  // Use WRAP rect for stable math across fixed headers/sidebars
+  const wrect = wrap.getBoundingClientRect();
+
+  // Board-space coords of the cursor BEFORE zoom
+  // screenX = wrect.left + (panX + bx * scale)
+  // => bx = (clientX - wrect.left - panX) / scale
+  const bx = (e.clientX - wrect.left - panX) / scale;
+  const by = (e.clientY - wrect.top  - panY) / scale;
+
+  // Keep cursor anchored:
+  // clientX = wrect.left + (newPanX + bx * newScale)
+  // => newPanX = clientX - wrect.left - bx * newScale
+  panX = e.clientX - wrect.left - bx * newScale;
+  panY = e.clientY - wrect.top  - by * newScale;
+
+  scale = newScale;
+  applyTransform();
+}, { passive: false });
+
 
     // Middle-mouse panning (button === 1)
     let panning = false;
@@ -210,7 +221,12 @@
     handle.addEventListener('mousedown', (e)=>{
       if (e.button !== 0) return;
       dragging = true;
-      el.style.zIndex = ++zTop;
+      if (!el.classList.contains('image-widget')) {
+        el.style.zIndex = ++zTop;
+      } 
+      else {
+        el.style.zIndex = 0;  // force them to bottom
+      }
       const b = toBoardCoords(e.clientX, e.clientY);
       start = b;
       origin = { x: parseFloat(el.style.left)||0, y: parseFloat(el.style.top)||0 };
