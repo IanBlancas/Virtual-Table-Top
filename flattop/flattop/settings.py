@@ -121,3 +121,9 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# uses database to login and send to board
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/board/'      # where to go after successful login
+LOGOUT_REDIRECT_URL = '/accounts/login/'
