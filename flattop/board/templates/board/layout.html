@@ -276,7 +276,12 @@ wrap.addEventListener('wheel', (e) => {
 if (!window._flatTopCardKeyHandlerInstalled) {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Delete') {
+      // remove selected playing cards
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
+      // remove selected tokens
+      document.querySelectorAll('.token.selected').forEach(t => t.remove());
+      // prevent browser navigation on Backspace
+      if (e.key === 'Backspace') e.preventDefault();
     }
     if (e.key === 'f' || e.key === 'F') {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
@@ -555,6 +560,8 @@ Widget.builders.cards = function(props = {}) {
     cardDiv.addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+      // also deselect tokens when selecting a card
+      document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
       cardDiv.classList.add('selected');
     });
     // Deselect on board click

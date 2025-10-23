@@ -88,6 +88,7 @@
 .token .resize-handle{
   position:absolute; bottom:-5px; right:-5px; width:12px; height:12px;
   background:#004080; border:2px solid #fff; border-radius:2px; cursor:se-resize;
+  display: none; /* hidden until token is selected */
 }
 .token input.rename{
   position:absolute; bottom:-26px; left:50%; transform:translateX(-50%);
@@ -109,8 +110,17 @@
   padding: 0;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  display: none; /* hidden until token is selected */
 }
-.token:hover .close{ opacity: 1; }
+
+/* Show controls only when the token is selected */
+.token.selected .close{
+  display: block;
+  opacity: 1;
+}
+.token.selected .resize-handle{
+  display: block;
+}
 
 /* Cards widget container (reuses .widget box style) */
 .cards-widget .btnrow { display:flex; gap:8px; margin-bottom:8px; }
