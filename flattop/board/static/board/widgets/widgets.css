@@ -437,3 +437,31 @@
   background: repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #003f7f 10px, #003f7f 20px);
   color: transparent; border: 2px solid #002f5f;
 }
+/* ===== Scorecard widget ===== */
+.scorecard-widget { width: 320px; }
+.scorecard-widget .header { display:flex; align-items:center; justify-content:space-between; }
+.scorecard-widget .header .header-actions { display:flex; gap:8px; align-items:center; }
+.scorecard-widget .body { padding: 10px; }
+.scorecard-widget .rows { display:flex; flex-direction:column; gap:8px; max-height:360px; overflow:auto; }
+.scorecard-widget .score-row { display:flex; align-items:center; gap:8px; padding:6px; border:1px solid #e6e6e6; border-radius:8px; background:#fff; }
+.scorecard-widget .player-name { flex:1; font-weight:600; padding:4px 6px; border-radius:6px; cursor:text; }
+.scorecard-widget .controls { display:flex; gap:6px; align-items:center; }
+.scorecard-widget .controls button { padding:6px 8px; border:1px solid #999; background:#fff; border-radius:6px; cursor:pointer; }
+.scorecard-widget .controls input.score { width:72px; text-align:right; padding:6px 8px; border:1px solid #ccc; border-radius:6px; }
+.scorecard-widget .controls .remove { border-color:#c33; color:#c33; }
+
+/* Score table styles */
+.scorecard-widget .table-wrap { overflow:auto; max-height:320px; }
+.scorecard-widget .score-table { border-collapse: collapse; width:100%; min-width:280px; }
+.scorecard-widget th, .scorecard-widget td { border:1px solid #e6e6e6; padding:6px 8px; }
+.scorecard-widget th { background:#f6f6f6; font-weight:700; text-align:left; }
+.scorecard-widget .col-hdr, .scorecard-widget .row-hdr { cursor:text; }
+.scorecard-widget td.cell { background:#fff; text-align:right; }
+.scorecard-widget td.cell input.cell-input { width:72px; padding:6px 8px; border:1px solid #ccc; border-radius:6px; text-align:right; }
+.scorecard-widget td.selected { box-shadow: inset 0 0 0 2px #ffb700; }
+
+/* expanded variant */
+.scorecard-widget.expanded { width: 680px; }
+.scorecard-widget.expanded .table-wrap { max-height: 520px; }
+.scorecard-widget.expanded .score-table { min-width: 560px; }
+
