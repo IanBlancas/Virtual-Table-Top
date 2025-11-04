@@ -35,6 +35,15 @@ body {
   cursor: pointer;
 }
 
+/* Make sidebar menu buttons fill the sidebar width
+   up to the widget width so they align visually with widgets. */
+.sidebar .file .menubtn,
+.sidebar .menubtn {
+  width: 100%;
+  max-width: 290px; /* match default widget width */
+  box-sizing: border-box;
+}
+
 
 .dropdown { position: relative; }
 .dropdown-content{
@@ -43,10 +52,21 @@ body {
   top: 100%; left: 0;
   min-width: 160px;
   padding: 8px;
-  background: var(--bg-menu);
-  border: 1px solid var(--border);
+  /* Provide sensible fallbacks so dropdowns are visible even if CSS variables
+     aren't defined in the current theme. */
+  background: var(--bg-menu, #ffffff);
+  color: var(--text, #111);
+  border: 1px solid var(--border, #ddd);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
   border-radius: 8px;
   z-index: 20;
+}
+
+/* Cards dropdown should match widget width and stay inside the sidebar */
+.dropdown-content.cards-menu {
+  width: 260px;           /* match default widget width */
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
 }
 .dropdown:hover .dropdown-content,
 .dropdown:focus-within .dropdown-content {

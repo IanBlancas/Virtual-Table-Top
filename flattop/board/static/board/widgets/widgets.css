@@ -80,10 +80,15 @@
   display:flex; align-items:center; justify-content:center;
   color:#fff; font-weight:bold; user-select:none;
 }
-.token.selected{ outline:3px dashed #ff3b30; outline-offset:2px; }
+.token.selected{
+  box-shadow: 0 0 0 4px #ffb700, 0 6px 18px rgba(0,0,0,0.25);
+  z-index: 1000;
+  transform: scale(1.08);
+ }
 .token .resize-handle{
   position:absolute; bottom:-5px; right:-5px; width:12px; height:12px;
   background:#004080; border:2px solid #fff; border-radius:2px; cursor:se-resize;
+  display: none; /* hidden until token is selected */
 }
 .token input.rename{
   position:absolute; bottom:-26px; left:50%; transform:translateX(-50%);
@@ -105,12 +110,64 @@
   padding: 0;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  display: none; /* hidden until token is selected */
 }
-.token:hover .close{ opacity: 1; }
+
+/* Show controls only when the token is selected */
+.token.selected .close{
+  display: block;
+  opacity: 1;
+}
+.token.selected .resize-handle{
+  display: block;
+}
 
 /* Cards widget container (reuses .widget box style) */
 .cards-widget .btnrow { display:flex; gap:8px; margin-bottom:8px; }
 .cards-widget .count { font-size:12px; color:#555; margin-bottom:6px; }
+
+/* make buttons in widget button rows uniform height */
+.btnrow button {
+  /* slightly shorter buttons for a tighter UI */
+  min-height: 28px;
+  height: 28px;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
+/* Flip button */
+.btnrow button.flip {
+  min-width: 61px; 
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+/* keep other buttons compact but allow them to size to their text */
+.btnrow button:not(.flip) {
+  min-width: 30px;
+}
+
+/* custom cards textarea styling */
+.cards-widget textarea.card-defs{
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.cards-widget .card-size-controls input[type="number"]{
+  font-size: 13px;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
 
 /* A single playing card (inspired by stnd_card_widget.css) */
 .cards-widget .playing-card{
@@ -140,6 +197,7 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   overflow:visible;           /* clip image to rounded corners */
   user-select:none;
+  z-index:1;
 }
 .image-widget .image{
   width:100%;
@@ -360,4 +418,50 @@
 }
 
 .counters-widget .small-hint { font-size: 12px; color: #666; margin-top: 6px; }
+
+/* A single playing card (inspired by stnd_card_widget.css) */
+.cards-widget .playing-card{
+  width: 80px; height: 120px;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 10px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+  display:flex; align-items:center; justify-content:center;
+  font-size: 28px; font-weight: 700;
+  user-select:none;
+}
+.cards-widget .playing-card.red{ color: #d00; }
+
+/* optional “back” state */
+.cards-widget .playing-card.back{
+  background: repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #003f7f 10px, #003f7f 20px);
+  color: transparent; border: 2px solid #002f5f;
+}
+/* ===== Scorecard widget ===== */
+.scorecard-widget { width: 320px; }
+.scorecard-widget .header { display:flex; align-items:center; justify-content:space-between; }
+.scorecard-widget .header .header-actions { display:flex; gap:8px; align-items:center; }
+.scorecard-widget .body { padding: 10px; }
+.scorecard-widget .rows { display:flex; flex-direction:column; gap:8px; max-height:360px; overflow:auto; }
+.scorecard-widget .score-row { display:flex; align-items:center; gap:8px; padding:6px; border:1px solid #e6e6e6; border-radius:8px; background:#fff; }
+.scorecard-widget .player-name { flex:1; font-weight:600; padding:4px 6px; border-radius:6px; cursor:text; }
+.scorecard-widget .controls { display:flex; gap:6px; align-items:center; }
+.scorecard-widget .controls button { padding:6px 8px; border:1px solid #999; background:#fff; border-radius:6px; cursor:pointer; }
+.scorecard-widget .controls input.score { width:72px; text-align:right; padding:6px 8px; border:1px solid #ccc; border-radius:6px; }
+.scorecard-widget .controls .remove { border-color:#c33; color:#c33; }
+
+/* Score table styles */
+.scorecard-widget .table-wrap { overflow:auto; max-height:320px; }
+.scorecard-widget .score-table { border-collapse: collapse; width:100%; min-width:280px; }
+.scorecard-widget th, .scorecard-widget td { border:1px solid #e6e6e6; padding:6px 8px; }
+.scorecard-widget th { background:#f6f6f6; font-weight:700; text-align:left; }
+.scorecard-widget .col-hdr, .scorecard-widget .row-hdr { cursor:text; }
+.scorecard-widget td.cell { background:#fff; text-align:right; }
+.scorecard-widget td.cell input.cell-input { width:72px; padding:6px 8px; border:1px solid #ccc; border-radius:6px; text-align:right; }
+.scorecard-widget td.selected { box-shadow: inset 0 0 0 2px #ffb700; }
+
+/* expanded variant */
+.scorecard-widget.expanded { width: 680px; }
+.scorecard-widget.expanded .table-wrap { max-height: 520px; }
+.scorecard-widget.expanded .score-table { min-width: 560px; }
 

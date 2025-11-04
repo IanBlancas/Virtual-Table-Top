@@ -24,7 +24,7 @@
                         <a href="#">first</a>
                         <a href="#">second</a>
                         <a href="#">third</a>
-                        <a href="#">4th</a>
+                        <a href="#">fourth</a>
                     </div>
                 </div>
 
@@ -34,7 +34,7 @@
                         <a href="#">first</a>
                         <a href="#">second</a>
                         <a href="#">third</a>
-                        <a href="#">4th</a>
+                        <a href="#">fourth</a>
                     </div>
                 </div>
 
@@ -44,7 +44,7 @@
                         <a href="#">first</a>
                         <a href="#">second</a>
                         <a href="#">third</a>
-                        <a href="#">4th</a>
+                        <a href="#">fourth</a>
                     </div>
                 </div>
 
@@ -54,7 +54,7 @@
                         <a href="#">first</a>
                         <a href="#">second</a>
                         <a href="#">third</a>
-                        <a href="#">4th</a>
+                        <a href="#">fourth</a>
                     </div>
                 </div>
 
@@ -64,7 +64,7 @@
                         <a href="#">first</a>
                         <a href="#">second</a>
                         <a href="#">third</a>
-                        <a href="#">4th</a>
+                        <a href="#">fourth</a>
                     </div>
                 </div>
             </div>
@@ -80,16 +80,25 @@
 
     <aside class="sidebar">
         <h2>Widgets</h2>
-        <div class="widget-list">
-            <button id = "diceBtn">Dice</button>
-            <button id = "cardsBtn">Cards</button>
-            <button id = "tokenBtn">Tokens</button>
-            <button id = "counterBtn">Counters</button>
-            <button id = "soundBtn">Soundboard</button>
-            <button>Boards</button>
-            <button>Rules</button>
-            <button>Favorites</button>
+    <div class="widget-list">
+      <button id = "diceBtn">Dice</button>
+
+      <div class="file dropdown">
+        <button class="menubtn">Cards</button>
+        <div class="dropdown-content cards-menu">
+          <a href="#" id="cardsDeckBtn">Standard Card Deck</a>
+          <a href="#" id="cardsCustomBtn">Custom Card Deck</a>
         </div>
+      </div>
+
+      <button id = "tokenBtn">Tokens</button>
+      <button id = "counterBtn">Counters</button>
+  <button id = "scoreBtn">Scorecard</button>
+      <button id = "soundBtn">Soundboard</button>
+      <button>Boards</button>
+      <button>Rules</button>
+      <button>Favorites</button>
+    </div>
     </aside>
 
     <main class="mainBoard">
@@ -131,24 +140,35 @@
     applyTransform();
 
     // Mouse wheel zoom around cursor
-    wrap.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const rect = board.getBoundingClientRect();
-      // Cursor position relative to board’s current transform
-      const cx = (e.clientX - rect.left) / scale;
-      const cy = (e.clientY - rect.top)  / scale;
+    // Replace your current wheel handler with this:
+wrap.addEventListener('wheel', (e) => {
+  e.preventDefault();
 
-      const direction = Math.sign(e.deltaY);        // -1 up (zoom in), +1 down (zoom out)
-      const factor = direction > 0 ? 0.9 : 1.1;     // zoom step
-      const newScale = Math.min(3, Math.max(0.2, scale * factor));
-      if (newScale === scale) return;
+  // clamp zoom step
+  const direction = Math.sign(e.deltaY);        // -1 in, +1 out
+  const factor    = direction > 0 ? 0.9 : 1.1;
+  const newScale  = Math.min(3, Math.max(0.2, scale * factor));
+  if (newScale === scale) return;
 
-      // Keep cursor “anchored” by adjusting pan as we zoom
-      panX = e.clientX - cx * newScale;
-      panY = e.clientY - cy * newScale;
-      scale = newScale;
-      applyTransform();
-    }, { passive: false });
+  // Use WRAP rect for stable math across fixed headers/sidebars
+  const wrect = wrap.getBoundingClientRect();
+
+  // Board-space coords of the cursor BEFORE zoom
+  // screenX = wrect.left + (panX + bx * scale)
+  // => bx = (clientX - wrect.left - panX) / scale
+  const bx = (e.clientX - wrect.left - panX) / scale;
+  const by = (e.clientY - wrect.top  - panY) / scale;
+
+  // Keep cursor anchored:
+  // clientX = wrect.left + (newPanX + bx * newScale)
+  // => newPanX = clientX - wrect.left - bx * newScale
+  panX = e.clientX - wrect.left - bx * newScale;
+  panY = e.clientY - wrect.top  - by * newScale;
+
+  scale = newScale;
+  applyTransform();
+}, { passive: false });
+
 
     // Middle-mouse panning (button === 1)
     let panning = false;
@@ -210,7 +230,12 @@
     handle.addEventListener('mousedown', (e)=>{
       if (e.button !== 0) return;
       dragging = true;
-      el.style.zIndex = ++zTop;
+      if (!el.classList.contains('image-widget')) {
+        el.style.zIndex = ++zTop;
+      } 
+      else {
+        el.style.zIndex = 0;  // force them to bottom
+      }
       const b = toBoardCoords(e.clientX, e.clientY);
       start = b;
       origin = { x: parseFloat(el.style.left)||0, y: parseFloat(el.style.top)||0 };
@@ -245,6 +270,28 @@
       return el;
     }
   };
+
+// Global keydown for delete and flip (installed once so it works even if the
+// standard Cards widget hasn't been created). Uses the same semantics as the
+// original handler: Delete removes selected cards, F flips selected cards.
+if (!window._flatTopCardKeyHandlerInstalled) {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Delete') {
+      // remove selected playing cards
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
+      // remove selected tokens
+      document.querySelectorAll('.token.selected').forEach(t => t.remove());
+      // prevent browser navigation on Backspace
+      if (e.key === 'Backspace') e.preventDefault();
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
+        if (typeof c.flipCard === 'function') c.flipCard();
+      });
+    }
+  });
+  window._flatTopCardKeyHandlerInstalled = true;
+}
 
   // ===== Dice Roller widget =====
   Widget.builders.dice = function(props={}){
@@ -407,17 +454,23 @@ Widget.builders.token = function(props = {}) {
   // ===== Hook the sidebar buttons =====
   diceBtn.addEventListener('click', ()=> Widget.create('dice', 0, 0));
   tokenBtn.addEventListener('click', ()=> Widget.create('token', 0, 0));
-  cardsBtn.addEventListener('click', () => Widget.create('cards', 0, 0));
+  const scoreBtn = document.getElementById('scoreBtn');
+  scoreBtn.addEventListener('click', ()=> Widget.create('scorecard', 0, 0));
+  // new dropdown menu items
+  const cardsDeckBtn = document.getElementById('cardsDeckBtn');
+  const cardsCustomBtn = document.getElementById('cardsCustomBtn');
+  cardsDeckBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('cards', 0, 0); });
+  cardsCustomBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('customCards', 0, 0); });
   const soundBtn = document.getElementById('soundBtn');
   soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
 
-  // ===== Cards widget (deck draw / shuffle / reset) =====
+  // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
   el.innerHTML = `
     <div class="header">
-      <div>🃏 Cards</div>
+      <div>🃏 Standard Card Deck</div>
       <button class="close" title="Remove">&times;</button>
     </div>
     <div class="body">
@@ -428,7 +481,10 @@ Widget.builders.cards = function(props = {}) {
         <button class="flip">Flip</button>
       </div>
       <div class="count"></div>
-      <div class="playing-card back" aria-label="card"></div>
+      <div class="playing-card back" aria-label="card" style="width:80px;height:120px;"></div>
+      <div class="widget-footer-note muted">
+        Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
+      </div>
     </div>
   `;
 
@@ -441,7 +497,7 @@ Widget.builders.cards = function(props = {}) {
     { sym: "♣", color: "black" },
     { sym: "♦", color: "red"   },
   ];
-  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]; // :contentReference[oaicite:3]{index=3}
+  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
   function buildDeck(){ const d=[]; for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s.sym, color:s.color}); return d; }
   function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 
@@ -451,33 +507,95 @@ Widget.builders.cards = function(props = {}) {
 
   const cardEl = el.querySelector('.playing-card');
   const countEl = el.querySelector('.count');
+  const flipBtn = el.querySelector('.flip');
+
+  function updateFlipUi() {
+    if (flipBtn) flipBtn.textContent = showBack ? 'Flip: On' : 'Flip: Off';
+  }
 
   function renderTop() {
-    countEl.textContent = `Deck: ${deck.length}  |  Discard: ${discard.length}`;
+    countEl.textContent = `Deck: ${deck.length}`;
     if (showBack) {
       cardEl.classList.add('back');
       cardEl.textContent = '';
       cardEl.classList.remove('red');
-      return;
+    } else {
+      cardEl.classList.remove('back');
+      if (deck.length === 0) {
+        cardEl.textContent = '';
+        cardEl.classList.remove('red');
+      } else {
+        cardEl.textContent = 'A♠'; // Default face for deck (front)
+        cardEl.classList.remove('red');
+      }
     }
-    cardEl.classList.remove('back');
-    if (discard.length === 0) { cardEl.textContent = ''; cardEl.classList.remove('red'); return; }
-    const top = discard[discard.length - 1];
-    cardEl.textContent = `${top.rank}${top.suit}`;
-    cardEl.classList.toggle('red', top.color === 'red'); // hearts/diamonds in red :contentReference[oaicite:4]{index=4}
+    updateFlipUi();
   }
+
+  // Helper to create a draggable card on the board
+  function createDraggableCard(card, x, y) {
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'playing-card draggable';
+    cardDiv.style.position = 'absolute';
+    cardDiv.style.left = snap(x) + 'px';
+    cardDiv.style.top = snap(y) + 'px';
+    cardDiv.style.width = '40px';
+    cardDiv.style.height = '60px';
+    cardDiv.style.zIndex = 9999;
+    // Store card data and flip state on the element
+    cardDiv._cardData = card;
+    cardDiv._flipped = showBack;
+    function renderCardFace() {
+      if (cardDiv._flipped) {
+        cardDiv.classList.add('back');
+        cardDiv.textContent = '';
+        cardDiv.classList.remove('red');
+      } else {
+        cardDiv.classList.remove('back');
+        cardDiv.textContent = `${card.rank}${card.suit}`;
+        if (card.color === 'red') cardDiv.classList.add('red');
+        else cardDiv.classList.remove('red');
+      }
+    }
+    renderCardFace();
+    makeDraggable(cardDiv, cardDiv);
+    // Selection logic
+    cardDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+      // also deselect tokens when selecting a card
+      document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+      cardDiv.classList.add('selected');
+    });
+    // Deselect on board click
+    board.addEventListener('click', () => {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+    });
+    // Flip on 'f' key
+    cardDiv.flipCard = function() {
+      cardDiv._flipped = !cardDiv._flipped;
+      renderCardFace();
+    };
+    board.appendChild(cardDiv);
+  }
+
+
 
   // buttons
   el.querySelector('.draw').addEventListener('click', () => {
     if (deck.length === 0) return; // empty
     const card = deck.pop();
+    // Get widget position relative to board
+    const widgetRect = el.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+    const x = widgetRect.left - boardRect.left + 100; // offset so card doesn't overlap widget
+    const y = widgetRect.top - boardRect.top;
+    createDraggableCard(card, x, y);
     discard.push(card);
-    showBack = false;
-    renderTop();
+    renderTop(); // keep showBack state
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
-    // shuffle remaining deck in place
     deck = shuffle(deck);
     renderTop();
   });
@@ -491,13 +609,146 @@ Widget.builders.cards = function(props = {}) {
 
   el.querySelector('.flip').addEventListener('click', () => {
     showBack = !showBack;
+    updateFlipUi();
     renderTop();
   });
 
-  // click card to draw (nice UX)
+  // click card to draw
   cardEl.addEventListener('click', () => el.querySelector('.draw').click());
 
   renderTop();
+  return el;
+};
+
+// ===== Custom Cards widget (simple custom-deck with a text area to define cards) =====
+Widget.builders.customCards = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget cards-widget';
+  el.innerHTML = `
+    <div class="header">
+      <div>🃏 Custom Card Deck</div>
+      <button class="close" title="Remove">&times;</button>
+    </div>
+    <div class="body">
+      <div class="btnrow">
+        <button class="draw">Draw</button>
+        <button class="shuffle">Shuffle</button>
+        <button class="reset">Reset</button>
+        <button class="flip">Flip</button>
+      </div>
+      <div class="count"></div>
+      <div class="muted small-hint">Define one card per line in the box below.</div>
+      <div class="card-size-controls" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+        <label style="font-size:13px;">W:<input type="number" class="card-width" value="60" min="10" style="width:72px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;"/></label>
+        <label style="font-size:13px;">H:<input type="number" class="card-height" value="90" min="10" style="width:72px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;"/></label>
+        <div style="font-size:12px;color:#666;margin-left:6px;">px</div>
+      </div>
+      <textarea class="card-defs" style="width:100%;height:100px;margin-top:8px;border:1px solid #ccc;border-radius:6px;padding:6px;" placeholder="Ace of Spades\nTwo of Hearts\n...">${(props.defs||'').toString()}</textarea>
+    <div class="widget-footer-note muted">
+        Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
+      </div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  let cards = [];
+  let showBack = false; // whether newly drawn cards should start face-down
+  const countEl = el.querySelector('.count');
+  const defs = el.querySelector('.card-defs');
+
+  function buildFromDefs(){
+    const lines = defs.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    cards = lines.map(l => ({ label: l }));
+  }
+  function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+  function renderCount(){ countEl.textContent = `Deck: ${cards.length}`; }
+
+  // actions
+  el.querySelector('.draw').addEventListener('click', () => {
+    if (cards.length === 0) return;
+    const card = cards.pop();
+    const widgetRect = el.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+    const x = widgetRect.left - boardRect.left + 100;
+    const y = widgetRect.top - boardRect.top;
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'playing-card draggable';
+    cardDiv.style.position = 'absolute';
+    cardDiv.style.left = snap(x) + 'px';
+    cardDiv.style.top = snap(y) + 'px';
+    // use configured size values (fallbacks: 60x90)
+    const w = parseInt((el.querySelector('.card-width')?.value) || '60', 10) || 60;
+    const h = parseInt((el.querySelector('.card-height')?.value) || '90', 10) || 90;
+    cardDiv.style.width = w + 'px';
+    cardDiv.style.height = h + 'px';
+    cardDiv.style.zIndex = 9999;
+    // store card data and flip state similar to the standard deck cards
+    cardDiv._cardData = card;
+  cardDiv._flipped = !!showBack; // default to current showBack setting
+
+    function renderCardFace() {
+      if (cardDiv._flipped) {
+        cardDiv.classList.add('back');
+        cardDiv.textContent = '';
+        cardDiv.classList.remove('red');
+      } else {
+        cardDiv.classList.remove('back');
+        cardDiv.textContent = card.label;
+        cardDiv.classList.remove('red');
+      }
+    }
+    renderCardFace();
+
+    makeDraggable(cardDiv, cardDiv);
+
+    // Selection logic (single-select)
+    cardDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+      cardDiv.classList.add('selected');
+    });
+    // Deselect on board click
+    board.addEventListener('click', () => {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+    });
+
+    // flip method used by global key handler
+    cardDiv.flipCard = function() {
+      cardDiv._flipped = !cardDiv._flipped;
+      renderCardFace();
+    };
+
+    board.appendChild(cardDiv);
+    renderCount();
+  });
+
+  el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); });
+  el.querySelector('.reset').addEventListener('click', () => { buildFromDefs(); shuffleArr(cards); renderCount(); });
+
+  // flip button toggles whether new cards come out face-down (and updates preview)
+  const flipBtn = el.querySelector('.flip');
+  function updateFlipUi() {
+    flipBtn.textContent = showBack ? 'Flip: On' : 'Flip: Off';
+  }
+  flipBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    showBack = !showBack;
+    updateFlipUi();
+  });
+  updateFlipUi();
+
+  // live update when defs change
+  defs.addEventListener('blur', () => { buildFromDefs(); renderCount(); });
+  defs.addEventListener('keydown', (e)=>{ if (e.key==='Escape') defs.blur(); });
+
+  // init
+  buildFromDefs(); shuffleArr(cards); renderCount();
+
+  // close
+  el.querySelector('.close').addEventListener('click', ()=> el.remove());
+
   return el;
 };
 
@@ -582,6 +833,132 @@ Widget.builders.counters = function(props = {}) {
     e.stopPropagation();
     createRow({});
   });
+
+  return el;
+};
+
+// ===== Scorecard widget =====
+Widget.builders.scorecard = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget scorecard-widget';
+  el.innerHTML = `
+    <div class="header">
+      <div>🏆 Scorecard</div>
+      <div class="header-actions">
+        <button class="add-row" title="Add row">＋Row</button>
+        <button class="add-col" title="Add column">＋Col</button>
+        <button class="expand" title="Expand">⤢</button>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+    </div>
+    <div class="body">
+      <div class="table-wrap">
+        <table class="score-table" cellspacing="0" cellpadding="0"></table>
+      </div>
+      <div class="muted small-hint">Double-click a header to rename. Hold shift to adjust by 5.</div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  const tbl = el.querySelector('.score-table');
+  const addRowBtn = el.querySelector('.add-row');
+  const addColBtn = el.querySelector('.add-col');
+  const close = el.querySelector('.close');
+  // keyboard handler: Shift+ArrowUp/ArrowDown adjusts selected cell by ±5
+  const _scoreKeyHandler = (e) => {
+    if (!e.shiftKey) return;
+    if (e.key === 'ArrowUp') { e.preventDefault(); adjustSelected(5); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); adjustSelected(-5); }
+  };
+  window.addEventListener('keydown', _scoreKeyHandler);
+  close.addEventListener('click', (e) => { e.stopPropagation(); window.removeEventListener('keydown', _scoreKeyHandler); el.remove(); });
+  const expandBtn = el.querySelector('.expand');
+  expandBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    el.classList.toggle('expanded');
+    expandBtn.textContent = el.classList.contains('expanded') ? '⤡' : '⤢';
+  });
+
+  // internal state: number of rows & cols (excluding header row/col)
+  let rows = Math.max(1, (props.rowsCount || 2));
+  let cols = Math.max(1, (props.colsCount || 2));
+  let selectedCell = null; // {r,c,el}
+
+  function buildTable() {
+    // clear
+    tbl.innerHTML = '';
+
+    // header row (top-left empty cell + column headers)
+    const thead = document.createElement('tr');
+    thead.className = 'hdr-row';
+    thead.appendChild(document.createElement('th')); // empty corner
+    for (let c = 0; c < cols; c++) {
+      const th = document.createElement('th');
+      th.className = 'col-hdr';
+      th.dataset.c = c;
+      th.textContent = (props.colLabels && props.colLabels[c]) || `Col ${c+1}`;
+      th.addEventListener('dblclick', (e)=> { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
+      th.addEventListener('blur', ()=> { th.contentEditable = 'false'; });
+      thead.appendChild(th);
+    }
+    tbl.appendChild(thead);
+
+    // body rows
+    for (let r = 0; r < rows; r++) {
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      // row header
+      const th = document.createElement('th');
+      th.className = 'row-hdr';
+      th.dataset.r = r;
+      th.textContent = (props.rowLabels && props.rowLabels[r]) || `Row ${r+1}`;
+      th.addEventListener('dblclick', (e)=> { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
+      th.addEventListener('blur', ()=> { th.contentEditable = 'false'; });
+      tr.appendChild(th);
+
+      for (let c = 0; c < cols; c++) {
+        const td = document.createElement('td');
+        td.className = 'cell';
+        td.dataset.r = r; td.dataset.c = c;
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.className = 'cell-input';
+        inp.value = (props.values && props.values[`${r},${c}`]) ?? 0;
+        inp.addEventListener('mousedown', (ev)=> ev.stopPropagation());
+        inp.addEventListener('click', (ev)=> { ev.stopPropagation(); selectCell(td); inp.focus(); });
+  inp.addEventListener('keydown', (ev)=> { if (ev.key === 'Enter') { inp.blur(); ev.stopPropagation(); } });
+        td.appendChild(inp);
+        tr.appendChild(td);
+      }
+      tbl.appendChild(tr);
+    }
+  }
+
+  function selectCell(td) {
+    if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected');
+    selectedCell = { r: parseInt(td.dataset.r,10), c: parseInt(td.dataset.c,10), el: td };
+    td.classList.add('selected');
+  }
+
+  function addRow() { rows++; buildTable(); }
+  function addCol() { cols++; buildTable(); }
+  function adjustSelected(delta) {
+    if (!selectedCell) return;
+    const td = selectedCell.el;
+    const inp = td.querySelector('.cell-input');
+    const cur = parseInt(inp.value || 0, 10);
+    inp.value = cur + delta;
+  }
+
+  addRowBtn.addEventListener('click', (e)=> { e.stopPropagation(); addRow(); });
+  addColBtn.addEventListener('click', (e)=> { e.stopPropagation(); addCol(); });
+
+  // click outside clears selection
+  board.addEventListener('click', ()=> { if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected'); selectedCell = null; });
+
+  // initialize
+  buildTable();
 
   return el;
 };
