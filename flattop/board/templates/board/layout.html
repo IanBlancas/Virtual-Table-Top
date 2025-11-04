@@ -349,13 +349,49 @@ if (!window._flatTopCardKeyHandlerInstalled) {
   // ===== Token widget (simple circular token with resize handle and x) =====
 Widget.builders.token = function(props = {}) {
   const token = document.createElement('div');
-  token.className = 'token';
+  token.className = 'token circle'; // default circle; we’ll support square
+
+  // apply initial shape if provided
+  if (props.shape === 'square') token.classList.replace('circle','square');
 
   // size & initial label
   const size = props.size || 40;
   token.style.width  = size + 'px';
   token.style.height = size + 'px';
   token.textContent  = (props.label || 'Token'); // put text node first
+
+  // if created with an image URL, set it
+  if (props.image) {
+    token.style.backgroundImage = `url("${props.image}")`;
+    token.classList.add('has-image');
+  }
+
+  // --- image drop helpers ---
+  function extractUrlFromDataTransfer(dt) {
+    // Prefer standard URI list (dragged from another tab)
+    const uriList = dt.getData('text/uri-list');
+    if (uriList) {
+      const first = uriList.split('\n').find(line => line && !line.startsWith('#'));
+      if (first) return first.trim();
+    }
+    // Fallback: some browsers put the URL in plain text
+    const plain = dt.getData('text/plain');
+    if (plain && /^https?:\/\//i.test(plain.trim())) return plain.trim();
+    return null;
+  }
+
+  async function setTokenImageFromFile(file) {
+    // For single-user/local: object URL. For multi-user persistence, swap this for an upload flow.
+    const blobUrl = URL.createObjectURL(file);
+    token.style.backgroundImage = `url("${blobUrl}")`;
+    token.classList.add('has-image');
+  }
+
+  function setTokenImageFromUrl(url) {
+    token.style.backgroundImage = `url("${url}")`;
+    token.classList.add('has-image');
+  }
+
 
   // resize handle
   const handle = document.createElement('div');
@@ -371,6 +407,85 @@ Widget.builders.token = function(props = {}) {
     e.stopPropagation();   // don’t start drag/select
     token.remove();
   });
+
+  // Make the token accept image drops *and* stop the event from reaching the board
+token.addEventListener('dragenter', (e) => {
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const hasImgFile = Array.from(dt.items || [])
+    .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
+  const maybeUrl = extractUrlFromDataTransfer(dt);
+  if (hasImgFile || maybeUrl) {
+    e.preventDefault();
+    e.stopPropagation();            // <-- important
+    token.classList.add('drop-target');
+  }
+});
+
+token.addEventListener('dragover', (e) => {
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const hasImgFile = Array.from(dt.items || [])
+    .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
+  const maybeUrl = extractUrlFromDataTransfer(dt);
+  if (hasImgFile || maybeUrl) {
+    e.preventDefault();
+    e.stopPropagation();            // <-- important
+    token.classList.add('drop-target');
+    if (dt.dropEffect) dt.dropEffect = 'copy';
+  }
+});
+
+token.addEventListener('dragleave', (e) => {
+  e.stopPropagation();              // <-- so board doesn't “un-highlight” itself
+  token.classList.remove('drop-target');
+});
+
+token.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  e.stopPropagation();              // <-- critical: keep board handler from firing
+  token.classList.remove('drop-target');
+
+  const dt = e.dataTransfer;
+  if (!dt) return;
+
+  if (dt.files && dt.files.length) {
+    const file = dt.files[0];
+    if (file && file.type && file.type.startsWith('image/')) {
+      await setTokenImageFromFile(file);
+      return;
+    }
+  }
+  const url = extractUrlFromDataTransfer(dt);
+  if (url) {
+    setTokenImageFromUrl(url);
+  }
+});
+
+
+
+  // shape toggle (◯ / ◻)
+  const shapeBtn = document.createElement('button');
+  shapeBtn.className = 'shape';
+  shapeBtn.title = 'Toggle shape (circle/square)';
+  shapeBtn.textContent = '◯';
+  token.appendChild(shapeBtn);
+
+  function refreshShapeIcon() {
+    shapeBtn.textContent = token.classList.contains('square') ? '◻' : '◯';
+  }
+  refreshShapeIcon();
+
+  shapeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (token.classList.contains('square')) {
+      token.classList.replace('square','circle');
+    } else {
+      token.classList.replace('circle','square');
+    }
+    refreshShapeIcon();
+  });
+
 
   // dragging (use the whole token as handle)
   makeDraggable(token, token);
@@ -422,14 +537,17 @@ Widget.builders.token = function(props = {}) {
     // so we will re-append them immediately after adding the input.
     token.textContent = '';
     token.appendChild(input);
-    token.appendChild(handle);  // re-attach
-    token.appendChild(close);   // re-attach
+    token.appendChild(handle);
+    token.appendChild(close);
+    token.appendChild(shapeBtn);
+
 
     input.focus();
     input.addEventListener('blur', () => {
       token.textContent = input.value || 'Token'; // put label back as text node
       token.appendChild(handle);                  // re-attach again
       token.appendChild(close);
+      token.appendChild(shapeBtn);
     });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') input.blur();
@@ -636,14 +754,23 @@ Widget.builders.customCards = function(props = {}) {
         <button class="reset">Reset</button>
         <button class="flip">Flip</button>
       </div>
-      <div class="count"></div>
-      <div class="muted small-hint">Define one card per line in the box below.</div>
-      <div class="card-size-controls" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+    <div class="count"></div>
+  <div class="card-size-controls" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
         <label style="font-size:13px;">W:<input type="number" class="card-width" value="60" min="10" style="width:72px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;"/></label>
         <label style="font-size:13px;">H:<input type="number" class="card-height" value="90" min="10" style="width:72px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;"/></label>
         <div style="font-size:12px;color:#666;margin-left:6px;">px</div>
       </div>
-      <textarea class="card-defs" style="width:100%;height:100px;margin-top:8px;border:1px solid #ccc;border-radius:6px;padding:6px;" placeholder="Ace of Spades\nTwo of Hearts\n...">${(props.defs||'').toString()}</textarea>
+
+      <div class="card-uploader" style="margin-top:8px;">
+        <label style="display:block;margin-bottom:6px;">Upload images: <input type="file" class="card-images-input" accept="image/*" multiple/></label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <button class="toggle-list" type="button" style="font-size:12px;padding:4px 8px;">Hide list</button>
+          <div class="muted" style="font-size:12px;">Toggle uploaded files list</div>
+        </div>
+        <div class="card-list" style="display:flex;flex-direction:column;gap:6px; margin-top:6px; max-height:220px; overflow:auto;"></div>
+  <div class="muted small-hint" style="font-size:12px;">Define one card per line in the box below.</div>
+        <textarea class="card-defs" style="width:100%;height:80px;margin-top:8px;border:1px solid #ccc;border-radius:6px;padding:6px;" placeholder="Ace of Spades\nTwo of Hearts\n...">${(props.defs||'').toString()}</textarea>
+      </div>
     <div class="widget-footer-note muted">
         Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
       </div>
@@ -653,17 +780,163 @@ Widget.builders.customCards = function(props = {}) {
   makeDraggable(el, el.querySelector('.header'));
 
   let cards = [];
+  // persist uploaded images separately so Reset can fully rebuild the deck
+  // even after some cards have been drawn/removed from `cards`.
+  let uploadedImageCards = [];
   let showBack = false; // whether newly drawn cards should start face-down
   const countEl = el.querySelector('.count');
   const defs = el.querySelector('.card-defs');
+  const fileInput = el.querySelector('.card-images-input');
+  const cardListEl = el.querySelector('.card-list');
+  const toggleListBtn = el.querySelector('.toggle-list');
+
+  // Make list collapsible and bounded in height to avoid huge widgets
+  if (toggleListBtn) {
+    toggleListBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (cardListEl.style.display === 'none') {
+        cardListEl.style.display = 'flex';
+        toggleListBtn.textContent = 'Hide list';
+      } else {
+        cardListEl.style.display = 'none';
+        toggleListBtn.textContent = 'Show list';
+      }
+    });
+  }
+
+  // CSRF helper for safe POSTs
+  function getCookie(name) {
+    const v = document.cookie.split(';').map(c => c.trim()).filter(c => c.startsWith(name + '='));
+    if (v.length === 0) return null;
+    return decodeURIComponent(v[0].split('=')[1]);
+  }
+
+  async function uploadFile(file) {
+    const fd = new FormData();
+    fd.append('image', file);
+    const res = await fetch('/board/api/upload_card_image/', {
+      method: 'POST',
+      body: fd,
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken') || ''
+      }
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Upload failed: ${res.status} ${txt}`);
+    }
+    const j = await res.json();
+    return j.url;
+  }
 
   function buildFromDefs(){
+    // parse the textarea for plain-label cards
     const lines = defs.value.split('\n').map(s=>s.trim()).filter(Boolean);
-    cards = lines.map(l => ({ label: l }));
+    // use the persistent uploadedImageCards (not the current `cards` which may have been drawn)
+    const imageCards = uploadedImageCards.slice();
+    const labelCards = lines.map(l => ({ label: l }));
+    cards = imageCards.concat(labelCards);
+  }
+
+  // Reset the deck to the current uploaded images + textarea definitions
+  // (reconstructs the deck even if cards were previously drawn)
+  function resetToDefs() {
+    buildFromDefs();
+    renderCardsList();
+    renderCount();
+  }
+
+  function renderCardsList(){
+    cardListEl.innerHTML = '';
+    cards.forEach((c, idx) => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '8px';
+
+  const thumb = document.createElement('div');
+  thumb.style.width = '48px';
+  thumb.style.height = '36px';
+  // prevent the thumbnail box from shrinking when there's a scrollbar
+  thumb.style.flex = '0 0 48px';
+  thumb.style.background = '#f6f6f6';
+  thumb.style.display = 'flex';
+  thumb.style.alignItems = 'center';
+  thumb.style.justifyContent = 'center';
+  thumb.style.border = '1px solid #ddd';
+      if (c.image) {
+  const img = document.createElement('img');
+  img.src = c.image;
+  // use max-width / max-height + object-fit to preserve aspect ratio and avoid distortion
+  img.style.maxWidth = '100%';
+  img.style.maxHeight = '100%';
+  img.style.objectFit = 'contain';
+  img.draggable = false;
+  thumb.style.overflow = 'hidden';
+  thumb.appendChild(img);
+      } else {
+        thumb.textContent = c.label || 'Text';
+        thumb.style.fontSize = '12px';
+        thumb.style.padding = '4px';
+      }
+
+  const label = document.createElement('input');
+  label.type = 'text'; label.value = c.label || '';
+  label.style.flex = '1';
+  // allow the input to shrink when the container is narrow (prevents pushing/shrinking the thumb)
+  label.style.minWidth = '0';
+      label.addEventListener('change', () => { c.label = label.value; });
+
+      const remove = document.createElement('button'); remove.innerHTML = '🗑'; remove.title = 'Remove'; remove.className = 'trash'; remove.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        // If this item is an uploaded image, remove from uploadedImageCards; otherwise remove from textarea defs
+        if (c.image) {
+          const i = uploadedImageCards.findIndex(ic => ic.image === c.image && ic.label === c.label);
+          if (i !== -1) uploadedImageCards.splice(i, 1);
+        } else {
+          // remove the corresponding label line
+          const lines = defs.value.split('\n').map(s=>s.trim()).filter(Boolean);
+          const imageCount = uploadedImageCards.length;
+          const labelIndex = idx - imageCount;
+          if (labelIndex >= 0 && labelIndex < lines.length) {
+            lines.splice(labelIndex, 1);
+            defs.value = lines.join('\n');
+          }
+        }
+        buildFromDefs();
+        renderCardsList();
+        renderCount();
+      });
+
+      row.appendChild(thumb);
+      row.appendChild(label);
+      row.appendChild(remove);
+      cardListEl.appendChild(row);
+    });
   }
   function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 
   function renderCount(){ countEl.textContent = `Deck: ${cards.length}`; }
+
+  // wire file input -> upload
+  fileInput.addEventListener('change', async (e)=>{
+    const files = Array.from(e.target.files || []);
+    for (const f of files) {
+      try {
+        const url = await uploadFile(f);
+        // persist uploaded images so Reset/rebuild uses them even after draws
+        uploadedImageCards.unshift({ label: f.name, image: url });
+        buildFromDefs();
+        renderCardsList();
+        renderCount();
+      } catch (err) {
+        console.error('Upload failed', err);
+        alert('Upload failed: ' + err.message);
+      }
+    }
+    // clear input
+    fileInput.value = '';
+  });
 
   // actions
   el.querySelector('.draw').addEventListener('click', () => {
@@ -695,7 +968,19 @@ Widget.builders.customCards = function(props = {}) {
         cardDiv.classList.remove('red');
       } else {
         cardDiv.classList.remove('back');
-        cardDiv.textContent = card.label;
+        // if card has an image, render it; otherwise render text label
+        cardDiv.textContent = '';
+        if (card.image) {
+          const img = document.createElement('img');
+          img.src = card.image;
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.draggable = false;
+          cardDiv.appendChild(img);
+        } else {
+          cardDiv.textContent = card.label;
+        }
         cardDiv.classList.remove('red');
       }
     }
@@ -725,7 +1010,12 @@ Widget.builders.customCards = function(props = {}) {
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); });
-  el.querySelector('.reset').addEventListener('click', () => { buildFromDefs(); shuffleArr(cards); renderCount(); });
+  el.querySelector('.reset').addEventListener('click', () => {
+    // Rebuild the deck from uploaded images + textarea, then shuffle — this restarts the deck
+    resetToDefs();
+    shuffleArr(cards);
+    renderCount();
+  });
 
   // flip button toggles whether new cards come out face-down (and updates preview)
   const flipBtn = el.querySelector('.flip');
