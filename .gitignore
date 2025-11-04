@@ -1,3 +1,29 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Packaging / build
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# Django
+db.sqlite3
+/media/
+/staticfiles/
+*.log
+
+# Virtual envs / IDE
+venv/
+.venv/
+env/
+.idea/
+.vscode/
+.DS_Store
 ﻿# Python/Django
 __pycache__/
 *.py[cod]
