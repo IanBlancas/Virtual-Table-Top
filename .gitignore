@@ -24,3 +24,24 @@ env/
 .idea/
 .vscode/
 .DS_Store
+﻿# Python/Django
+__pycache__/
+*.py[cod]
+*.egg-info/
+db.sqlite3
+*.sqlite3
+*.log
+
+# Virtual envs
+flattop-venv/
+venv/
+.env/
+
+# Editors/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Collected static/media
+staticfiles/
+media/
