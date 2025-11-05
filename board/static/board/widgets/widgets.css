@@ -121,6 +121,50 @@
 .token.selected .resize-handle{
   display: block;
 }
+/* --- Token background image helpers --- */
+.token {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* If a token has art, make the label readable */
+.token.has-image {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* Shape variants (default circle already via border-radius) */
+.token.circle { border-radius: 50%; }
+.token.square { border-radius: 8px; } /* subtle rounded square */
+
+/* Tiny shape toggle button (shown when selected, like the ×) */
+.token .shape {
+  position: absolute;
+  top: -8px; right: 14px;          /* sits just left of the × (which is at right:-8px) */
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1px solid #004080;
+  background: #fff;
+  color: #004080;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  display: none;                   /* mirrors .close visibility */
+}
+
+/* Show controls only when the token is selected */
+.token.selected .shape { display: block; }
+
+/* Visual cue while an image is dragged over a token */
+.token.drop-target {
+  outline: 3px dashed #42a5f5;
+  outline-offset: 2px;
+}
+
 
 /* Cards widget container (reuses .widget box style) */
 .cards-widget .btnrow { display:flex; gap:8px; margin-bottom:8px; }

@@ -349,13 +349,49 @@ if (!window._flatTopCardKeyHandlerInstalled) {
   // ===== Token widget (simple circular token with resize handle and x) =====
 Widget.builders.token = function(props = {}) {
   const token = document.createElement('div');
-  token.className = 'token';
+  token.className = 'token circle'; // default circle; we’ll support square
+
+  // apply initial shape if provided
+  if (props.shape === 'square') token.classList.replace('circle','square');
 
   // size & initial label
   const size = props.size || 40;
   token.style.width  = size + 'px';
   token.style.height = size + 'px';
   token.textContent  = (props.label || 'Token'); // put text node first
+
+  // if created with an image URL, set it
+  if (props.image) {
+    token.style.backgroundImage = `url("${props.image}")`;
+    token.classList.add('has-image');
+  }
+
+  // --- image drop helpers ---
+  function extractUrlFromDataTransfer(dt) {
+    // Prefer standard URI list (dragged from another tab)
+    const uriList = dt.getData('text/uri-list');
+    if (uriList) {
+      const first = uriList.split('\n').find(line => line && !line.startsWith('#'));
+      if (first) return first.trim();
+    }
+    // Fallback: some browsers put the URL in plain text
+    const plain = dt.getData('text/plain');
+    if (plain && /^https?:\/\//i.test(plain.trim())) return plain.trim();
+    return null;
+  }
+
+  async function setTokenImageFromFile(file) {
+    // For single-user/local: object URL. For multi-user persistence, swap this for an upload flow.
+    const blobUrl = URL.createObjectURL(file);
+    token.style.backgroundImage = `url("${blobUrl}")`;
+    token.classList.add('has-image');
+  }
+
+  function setTokenImageFromUrl(url) {
+    token.style.backgroundImage = `url("${url}")`;
+    token.classList.add('has-image');
+  }
+
 
   // resize handle
   const handle = document.createElement('div');
@@ -371,6 +407,85 @@ Widget.builders.token = function(props = {}) {
     e.stopPropagation();   // don’t start drag/select
     token.remove();
   });
+
+  // Make the token accept image drops *and* stop the event from reaching the board
+token.addEventListener('dragenter', (e) => {
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const hasImgFile = Array.from(dt.items || [])
+    .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
+  const maybeUrl = extractUrlFromDataTransfer(dt);
+  if (hasImgFile || maybeUrl) {
+    e.preventDefault();
+    e.stopPropagation();            // <-- important
+    token.classList.add('drop-target');
+  }
+});
+
+token.addEventListener('dragover', (e) => {
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const hasImgFile = Array.from(dt.items || [])
+    .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
+  const maybeUrl = extractUrlFromDataTransfer(dt);
+  if (hasImgFile || maybeUrl) {
+    e.preventDefault();
+    e.stopPropagation();            // <-- important
+    token.classList.add('drop-target');
+    if (dt.dropEffect) dt.dropEffect = 'copy';
+  }
+});
+
+token.addEventListener('dragleave', (e) => {
+  e.stopPropagation();              // <-- so board doesn't “un-highlight” itself
+  token.classList.remove('drop-target');
+});
+
+token.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  e.stopPropagation();              // <-- critical: keep board handler from firing
+  token.classList.remove('drop-target');
+
+  const dt = e.dataTransfer;
+  if (!dt) return;
+
+  if (dt.files && dt.files.length) {
+    const file = dt.files[0];
+    if (file && file.type && file.type.startsWith('image/')) {
+      await setTokenImageFromFile(file);
+      return;
+    }
+  }
+  const url = extractUrlFromDataTransfer(dt);
+  if (url) {
+    setTokenImageFromUrl(url);
+  }
+});
+
+
+
+  // shape toggle (◯ / ◻)
+  const shapeBtn = document.createElement('button');
+  shapeBtn.className = 'shape';
+  shapeBtn.title = 'Toggle shape (circle/square)';
+  shapeBtn.textContent = '◯';
+  token.appendChild(shapeBtn);
+
+  function refreshShapeIcon() {
+    shapeBtn.textContent = token.classList.contains('square') ? '◻' : '◯';
+  }
+  refreshShapeIcon();
+
+  shapeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (token.classList.contains('square')) {
+      token.classList.replace('square','circle');
+    } else {
+      token.classList.replace('circle','square');
+    }
+    refreshShapeIcon();
+  });
+
 
   // dragging (use the whole token as handle)
   makeDraggable(token, token);
@@ -422,14 +537,17 @@ Widget.builders.token = function(props = {}) {
     // so we will re-append them immediately after adding the input.
     token.textContent = '';
     token.appendChild(input);
-    token.appendChild(handle);  // re-attach
-    token.appendChild(close);   // re-attach
+    token.appendChild(handle);
+    token.appendChild(close);
+    token.appendChild(shapeBtn);
+
 
     input.focus();
     input.addEventListener('blur', () => {
       token.textContent = input.value || 'Token'; // put label back as text node
       token.appendChild(handle);                  // re-attach again
       token.appendChild(close);
+      token.appendChild(shapeBtn);
     });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') input.blur();
