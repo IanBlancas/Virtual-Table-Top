@@ -95,6 +95,7 @@
       <button id = "counterBtn">Counters</button>
   <button id = "scoreBtn">Scorecard</button>
       <button id = "soundBtn">Soundboard</button>
+      <button id="addNotesWidget">Notes</button>
       <button>Boards</button>
       <button>Rules</button>
       <button>Favorites</button>
@@ -581,6 +582,8 @@ token.addEventListener('drop', async (e) => {
   cardsCustomBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('customCards', 0, 0); });
   const soundBtn = document.getElementById('soundBtn');
   soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
+  const addNotesBtn = document.getElementById('addNotesWidget');
+  addNotesBtn.addEventListener('click', ()=> Widget.create('notes', 0, 0));
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
@@ -1402,6 +1405,7 @@ function fileToDataURL(file) {
 </script>
 
     </main>
+<script src="{% static 'board/widgets/notes.js' %}"></script>
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
 </body>
