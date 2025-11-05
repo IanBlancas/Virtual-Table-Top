@@ -509,3 +509,42 @@
 .scorecard-widget.expanded .table-wrap { max-height: 520px; }
 .scorecard-widget.expanded .score-table { min-width: 560px; }
 
+/*notes style*/
+.notes-widget {
+  background: #fffdf7;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.15);
+  resize: both;
+  overflow: hidden;
+  min-width: 160px;
+  min-height: 100px;
+}
+
+.notes-widget .header {
+  background: #eee;
+  padding: 6px 8px;
+  font-weight: bold;
+  cursor: move;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.notes-widget .body {
+  display: flex;
+  height: calc(100% - 32px);
+}
+
+.notes-widget .notes-area {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  background: #fffdf7;
+  box-sizing: border-box;
+}
