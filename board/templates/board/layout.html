@@ -6,6 +6,7 @@
     {% load static %}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <link rel="stylesheet" href="{% static 'board/layoutStyle.css' %}">
     <link rel="stylesheet" href="{% static 'board/widgets/widgets.css' %}">
 
@@ -814,6 +815,17 @@ Widget.builders.customCards = function(props = {}) {
     return decodeURIComponent(v[0].split('=')[1]);
   }
 
+  function getCSRFToken() {
+    // Try to get CSRF token from cookie first
+    let token = getCookie('csrftoken');
+    // If not available, try to get from meta tag
+    if (!token) {
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      token = meta ? meta.getAttribute('content') : '';
+    }
+    return token;
+  }
+
   async function uploadFile(file) {
     const fd = new FormData();
     fd.append('image', file);
@@ -821,12 +833,29 @@ Widget.builders.customCards = function(props = {}) {
       method: 'POST',
       body: fd,
       headers: {
-        'X-CSRFToken': getCookie('csrftoken') || ''
+        'X-CSRFToken': getCSRFToken()
       }
     });
     if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Upload failed: ${res.status} ${txt}`);
+      let errorMsg = `HTTP ${res.status}`;
+      try {
+        const txt = await res.text();
+        // Try to parse as JSON first (in case it's our API error)
+        try {
+          const errorJson = JSON.parse(txt);
+          errorMsg = errorJson.error || errorMsg;
+        } catch {
+          // Not JSON, check if it's HTML (login redirect)
+          if (txt.includes('<!doctype') || txt.includes('<html')) {
+            errorMsg = 'Please log in first';
+          } else {
+            errorMsg = txt.substring(0, 100); // First 100 chars
+          }
+        }
+      } catch {
+        // Could not read response text
+      }
+      throw new Error(errorMsg);
     }
     const j = await res.json();
     return j.url;
