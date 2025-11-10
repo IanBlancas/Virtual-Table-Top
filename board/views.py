@@ -3,15 +3,21 @@ from django.template import loader
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from functools import wraps
 import hashlib
 import os
 
 from .models import CardImage
 
 
-def board(request):
-    template = loader.get_template('board/layout.html')
-    return HttpResponse(template.render({}, request))
+def ajax_login_required(view_func):
+    """Like @login_required but returns JSON error for AJAX requests instead of redirecting."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Authentication required'}, status=401)
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 
 def login_page(request):
@@ -19,8 +25,14 @@ def login_page(request):
     return HttpResponse(template.render({}, request))
 
 
-@require_POST
 @login_required
+def board(request):
+    template = loader.get_template('board/layout.html')
+    return HttpResponse(template.render({}, request))
+
+
+@require_POST
+@ajax_login_required
 def upload_card_image(request):
     """Accepts a single file in 'image' and returns JSON { url: <media url> }."""
     f = request.FILES.get('image')
