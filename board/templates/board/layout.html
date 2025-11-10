@@ -110,6 +110,7 @@
     <span class="badge">Reset</span>
     <button id="resetBtn">Reset view</button>
     <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
+    <button id = "lasso_Button">Lasso</button>
   </div>
 
   <div class="wrap" id="wrap">
@@ -126,6 +127,100 @@
     const cardsBtn = document.getElementById('cardsBtn');
     const counterBtn = document.getElementById('counterBtn');
     counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
+
+    // lasso shift click and drag
+const lasso_Button = document.getElementById('lasso_Button');
+let usingLasso = false;
+let draggingLasso = false;
+let lasso_Start = { x: 0, y: 0 };
+let lasso_box = null;
+
+lasso_Button.addEventListener('click', () => {
+  usingLasso = !usingLasso;
+  lasso_Button.classList.toggle('active', usingLasso);
+});
+
+// stop right-click menu when we’re lassoing
+wrap.addEventListener('contextmenu', (e) => {
+  if (usingLasso) e.preventDefault();
+});
+
+// get all things we want to be selectable
+function getSelectableWidgets() {
+  return Array.from(document.querySelectorAll(
+    '.token, .playing-card.draggable, .image-widget, .widget'
+  ));
+}
+
+wrap.addEventListener('mousedown', (e) => {
+  // must be selected
+  if (!usingLasso) return;
+  // must hold Shift
+  if (!e.shiftKey) return;
+  if (e.button !== 0) return;
+
+  const rect = wrap.getBoundingClientRect();
+  draggingLasso = true;
+
+  // start inside wrap coords
+  lasso_Start = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+
+  lasso_box = document.createElement('div');
+  lasso_box.className = 'lasso_box';
+  lasso_box.style.left = lasso_Start.x + 'px';
+  lasso_box.style.top = lasso_Start.y + 'px';
+  lasso_box.style.width = '0px';
+  lasso_box.style.height = '0px';
+  wrap.appendChild(lasso_box);
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!draggingLasso || !lasso_box) return;
+
+  const rect = wrap.getBoundingClientRect();
+  const curX = e.clientX - rect.left;
+  const curY = e.clientY - rect.top;
+
+  const left = Math.min(lasso_Start.x, curX);
+  const top = Math.min(lasso_Start.y, curY);
+  const width = Math.abs(curX - lasso_Start.x);
+  const height = Math.abs(curY - lasso_Start.y);
+
+  lasso_box.style.left = left + 'px';
+  lasso_box.style.top = top + 'px';
+  lasso_box.style.width = width + 'px';
+  lasso_box.style.height = height + 'px';
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!draggingLasso) return;
+  draggingLasso = false;
+
+  const boxRect = lasso_box.getBoundingClientRect();
+  lasso_box.remove();
+  lasso_box = null;
+
+  // removes previously selected widgets
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+
+  // checks for overlapping widgets
+  const widgets = getSelectableWidgets();
+  widgets.forEach(widget => {
+    const r = widget.getBoundingClientRect();
+    const overlap =
+      r.right  > boxRect.left &&
+      r.left   < boxRect.right &&
+      r.bottom > boxRect.top &&
+      r.top    < boxRect.bottom;
+
+    if (overlap) {
+      widget.classList.add('selected');
+    }
+  });
+});
 
 
     let scale = 1;     // zoom factor
@@ -223,39 +318,92 @@ wrap.addEventListener('wheel', (e) => {
   }
   function snap(v) { return Math.round(v / CELL) * CELL; }
 
-  // Bring-to-front when grabbing (optional)
-  let zTop = 1;
+// Bring-to-front counter (keep this if you had it)
+let zTop = 1;
 
-  // Generic drag handler you can reuse for any widget
-  function makeDraggable(el, handle) {
-    let dragging = false, start = {x:0,y:0}, origin = {x:0,y:0};
-    handle.addEventListener('mousedown', (e)=>{
-      if (e.button !== 0) return;
-      dragging = true;
-      if (!el.classList.contains('image-widget')) {
-        el.style.zIndex = ++zTop;
-      } 
-      else {
-        el.style.zIndex = 0;  // force them to bottom
-      }
-      const b = toBoardCoords(e.clientX, e.clientY);
-      start = b;
-      origin = { x: parseFloat(el.style.left)||0, y: parseFloat(el.style.top)||0 };
-      e.preventDefault();
+// draggable that supports multi-select drag
+function makeDraggable(el, handle = el) {
+  let dragging = false;
+  let dragStartBoard = { x: 0, y: 0 };
+  // array of {el, startLeft, startTop}
+  let dragTargets = [];
+
+  handle.addEventListener('mousedown', (e) => {
+    // only left mouse
+    if (e.button !== 0) return;
+
+    dragging = true;
+
+    // which things are we going to move?
+    // if this element is selected, move *all* selected
+    const selected = Array.from(document.querySelectorAll('.selected'));
+    if (el.classList.contains('selected') && selected.length > 0) {
+      dragTargets = selected.map(node => {
+        return {
+          el: node,
+          startLeft: parseFloat(node.style.left) || 0,
+          startTop: parseFloat(node.style.top) || 0
+        };
+      });
+    } else {
+      // just this one
+      dragTargets = [{
+        el,
+        startLeft: parseFloat(el.style.left) || 0,
+        startTop: parseFloat(el.style.top) || 0
+      }];
+      // also make this one the only selected one (optional)
+      document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // z-index bump for the one we actually grabbed
+    if (!el.classList.contains('image-widget')) {
+      el.style.zIndex = ++zTop;
+    } else {
+      el.style.zIndex = 0;
+    }
+
+    // where on the board did we start the drag
+    dragStartBoard = toBoardCoords(e.clientX, e.clientY);
+
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+
+    const curBoard = toBoardCoords(e.clientX, e.clientY);
+    const dx = curBoard.x - dragStartBoard.x;
+    const dy = curBoard.y - dragStartBoard.y;
+
+    // move every target by the same delta
+    dragTargets.forEach(t => {
+      t.el.style.left = (t.startLeft + dx) + 'px';
+      t.el.style.top  = (t.startTop + dy) + 'px';
     });
-    window.addEventListener('mousemove', (e)=>{
-      if (!dragging) return;
-      const b = toBoardCoords(e.clientX, e.clientY);
-      el.style.left = (origin.x + (b.x - start.x)) + 'px';
-      el.style.top  = (origin.y + (b.y - start.y)) + 'px';
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+
+    // snap them all to grid
+    dragTargets.forEach(t => {
+      t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
+      t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
     });
-    window.addEventListener('mouseup', ()=>{
-      if (!dragging) return;
-      dragging = false;
-      el.style.left = snap(parseFloat(el.style.left)) + 'px';
-      el.style.top  = snap(parseFloat(el.style.top))  + 'px';
-    });
-  }
+    dragTargets = [];
+  });
+  // clear selection when clicking empty board, but not while lasso is on
+board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
+}
+
 
   // Tiny widget “registry”
   const Widget = {
@@ -563,9 +711,16 @@ token.addEventListener('drop', async (e) => {
     document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
     token.classList.add('selected');
   });
+  /*
   board.addEventListener('click', () => {
     document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
   });
+  */
+ board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
 
   return token;
 };
@@ -690,9 +845,15 @@ Widget.builders.cards = function(props = {}) {
       cardDiv.classList.add('selected');
     });
     // Deselect on board click
-    board.addEventListener('click', () => {
+    /*board.addEventListener('click', () => {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
     });
+    */
+   board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
     // Flip on 'f' key
     cardDiv.flipCard = function() {
       cardDiv._flipped = !cardDiv._flipped;
@@ -1027,9 +1188,16 @@ Widget.builders.customCards = function(props = {}) {
       cardDiv.classList.add('selected');
     });
     // Deselect on board click
+    /*
     board.addEventListener('click', () => {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
     });
+    */
+   board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
 
     // flip method used by global key handler
     cardDiv.flipCard = function() {
