@@ -515,9 +515,12 @@ Widget.builders.token = function(props = {}) {
 
   // if created with an image URL, set it
   if (props.image) {
-    token.style.backgroundImage = `url("${props.image}")`;
-    token.classList.add('has-image');
-  }
+  token.dataset.imageSrc = props.image;
+  token.style.backgroundImage = `url("${props.image}")`;
+  token.classList.add('has-image');
+}
+
+  
 
   // --- image drop helpers ---
   function extractUrlFromDataTransfer(dt) {
@@ -534,16 +537,25 @@ Widget.builders.token = function(props = {}) {
   }
 
   async function setTokenImageFromFile(file) {
-    // For single-user/local: object URL. For multi-user persistence, swap this for an upload flow.
-    const blobUrl = URL.createObjectURL(file);
-    token.style.backgroundImage = `url("${blobUrl}")`;
-    token.classList.add('has-image');
-  }
+  // Persist as data URL so it survives reloads
+  const reader = new FileReader();
+  const dataUrl = await new Promise((res, rej) => {
+    reader.onerror = () => rej(reader.error);
+    reader.onload = () => res(reader.result);
+    reader.readAsDataURL(file);
+  });
+  token.dataset.imageSrc = dataUrl;
+  token.style.backgroundImage = `url("${dataUrl}")`;
+  token.classList.add('has-image');
+}
 
-  function setTokenImageFromUrl(url) {
-    token.style.backgroundImage = `url("${url}")`;
-    token.classList.add('has-image');
-  }
+function setTokenImageFromUrl(url) {
+  // Persist the canonical URL (works for http/https)
+  token.dataset.imageSrc = url;
+  token.style.backgroundImage = `url("${url}")`;
+  token.classList.add('has-image');
+}
+
 
 
   // resize handle
@@ -1686,14 +1698,19 @@ document.querySelectorAll('#board > .widget').forEach(el => {
 
   // 2) Tokens
 document.querySelectorAll('#board > .token').forEach(el => {
-  const bg = getComputedStyle(el).backgroundImage;
-  let imageUrl = '';
-  if (bg && bg !== 'none') {
-    const m = bg.match(/url\(["']?(.*?)["']?\)/i);
-    if (m && m[1]) imageUrl = m[1];
+  // Prefer the persisted source if present
+  let imageUrl = el.dataset.imageSrc || '';
+  if (!imageUrl) {
+    const bg = getComputedStyle(el).backgroundImage;
+    if (bg && bg !== 'none') {
+      const m = bg.match(/url\(["']?(.*?)["']?\)/i);
+      if (m && m[1] && !m[1].startsWith('blob:')) {
+        imageUrl = m[1]; // only keep durable (non-blob) URLs
+      }
+    }
   }
 
-  // Read ONLY the label's text node (the token’s first child)
+  // read label from first text node
   let label = '';
   const fc = el.firstChild;
   if (fc && fc.nodeType === Node.TEXT_NODE) {
@@ -1712,6 +1729,7 @@ document.querySelectorAll('#board > .token').forEach(el => {
     imageUrl
   });
 });
+
 
 
   // 3) Image widgets (note: your rotation is on the IMG, not the wrapper)
