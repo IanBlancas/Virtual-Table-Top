@@ -6,6 +6,7 @@
     {% load static %}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <link rel="stylesheet" href="{% static 'board/layoutStyle.css' %}">
     <link rel="stylesheet" href="{% static 'board/widgets/widgets.css' %}">
 
@@ -19,14 +20,15 @@
 
             <div class="menubtn-row">
                 <div class="file dropdown">
-                    <button class="menubtn">File</button>
-                    <div class="dropdown-content">
-                        <a href="#">first</a>
-                        <a href="#">second</a>
-                        <a href="#">third</a>
-                        <a href="#">fourth</a>
-                    </div>
+                  <button class="menubtn">File</button>
+                  <div class="dropdown-content">
+                    <a href="#" id="menu-save">Save board (JSON)</a>
+                    <a href="#" id="menu-load">Load board…</a>
+                  </div>
                 </div>
+
+                <!-- Hidden file input for “Load…” -->
+                <input id="menu-load-input" type="file" accept=".json,.txt" style="display:none" />
 
                 <div class="file dropdown">
                     <button class="menubtn">Lobby</button>
@@ -95,6 +97,7 @@
       <button id = "counterBtn">Counters</button>
   <button id = "scoreBtn">Scorecard</button>
       <button id = "soundBtn">Soundboard</button>
+      <button id="addNotesWidget">Notes</button>
       <button>Boards</button>
       <button>Rules</button>
       <button>Favorites</button>
@@ -108,6 +111,7 @@
     <span class="badge">Reset</span>
     <button id="resetBtn">Reset view</button>
     <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
+    <button id = "lasso_Button">Lasso</button>
   </div>
 
   <div class="wrap" id="wrap">
@@ -124,6 +128,100 @@
     const cardsBtn = document.getElementById('cardsBtn');
     const counterBtn = document.getElementById('counterBtn');
     counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
+
+    // lasso shift click and drag
+const lasso_Button = document.getElementById('lasso_Button');
+let usingLasso = false;
+let draggingLasso = false;
+let lasso_Start = { x: 0, y: 0 };
+let lasso_box = null;
+
+lasso_Button.addEventListener('click', () => {
+  usingLasso = !usingLasso;
+  lasso_Button.classList.toggle('active', usingLasso);
+});
+
+// stop right-click menu when we’re lassoing
+wrap.addEventListener('contextmenu', (e) => {
+  if (usingLasso) e.preventDefault();
+});
+
+// get all things we want to be selectable
+function getSelectableWidgets() {
+  return Array.from(document.querySelectorAll(
+    '.token, .playing-card.draggable, .image-widget, .widget'
+  ));
+}
+
+wrap.addEventListener('mousedown', (e) => {
+  // must be selected
+  if (!usingLasso) return;
+  // must hold Shift
+  if (!e.shiftKey) return;
+  if (e.button !== 0) return;
+
+  const rect = wrap.getBoundingClientRect();
+  draggingLasso = true;
+
+  // start inside wrap coords
+  lasso_Start = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+
+  lasso_box = document.createElement('div');
+  lasso_box.className = 'lasso_box';
+  lasso_box.style.left = lasso_Start.x + 'px';
+  lasso_box.style.top = lasso_Start.y + 'px';
+  lasso_box.style.width = '0px';
+  lasso_box.style.height = '0px';
+  wrap.appendChild(lasso_box);
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!draggingLasso || !lasso_box) return;
+
+  const rect = wrap.getBoundingClientRect();
+  const curX = e.clientX - rect.left;
+  const curY = e.clientY - rect.top;
+
+  const left = Math.min(lasso_Start.x, curX);
+  const top = Math.min(lasso_Start.y, curY);
+  const width = Math.abs(curX - lasso_Start.x);
+  const height = Math.abs(curY - lasso_Start.y);
+
+  lasso_box.style.left = left + 'px';
+  lasso_box.style.top = top + 'px';
+  lasso_box.style.width = width + 'px';
+  lasso_box.style.height = height + 'px';
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!draggingLasso) return;
+  draggingLasso = false;
+
+  const boxRect = lasso_box.getBoundingClientRect();
+  lasso_box.remove();
+  lasso_box = null;
+
+  // removes previously selected widgets
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+
+  // checks for overlapping widgets
+  const widgets = getSelectableWidgets();
+  widgets.forEach(widget => {
+    const r = widget.getBoundingClientRect();
+    const overlap =
+      r.right  > boxRect.left &&
+      r.left   < boxRect.right &&
+      r.bottom > boxRect.top &&
+      r.top    < boxRect.bottom;
+
+    if (overlap) {
+      widget.classList.add('selected');
+    }
+  });
+});
 
 
     let scale = 1;     // zoom factor
@@ -221,39 +319,92 @@ wrap.addEventListener('wheel', (e) => {
   }
   function snap(v) { return Math.round(v / CELL) * CELL; }
 
-  // Bring-to-front when grabbing (optional)
-  let zTop = 1;
+// Bring-to-front counter (keep this if you had it)
+let zTop = 1;
 
-  // Generic drag handler you can reuse for any widget
-  function makeDraggable(el, handle) {
-    let dragging = false, start = {x:0,y:0}, origin = {x:0,y:0};
-    handle.addEventListener('mousedown', (e)=>{
-      if (e.button !== 0) return;
-      dragging = true;
-      if (!el.classList.contains('image-widget')) {
-        el.style.zIndex = ++zTop;
-      } 
-      else {
-        el.style.zIndex = 0;  // force them to bottom
-      }
-      const b = toBoardCoords(e.clientX, e.clientY);
-      start = b;
-      origin = { x: parseFloat(el.style.left)||0, y: parseFloat(el.style.top)||0 };
-      e.preventDefault();
+// draggable that supports multi-select drag
+function makeDraggable(el, handle = el) {
+  let dragging = false;
+  let dragStartBoard = { x: 0, y: 0 };
+  // array of {el, startLeft, startTop}
+  let dragTargets = [];
+
+  handle.addEventListener('mousedown', (e) => {
+    // only left mouse
+    if (e.button !== 0) return;
+
+    dragging = true;
+
+    // which things are we going to move?
+    // if this element is selected, move *all* selected
+    const selected = Array.from(document.querySelectorAll('.selected'));
+    if (el.classList.contains('selected') && selected.length > 0) {
+      dragTargets = selected.map(node => {
+        return {
+          el: node,
+          startLeft: parseFloat(node.style.left) || 0,
+          startTop: parseFloat(node.style.top) || 0
+        };
+      });
+    } else {
+      // just this one
+      dragTargets = [{
+        el,
+        startLeft: parseFloat(el.style.left) || 0,
+        startTop: parseFloat(el.style.top) || 0
+      }];
+      // also make this one the only selected one (optional)
+      document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // z-index bump for the one we actually grabbed
+    if (!el.classList.contains('image-widget')) {
+      el.style.zIndex = ++zTop;
+    } else {
+      el.style.zIndex = 0;
+    }
+
+    // where on the board did we start the drag
+    dragStartBoard = toBoardCoords(e.clientX, e.clientY);
+
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+
+    const curBoard = toBoardCoords(e.clientX, e.clientY);
+    const dx = curBoard.x - dragStartBoard.x;
+    const dy = curBoard.y - dragStartBoard.y;
+
+    // move every target by the same delta
+    dragTargets.forEach(t => {
+      t.el.style.left = (t.startLeft + dx) + 'px';
+      t.el.style.top  = (t.startTop + dy) + 'px';
     });
-    window.addEventListener('mousemove', (e)=>{
-      if (!dragging) return;
-      const b = toBoardCoords(e.clientX, e.clientY);
-      el.style.left = (origin.x + (b.x - start.x)) + 'px';
-      el.style.top  = (origin.y + (b.y - start.y)) + 'px';
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+
+    // snap them all to grid
+    dragTargets.forEach(t => {
+      t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
+      t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
     });
-    window.addEventListener('mouseup', ()=>{
-      if (!dragging) return;
-      dragging = false;
-      el.style.left = snap(parseFloat(el.style.left)) + 'px';
-      el.style.top  = snap(parseFloat(el.style.top))  + 'px';
-    });
-  }
+    dragTargets = [];
+  });
+  // clear selection when clicking empty board, but not while lasso is on
+board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
+}
+
 
   // Tiny widget “registry”
   const Widget = {
@@ -297,6 +448,7 @@ if (!window._flatTopCardKeyHandlerInstalled) {
   Widget.builders.dice = function(props={}){
     const el = document.createElement('div');
     el.className = 'widget';
+    el.dataset.type = 'dice';
     el.innerHTML = `
       <div class="header">
         <div>🎲 Dice Roller</div>
@@ -350,6 +502,7 @@ if (!window._flatTopCardKeyHandlerInstalled) {
 Widget.builders.token = function(props = {}) {
   const token = document.createElement('div');
   token.className = 'token circle'; // default circle; we’ll support square
+  token.dataset.type = 'token';
 
   // apply initial shape if provided
   if (props.shape === 'square') token.classList.replace('circle','square');
@@ -561,9 +714,16 @@ token.addEventListener('drop', async (e) => {
     document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
     token.classList.add('selected');
   });
+  /*
   board.addEventListener('click', () => {
     document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
   });
+  */
+ board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
 
   return token;
 };
@@ -581,11 +741,14 @@ token.addEventListener('drop', async (e) => {
   cardsCustomBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('customCards', 0, 0); });
   const soundBtn = document.getElementById('soundBtn');
   soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
+  const addNotesBtn = document.getElementById('addNotesWidget');
+  addNotesBtn.addEventListener('click', ()=> Widget.create('notes', 0, 0));
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
+  el.dataset.type = 'cards';
   el.innerHTML = `
     <div class="header">
       <div>🃏 Standard Card Deck</div>
@@ -686,9 +849,15 @@ Widget.builders.cards = function(props = {}) {
       cardDiv.classList.add('selected');
     });
     // Deselect on board click
-    board.addEventListener('click', () => {
+    /*board.addEventListener('click', () => {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
     });
+    */
+   board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
     // Flip on 'f' key
     cardDiv.flipCard = function() {
       cardDiv._flipped = !cardDiv._flipped;
@@ -742,6 +911,7 @@ Widget.builders.cards = function(props = {}) {
 Widget.builders.customCards = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
+  el.dataset.type = 'customCards';
   el.innerHTML = `
     <div class="header">
       <div>🃏 Custom Card Deck</div>
@@ -811,6 +981,17 @@ Widget.builders.customCards = function(props = {}) {
     return decodeURIComponent(v[0].split('=')[1]);
   }
 
+  function getCSRFToken() {
+    // Try to get CSRF token from cookie first
+    let token = getCookie('csrftoken');
+    // If not available, try to get from meta tag
+    if (!token) {
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      token = meta ? meta.getAttribute('content') : '';
+    }
+    return token;
+  }
+
   async function uploadFile(file) {
     const fd = new FormData();
     fd.append('image', file);
@@ -818,12 +999,29 @@ Widget.builders.customCards = function(props = {}) {
       method: 'POST',
       body: fd,
       headers: {
-        'X-CSRFToken': getCookie('csrftoken') || ''
+        'X-CSRFToken': getCSRFToken()
       }
     });
     if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Upload failed: ${res.status} ${txt}`);
+      let errorMsg = `HTTP ${res.status}`;
+      try {
+        const txt = await res.text();
+        // Try to parse as JSON first (in case it's our API error)
+        try {
+          const errorJson = JSON.parse(txt);
+          errorMsg = errorJson.error || errorMsg;
+        } catch {
+          // Not JSON, check if it's HTML (login redirect)
+          if (txt.includes('<!doctype') || txt.includes('<html')) {
+            errorMsg = 'Please log in first';
+          } else {
+            errorMsg = txt.substring(0, 100); // First 100 chars
+          }
+        }
+      } catch {
+        // Could not read response text
+      }
+      throw new Error(errorMsg);
     }
     const j = await res.json();
     return j.url;
@@ -995,9 +1193,16 @@ Widget.builders.customCards = function(props = {}) {
       cardDiv.classList.add('selected');
     });
     // Deselect on board click
+    /*
     board.addEventListener('click', () => {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
     });
+    */
+   board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
 
     // flip method used by global key handler
     cardDiv.flipCard = function() {
@@ -1046,6 +1251,7 @@ Widget.builders.customCards = function(props = {}) {
 Widget.builders.counters = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget counters-widget';
+  el.dataset.type = 'counters';
   el.innerHTML = `
     <div class="header">
       <div>🔢 Counters</div>
@@ -1131,6 +1337,7 @@ Widget.builders.counters = function(props = {}) {
 Widget.builders.scorecard = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget scorecard-widget';
+  el.dataset.type = 'scorecard'; 
   el.innerHTML = `
     <div class="header">
       <div>🏆 Scorecard</div>
@@ -1260,6 +1467,7 @@ Widget.builders.scorecard = function(props = {}) {
 Widget.builders.image = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'image-widget';
+  el.dataset.type = 'image';
   el.style.width  = (props.width  ?? 200) + 'px';
   el.style.height = (props.height ?? 200) + 'px';
   el.style.position = 'absolute';
@@ -1398,10 +1606,315 @@ function fileToDataURL(file) {
     reader.readAsDataURL(file);
   });
 }
-
 </script>
 
+<script>
+// ===== SAVE / LOAD =====
+
+// Keep JSON stable in "board pixels"
+function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
+
+// Read rotation in degrees from a CSS matrix()
+function matrixToDeg(mstr){
+  if (!mstr || mstr === 'none') return 0;
+  const m = mstr.match(/matrix\(([-\d.e, ]+)\)/);
+  if (!m) return 0;
+  const [a,b] = m[1].split(',').map(Number);
+  return Math.round(Math.atan2(b, a) * 180 / Math.PI);
+}
+
+// Build a snapshot of the board
+function collectBoardState(){
+  const items = [];
+
+  // 1) Panel widgets (anything with #board > .widget)
+document.querySelectorAll('#board > .widget').forEach(el => {
+  const kind  = el.dataset.type || 'widget';
+  const title = el.querySelector('.header div')?.textContent?.trim() || '';
+
+  // default payload
+  const base = {
+    kind,
+    label: title,
+    x: pxToNum(el.style.left),
+    y: pxToNum(el.style.top),
+    w: pxToNum(el.style.width)  || el.offsetWidth,
+    h: pxToNum(el.style.height) || el.offsetHeight,
+    z: pxToNum(el.style.zIndex) || 1,
+    data: null
+  };
+
+  // Capture per-widget state
+  if (kind === 'notes') {
+    // try common selectors; adjust if your notes.js uses a specific class
+    const ta = el.querySelector('textarea, .notes-text, .note-text');
+    base.data = { text: ta ? ta.value : '' };
+  } else if (kind === 'counters') {
+    const rows = [];
+    el.querySelectorAll('.counter-row').forEach(r => {
+      const name  = r.querySelector('.name')?.value ?? '';
+      const value = parseInt(r.querySelector('.value')?.value ?? '0', 10) || 0;
+      rows.push({ name, value });
+    });
+    base.data = { counters: rows };
+  } else if (kind === 'scorecard') {
+    // headers
+    const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
+    const rowHdrs = Array.from(el.querySelectorAll('tr.data-row th.row-hdr')).map(th => th.textContent.trim());
+
+    // values keyed by "r,c"
+    const values = {};
+    el.querySelectorAll('tr.data-row').forEach((tr, r) => {
+      tr.querySelectorAll('td.cell').forEach((td, c) => {
+        const v = parseInt(td.querySelector('input.cell-input')?.value ?? '0', 10) || 0;
+        values[`${r},${c}`] = v;
+      });
+    });
+
+    base.data = {
+      rowsCount: rowHdrs.length,
+      colsCount: colHdrs.length,
+      rowLabels: rowHdrs,
+      colLabels: colHdrs,
+      values
+    };
+  }
+
+  items.push(base);
+});
+
+
+  // 2) Tokens
+document.querySelectorAll('#board > .token').forEach(el => {
+  const bg = getComputedStyle(el).backgroundImage;
+  let imageUrl = '';
+  if (bg && bg !== 'none') {
+    const m = bg.match(/url\(["']?(.*?)["']?\)/i);
+    if (m && m[1]) imageUrl = m[1];
+  }
+
+  // Read ONLY the label's text node (the token’s first child)
+  let label = '';
+  const fc = el.firstChild;
+  if (fc && fc.nodeType === Node.TEXT_NODE) {
+    label = (fc.nodeValue || '').trim();
+  }
+
+  items.push({
+    kind: 'token',
+    shape: el.classList.contains('square') ? 'square' : 'circle',
+    label,
+    x: pxToNum(el.style.left),
+    y: pxToNum(el.style.top),
+    w: pxToNum(el.style.width)  || el.offsetWidth,
+    h: pxToNum(el.style.height) || el.offsetHeight,
+    z: pxToNum(el.style.zIndex) || 1,
+    imageUrl
+  });
+});
+
+
+  // 3) Image widgets (note: your rotation is on the IMG, not the wrapper)
+  document.querySelectorAll('#board > .image-widget').forEach(el => {
+    const img = el.querySelector('img.image');
+    const src = img ? img.getAttribute('src') : '';
+    const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
+    items.push({
+      kind: 'image',
+      src,
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width)  || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      rotation
+    });
+  });
+
+  return { version: 1, cell: CELL, items };
+}
+
+function downloadJSON(data, filename='flattop-board.json'){
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+
+function clearBoard(){
+  document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget')
+    .forEach(el => el.remove());
+}
+
+function applyBoardState(state){
+  clearBoard();
+  const items = state?.items || [];
+  for (const it of items) {
+    // Tokens
+    if (it.kind === 'token') {
+      // your Widget.create(type, x, y, props)
+      if (typeof Widget?.create === 'function' && Widget.builders?.token) {
+        const el = Widget.create('token', it.x, it.y, {
+          size: Math.max(it.w, it.h),
+          label: it.label || '',
+          image: it.imageUrl || '',
+          shape: it.shape || 'circle'
+        });
+        el.style.zIndex = it.z || '';
+      } else {
+        const el = document.createElement('div');
+        el.className = `token ${it.shape === 'square' ? 'square' : 'circle'}`;
+        el.style.left = it.x + 'px';
+        el.style.top  = it.y + 'px';
+        el.style.width  = it.w + 'px';
+        el.style.height = it.h + 'px';
+        el.style.zIndex = it.z || '';
+        if (it.imageUrl) { el.style.backgroundImage = `url("${it.imageUrl}")`; el.classList.add('has-image'); }
+        else { el.textContent = it.label || ''; }
+        board.appendChild(el);
+      }
+      continue;
+    }
+
+    // Image widgets
+    if (it.kind === 'image') {
+      if (typeof Widget?.create === 'function' && Widget.builders?.image) {
+        const el = Widget.create('image', it.x, it.y, {
+          src: it.src || '',
+          width: it.w,
+          height: it.h,
+          rotation: it.rotation || 0
+        });
+        el.style.zIndex = it.z || '';
+        // ensure the <img> picks up rotation if builder didn’t already
+        const img = el.querySelector('img.image');
+        if (img && (it.rotation || 0) !== 0) {
+          img.style.transformOrigin = 'center center';
+          img.style.transform = `rotate(${(it.rotation||0)%360}deg)`;
+        }
+      } else {
+        const el = document.createElement('div');
+        el.className = 'image-widget';
+        el.style.left = it.x + 'px';
+        el.style.top  = it.y + 'px';
+        el.style.width  = it.w + 'px';
+        el.style.height = it.h + 'px';
+        el.style.zIndex = it.z || '';
+        el.innerHTML = `<img class="image" src="${it.src || ''}" alt="">` +
+                       `<div class="resize-handle"></div>`;
+        const img = el.querySelector('img.image');
+        if (img && (it.rotation || 0) !== 0) {
+          img.style.transformOrigin = 'center center';
+          img.style.transform = `rotate(${(it.rotation||0)%360}deg)`;
+        }
+        board.appendChild(el);
+      }
+      continue;
+    }
+
+// Panel widgets — restore position/size/title + inner state if we know it
+if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
+  let props = {};
+
+  if (it.kind === 'notes' && it.data) {
+    props.text = it.data.text || '';
+  } else if (it.kind === 'counters' && it.data) {
+    // our builder already supports props.counters
+    props.counters = Array.isArray(it.data.counters) ? it.data.counters : [];
+  } else if (it.kind === 'scorecard' && it.data) {
+    props = {
+      rowsCount: it.data.rowsCount ?? 2,
+      colsCount: it.data.colsCount ?? 2,
+      rowLabels: it.data.rowLabels ?? null,
+      colLabels: it.data.colLabels ?? null,
+      values:    it.data.values    ?? {}
+    };
+  }
+
+  const el = Widget.create(it.kind, it.x, it.y, props);
+  el.style.width  = (it.w||el.offsetWidth)  + 'px';
+  el.style.height = (it.h||el.offsetHeight) + 'px';
+  el.style.zIndex = it.z || '';
+
+  const hdr = el.querySelector('.header div');
+  if (hdr && it.label) hdr.textContent = it.label;
+
+  // If notes builder didn’t consume props.text directly, set it post-create
+  if (it.kind === 'notes' && it.data?.text != null) {
+    const ta = el.querySelector('textarea, .notes-text, .note-text');
+    if (ta) ta.value = it.data.text;
+  }
+
+  continue;
+}
+
+
+    // Fallback plain box if we don't recognize the kind
+    const el = document.createElement('div');
+    el.className = 'widget';
+    el.style.left = it.x + 'px';
+    el.style.top  = it.y + 'px';
+    el.style.width  = it.w + 'px';
+    el.style.height = it.h + 'px';
+    el.style.zIndex = it.z || '';
+    el.innerHTML = `
+      <div class="header">
+        <div>${it.label || (it.kind || 'Widget')}</div>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+      <div class="body"><div class="muted">Restored from save.</div></div>
+    `;
+    el.querySelector('.close')?.addEventListener('click', () => el.remove());
+    board.appendChild(el);
+  }
+}
+
+// Wire File menu
+const fileSaveBtn  = document.getElementById('menu-save');
+const fileLoadBtn  = document.getElementById('menu-load');
+const fileLoadIn   = document.getElementById('menu-load-input');
+
+fileSaveBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  downloadJSON(collectBoardState(), 'flattop-board.json');
+});
+fileLoadBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  fileLoadIn?.click();
+});
+fileLoadIn?.addEventListener('change', async (e) => {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  try {
+    const text = await f.text();
+    applyBoardState(JSON.parse(text));
+  } catch (err) {
+    alert('Invalid save file.');
+    console.error(err);
+  } finally {
+    fileLoadIn.value = '';
+  }
+});
+
+// Optional: Ctrl/Cmd+S and Ctrl/Cmd+O
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    downloadJSON(collectBoardState(), 'flattop-board.json');
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+    e.preventDefault();
+    document.getElementById('menu-load-input')?.click();
+  }
+});
+</script>
+
+
     </main>
+<script src="{% static 'board/widgets/notes.js' %}"></script>
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
 </body>
