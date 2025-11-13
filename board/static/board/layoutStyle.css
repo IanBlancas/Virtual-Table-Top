@@ -1,0 +1,258 @@
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding-top: 64px; 
+  font: 14px/1.4 sans-serif;
+  background: #fff;
+}
+
+
+.top{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 64px;            
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--bg-top);
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+  border: 1px solid black;
+}
+.left, .right { position: relative; }
+.left h1, .right h1 { margin: 0; font-size: 18px; font-weight: 600; }
+.right-row { display: flex; gap: 8px; align-items: center; }
+
+.menubtn-row { display: flex; gap: 8px; margin-top: 6px; }
+
+.menubtn, .sharebtn, .widget-item, .widget-btn, .sidebar button {
+  border: 1px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Make sidebar menu buttons fill the sidebar width
+   up to the widget width so they align visually with widgets. */
+.sidebar .file .menubtn,
+.sidebar .menubtn {
+  width: 100%;
+  max-width: 290px; /* match default widget width */
+  box-sizing: border-box;
+}
+
+
+.dropdown { position: relative; }
+.dropdown-content{
+  display: none;
+  position: absolute;
+  top: 100%; left: 0;
+  min-width: 160px;
+  padding: 8px;
+  /* Provide sensible fallbacks so dropdowns are visible even if CSS variables
+     aren't defined in the current theme. */
+  background: var(--bg-menu, #ffffff);
+  color: var(--text, #111);
+  border: 1px solid var(--border, #ddd);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  border-radius: 8px;
+  z-index: 20;
+}
+
+/* Cards dropdown should match widget width and stay inside the sidebar */
+.dropdown-content.cards-menu {
+  width: 260px;           /* match default widget width */
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+}
+.dropdown:hover .dropdown-content,
+.dropdown:focus-within .dropdown-content,
+.dropdown.active .dropdown-content {
+  display: block;
+}
+.dropdown-content a{
+  display: block;
+  padding: 6px 8px;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+
+.sidebar{
+  position: fixed;
+  top: 64px;
+  left: 0;
+  bottom: 0;
+  width: 20vw;
+  min-width: 240px;
+  max-width: 420px;
+  border-right: 1px;
+  padding: 12px 10px;
+  overflow: auto;
+  z-index: 5;
+  border: 1px solid black;
+
+}
+
+.sidebar h2 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.widget-list{
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 8px;
+}
+
+.mainBoard{
+  margin-left: 20vw;
+  max-width: calc(100vw - 20vw);
+  min-height: calc(100vh - 64px);
+  padding: 0px;
+}
+
+@media (min-width: 1600px){
+  .mainBoard{
+    margin-left: 420px;
+    max-width: calc(100vw - 420px);
+  }
+}
+@media (max-width: 1200px){
+  .mainBoard{
+    margin-left: 240px;
+    max-width: calc(100vw - 240px);
+  }
+}
+
+.hidden { display: none !important; }
+.center { display: grid; place-items: center; }
+
+@media (max-width: 500px){
+  :root{ --top-h: 72px; }
+}
+
+    .toolbar {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .wrap {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 64px - 44px);
+      overflow: hidden;       /* we'll do our own panning */
+      background: #fff;
+      cursor: default;
+      /* Allow button interactions but prevent scrolling */
+      touch-action: pan-x pan-y pinch-zoom;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* The board is what we pan/zoom via CSS transforms */
+    .board {
+        top: 0;               /* anchor top-left */
+        left: 0;
+        width: 8000px;        /* ← hard-code your exact board width */
+        height: 8000px;       /* ← hard-code your exact board height */
+        transform-origin: 0 0;
+        /* Allow pan and zoom but not on interactive elements */
+        touch-action: pan-x pan-y pinch-zoom;
+        
+        /* Grid lines for a 48px cell: */
+        background-image:
+        linear-gradient(#000 2px, transparent 2px),
+        linear-gradient(90deg, #000 2px, transparent 2px);
+        background-size: 40px 40px, 40px 40px;   /* ← hard-code cell size */
+        background-position: 0 0;
+        position: absolute;
+}
+
+
+    .hint {
+      color: #666;
+      font-size: 13px;
+    }
+    .badge {
+      border: 1px solid #ccc;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+
+    /* Touch-friendly styles */
+    @media (pointer: coarse) {
+      /* Larger buttons and touch targets for mobile */
+      button, .menubtn, .sharebtn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 8px 12px;
+        font-size: 16px;
+      }
+      
+      /* Larger close buttons */
+      .close {
+        min-height: 32px;
+        min-width: 32px;
+        font-size: 16px;
+      }
+      
+      /* Better spacing in sidebar */
+      .sidebar button {
+        margin-bottom: 8px;
+        padding: 12px;
+      }
+      
+      /* Larger widget controls */
+      .widget .header {
+        padding: 12px;
+        min-height: 44px;
+      }
+      
+      /* Touch-friendly inputs */
+      input[type="text"], input[type="number"], textarea {
+        min-height: 44px;
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 8px 12px;
+      }
+    }
+
+    /* Responsive design for mobile */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 280px;
+        min-width: 280px;
+      }
+      
+      .mainBoard {
+        margin-left: 280px;
+      }
+      
+      .top {
+        height: 56px;
+        padding: 0 12px;
+      }
+      
+      body {
+        padding-top: 56px;
+      }
+      
+      .left h1, .right h1 {
+        font-size: 16px;
+      }
+      
+      .menubtn-row {
+        gap: 4px;
+      }
+      
+      .right-row {
+        gap: 4px;
+      }
+    }
