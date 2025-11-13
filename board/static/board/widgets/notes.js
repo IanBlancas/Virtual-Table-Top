@@ -2,6 +2,7 @@
 Widget.builders.notes = function (props = {}) {
   const el = document.createElement("div");
   el.className = "widget notes-widget";
+  el.dataset.type = "notes";
   el.innerHTML = `
     <div class="header">
       <div>📝 Notes</div>

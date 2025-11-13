@@ -20,14 +20,15 @@
 
             <div class="menubtn-row">
                 <div class="file dropdown">
-                    <button class="menubtn">File</button>
-                    <div class="dropdown-content">
-                        <a href="#">first</a>
-                        <a href="#">second</a>
-                        <a href="#">third</a>
-                        <a href="#">fourth</a>
-                    </div>
+                  <button class="menubtn">File</button>
+                  <div class="dropdown-content">
+                    <a href="#" id="menu-save">Save board (JSON)</a>
+                    <a href="#" id="menu-load">Load board…</a>
+                  </div>
                 </div>
+
+                <!-- Hidden file input for “Load…” -->
+                <input id="menu-load-input" type="file" accept=".json,.txt" style="display:none" />
 
                 <div class="file dropdown">
                     <button class="menubtn">Lobby</button>
@@ -447,6 +448,7 @@ if (!window._flatTopCardKeyHandlerInstalled) {
   Widget.builders.dice = function(props={}){
     const el = document.createElement('div');
     el.className = 'widget';
+    el.dataset.type = 'dice';
     el.innerHTML = `
       <div class="header">
         <div>🎲 Dice Roller</div>
@@ -500,6 +502,7 @@ if (!window._flatTopCardKeyHandlerInstalled) {
 Widget.builders.token = function(props = {}) {
   const token = document.createElement('div');
   token.className = 'token circle'; // default circle; we’ll support square
+  token.dataset.type = 'token';
 
   // apply initial shape if provided
   if (props.shape === 'square') token.classList.replace('circle','square');
@@ -512,9 +515,12 @@ Widget.builders.token = function(props = {}) {
 
   // if created with an image URL, set it
   if (props.image) {
-    token.style.backgroundImage = `url("${props.image}")`;
-    token.classList.add('has-image');
-  }
+  token.dataset.imageSrc = props.image;
+  token.style.backgroundImage = `url("${props.image}")`;
+  token.classList.add('has-image');
+}
+
+  
 
   // --- image drop helpers ---
   function extractUrlFromDataTransfer(dt) {
@@ -531,16 +537,25 @@ Widget.builders.token = function(props = {}) {
   }
 
   async function setTokenImageFromFile(file) {
-    // For single-user/local: object URL. For multi-user persistence, swap this for an upload flow.
-    const blobUrl = URL.createObjectURL(file);
-    token.style.backgroundImage = `url("${blobUrl}")`;
-    token.classList.add('has-image');
-  }
+  // Persist as data URL so it survives reloads
+  const reader = new FileReader();
+  const dataUrl = await new Promise((res, rej) => {
+    reader.onerror = () => rej(reader.error);
+    reader.onload = () => res(reader.result);
+    reader.readAsDataURL(file);
+  });
+  token.dataset.imageSrc = dataUrl;
+  token.style.backgroundImage = `url("${dataUrl}")`;
+  token.classList.add('has-image');
+}
 
-  function setTokenImageFromUrl(url) {
-    token.style.backgroundImage = `url("${url}")`;
-    token.classList.add('has-image');
-  }
+function setTokenImageFromUrl(url) {
+  // Persist the canonical URL (works for http/https)
+  token.dataset.imageSrc = url;
+  token.style.backgroundImage = `url("${url}")`;
+  token.classList.add('has-image');
+}
+
 
 
   // resize handle
@@ -745,6 +760,7 @@ token.addEventListener('drop', async (e) => {
 Widget.builders.cards = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
+  el.dataset.type = 'cards';
   el.innerHTML = `
     <div class="header">
       <div>🃏 Standard Card Deck</div>
@@ -907,6 +923,7 @@ Widget.builders.cards = function(props = {}) {
 Widget.builders.customCards = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
+  el.dataset.type = 'customCards';
   el.innerHTML = `
     <div class="header">
       <div>🃏 Custom Card Deck</div>
@@ -1246,6 +1263,7 @@ Widget.builders.customCards = function(props = {}) {
 Widget.builders.counters = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget counters-widget';
+  el.dataset.type = 'counters';
   el.innerHTML = `
     <div class="header">
       <div>🔢 Counters</div>
@@ -1331,6 +1349,7 @@ Widget.builders.counters = function(props = {}) {
 Widget.builders.scorecard = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'widget scorecard-widget';
+  el.dataset.type = 'scorecard'; 
   el.innerHTML = `
     <div class="header">
       <div>🏆 Scorecard</div>
@@ -1460,6 +1479,7 @@ Widget.builders.scorecard = function(props = {}) {
 Widget.builders.image = function(props = {}) {
   const el = document.createElement('div');
   el.className = 'image-widget';
+  el.dataset.type = 'image';
   el.style.width  = (props.width  ?? 200) + 'px';
   el.style.height = (props.height ?? 200) + 'px';
   el.style.position = 'absolute';
@@ -1598,8 +1618,318 @@ function fileToDataURL(file) {
     reader.readAsDataURL(file);
   });
 }
-
 </script>
+
+<script>
+// ===== SAVE / LOAD =====
+
+// Keep JSON stable in "board pixels"
+function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
+
+// Read rotation in degrees from a CSS matrix()
+function matrixToDeg(mstr){
+  if (!mstr || mstr === 'none') return 0;
+  const m = mstr.match(/matrix\(([-\d.e, ]+)\)/);
+  if (!m) return 0;
+  const [a,b] = m[1].split(',').map(Number);
+  return Math.round(Math.atan2(b, a) * 180 / Math.PI);
+}
+
+// Build a snapshot of the board
+function collectBoardState(){
+  const items = [];
+
+  // 1) Panel widgets (anything with #board > .widget)
+document.querySelectorAll('#board > .widget').forEach(el => {
+  const kind  = el.dataset.type || 'widget';
+  const title = el.querySelector('.header div')?.textContent?.trim() || '';
+
+  // default payload
+  const base = {
+    kind,
+    label: title,
+    x: pxToNum(el.style.left),
+    y: pxToNum(el.style.top),
+    w: pxToNum(el.style.width)  || el.offsetWidth,
+    h: pxToNum(el.style.height) || el.offsetHeight,
+    z: pxToNum(el.style.zIndex) || 1,
+    data: null
+  };
+
+  // Capture per-widget state
+  if (kind === 'notes') {
+    // try common selectors; adjust if your notes.js uses a specific class
+    const ta = el.querySelector('textarea, .notes-text, .note-text');
+    base.data = { text: ta ? ta.value : '' };
+  } else if (kind === 'counters') {
+    const rows = [];
+    el.querySelectorAll('.counter-row').forEach(r => {
+      const name  = r.querySelector('.name')?.value ?? '';
+      const value = parseInt(r.querySelector('.value')?.value ?? '0', 10) || 0;
+      rows.push({ name, value });
+    });
+    base.data = { counters: rows };
+  } else if (kind === 'scorecard') {
+    // headers
+    const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
+    const rowHdrs = Array.from(el.querySelectorAll('tr.data-row th.row-hdr')).map(th => th.textContent.trim());
+
+    // values keyed by "r,c"
+    const values = {};
+    el.querySelectorAll('tr.data-row').forEach((tr, r) => {
+      tr.querySelectorAll('td.cell').forEach((td, c) => {
+        const v = parseInt(td.querySelector('input.cell-input')?.value ?? '0', 10) || 0;
+        values[`${r},${c}`] = v;
+      });
+    });
+
+    base.data = {
+      rowsCount: rowHdrs.length,
+      colsCount: colHdrs.length,
+      rowLabels: rowHdrs,
+      colLabels: colHdrs,
+      values
+    };
+  }
+
+  items.push(base);
+});
+
+
+  // 2) Tokens
+document.querySelectorAll('#board > .token').forEach(el => {
+  // Prefer the persisted source if present
+  let imageUrl = el.dataset.imageSrc || '';
+  if (!imageUrl) {
+    const bg = getComputedStyle(el).backgroundImage;
+    if (bg && bg !== 'none') {
+      const m = bg.match(/url\(["']?(.*?)["']?\)/i);
+      if (m && m[1] && !m[1].startsWith('blob:')) {
+        imageUrl = m[1]; // only keep durable (non-blob) URLs
+      }
+    }
+  }
+
+  // read label from first text node
+  let label = '';
+  const fc = el.firstChild;
+  if (fc && fc.nodeType === Node.TEXT_NODE) {
+    label = (fc.nodeValue || '').trim();
+  }
+
+  items.push({
+    kind: 'token',
+    shape: el.classList.contains('square') ? 'square' : 'circle',
+    label,
+    x: pxToNum(el.style.left),
+    y: pxToNum(el.style.top),
+    w: pxToNum(el.style.width)  || el.offsetWidth,
+    h: pxToNum(el.style.height) || el.offsetHeight,
+    z: pxToNum(el.style.zIndex) || 1,
+    imageUrl
+  });
+});
+
+
+
+  // 3) Image widgets (note: your rotation is on the IMG, not the wrapper)
+  document.querySelectorAll('#board > .image-widget').forEach(el => {
+    const img = el.querySelector('img.image');
+    const src = img ? img.getAttribute('src') : '';
+    const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
+    items.push({
+      kind: 'image',
+      src,
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width)  || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      rotation
+    });
+  });
+
+  return { version: 1, cell: CELL, items };
+}
+
+function downloadJSON(data, filename='flattop-board.json'){
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+
+function clearBoard(){
+  document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget')
+    .forEach(el => el.remove());
+}
+
+function applyBoardState(state){
+  clearBoard();
+  const items = state?.items || [];
+  for (const it of items) {
+    // Tokens
+    if (it.kind === 'token') {
+      // your Widget.create(type, x, y, props)
+      if (typeof Widget?.create === 'function' && Widget.builders?.token) {
+        const el = Widget.create('token', it.x, it.y, {
+          size: Math.max(it.w, it.h),
+          label: it.label || '',
+          image: it.imageUrl || '',
+          shape: it.shape || 'circle'
+        });
+        el.style.zIndex = it.z || '';
+      } else {
+        const el = document.createElement('div');
+        el.className = `token ${it.shape === 'square' ? 'square' : 'circle'}`;
+        el.style.left = it.x + 'px';
+        el.style.top  = it.y + 'px';
+        el.style.width  = it.w + 'px';
+        el.style.height = it.h + 'px';
+        el.style.zIndex = it.z || '';
+        if (it.imageUrl) { el.style.backgroundImage = `url("${it.imageUrl}")`; el.classList.add('has-image'); }
+        else { el.textContent = it.label || ''; }
+        board.appendChild(el);
+      }
+      continue;
+    }
+
+    // Image widgets
+    if (it.kind === 'image') {
+      if (typeof Widget?.create === 'function' && Widget.builders?.image) {
+        const el = Widget.create('image', it.x, it.y, {
+          src: it.src || '',
+          width: it.w,
+          height: it.h,
+          rotation: it.rotation || 0
+        });
+        el.style.zIndex = it.z || '';
+        // ensure the <img> picks up rotation if builder didn’t already
+        const img = el.querySelector('img.image');
+        if (img && (it.rotation || 0) !== 0) {
+          img.style.transformOrigin = 'center center';
+          img.style.transform = `rotate(${(it.rotation||0)%360}deg)`;
+        }
+      } else {
+        const el = document.createElement('div');
+        el.className = 'image-widget';
+        el.style.left = it.x + 'px';
+        el.style.top  = it.y + 'px';
+        el.style.width  = it.w + 'px';
+        el.style.height = it.h + 'px';
+        el.style.zIndex = it.z || '';
+        el.innerHTML = `<img class="image" src="${it.src || ''}" alt="">` +
+                       `<div class="resize-handle"></div>`;
+        const img = el.querySelector('img.image');
+        if (img && (it.rotation || 0) !== 0) {
+          img.style.transformOrigin = 'center center';
+          img.style.transform = `rotate(${(it.rotation||0)%360}deg)`;
+        }
+        board.appendChild(el);
+      }
+      continue;
+    }
+
+// Panel widgets — restore position/size/title + inner state if we know it
+if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
+  let props = {};
+
+  if (it.kind === 'notes' && it.data) {
+    props.text = it.data.text || '';
+  } else if (it.kind === 'counters' && it.data) {
+    // our builder already supports props.counters
+    props.counters = Array.isArray(it.data.counters) ? it.data.counters : [];
+  } else if (it.kind === 'scorecard' && it.data) {
+    props = {
+      rowsCount: it.data.rowsCount ?? 2,
+      colsCount: it.data.colsCount ?? 2,
+      rowLabels: it.data.rowLabels ?? null,
+      colLabels: it.data.colLabels ?? null,
+      values:    it.data.values    ?? {}
+    };
+  }
+
+  const el = Widget.create(it.kind, it.x, it.y, props);
+  el.style.width  = (it.w||el.offsetWidth)  + 'px';
+  el.style.height = (it.h||el.offsetHeight) + 'px';
+  el.style.zIndex = it.z || '';
+
+  const hdr = el.querySelector('.header div');
+  if (hdr && it.label) hdr.textContent = it.label;
+
+  // If notes builder didn’t consume props.text directly, set it post-create
+  if (it.kind === 'notes' && it.data?.text != null) {
+    const ta = el.querySelector('textarea, .notes-text, .note-text');
+    if (ta) ta.value = it.data.text;
+  }
+
+  continue;
+}
+
+
+    // Fallback plain box if we don't recognize the kind
+    const el = document.createElement('div');
+    el.className = 'widget';
+    el.style.left = it.x + 'px';
+    el.style.top  = it.y + 'px';
+    el.style.width  = it.w + 'px';
+    el.style.height = it.h + 'px';
+    el.style.zIndex = it.z || '';
+    el.innerHTML = `
+      <div class="header">
+        <div>${it.label || (it.kind || 'Widget')}</div>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+      <div class="body"><div class="muted">Restored from save.</div></div>
+    `;
+    el.querySelector('.close')?.addEventListener('click', () => el.remove());
+    board.appendChild(el);
+  }
+}
+
+// Wire File menu
+const fileSaveBtn  = document.getElementById('menu-save');
+const fileLoadBtn  = document.getElementById('menu-load');
+const fileLoadIn   = document.getElementById('menu-load-input');
+
+fileSaveBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  downloadJSON(collectBoardState(), 'flattop-board.json');
+});
+fileLoadBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  fileLoadIn?.click();
+});
+fileLoadIn?.addEventListener('change', async (e) => {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  try {
+    const text = await f.text();
+    applyBoardState(JSON.parse(text));
+  } catch (err) {
+    alert('Invalid save file.');
+    console.error(err);
+  } finally {
+    fileLoadIn.value = '';
+  }
+});
+
+// Optional: Ctrl/Cmd+S and Ctrl/Cmd+O
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    downloadJSON(collectBoardState(), 'flattop-board.json');
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+    e.preventDefault();
+    document.getElementById('menu-load-input')?.click();
+  }
+});
+</script>
+
 
     </main>
 <script src="{% static 'board/widgets/notes.js' %}"></script>
