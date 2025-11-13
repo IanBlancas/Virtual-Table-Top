@@ -1,0 +1,1968 @@
+
+
+<!doctype html>
+
+<head>
+    {% load static %}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="stylesheet" href="{% static 'board/layoutStyle.css' %}">
+    <link rel="stylesheet" href="{% static 'board/widgets/widgets.css' %}">
+
+    <title>FlatTop — Board</title>
+</head>
+
+<body>
+    <header class="top">
+        <div class="left">
+            <h1>Lobby Name: NAME</h1>
+
+            <div class="menubtn-row">
+                <div class="file dropdown">
+                  <button class="menubtn">File</button>
+                  <div class="dropdown-content">
+                    <a href="#" id="menu-save">Save board (JSON)</a>
+                    <a href="#" id="menu-load">Load board…</a>
+                  </div>
+                </div>
+
+                <!-- Hidden file input for “Load…” -->
+                <input id="menu-load-input" type="file" accept=".json,.txt" style="display:none" />
+
+                <div class="file dropdown">
+                    <button class="menubtn">Lobby</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">fourth</a>
+                    </div>
+                </div>
+
+                <div class="file dropdown">
+                    <button class="menubtn">Insert</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">fourth</a>
+                    </div>
+                </div>
+
+                <div class="file dropdown">
+                    <button class="menubtn">View</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">fourth</a>
+                    </div>
+                </div>
+
+                <div class="file dropdown">
+                    <button class="menubtn">Help</button>
+                    <div class="dropdown-content">
+                        <a href="#">first</a>
+                        <a href="#">second</a>
+                        <a href="#">third</a>
+                        <a href="#">fourth</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right">
+            <div class="right-row">
+                <h1>Lobby Code: 123456</h1>
+                <button class="sharebtn">Share</button>
+            </div>
+        </div>
+    </header>
+
+    <aside class="sidebar">
+        <h2>Widgets</h2>
+    <div class="widget-list">
+      <button id = "diceBtn">Dice</button>
+
+      <div class="file dropdown">
+        <button class="menubtn">Cards</button>
+        <div class="dropdown-content cards-menu">
+          <a href="#" id="cardsDeckBtn">Standard Card Deck</a>
+          <a href="#" id="cardsCustomBtn">Custom Card Deck</a>
+        </div>
+      </div>
+
+      <button id = "tokenBtn">Tokens</button>
+      <button id = "counterBtn">Counters</button>
+      <button id = "scoreBtn">Scorecard</button>
+      <button id = "soundBtn">Soundboard</button>
+      <button id="addNotesWidget">Notes</button>
+      <button id="addChatWidget">Chat</button>
+      <button>Boards</button>
+      <button>Rules</button>
+      <button>Favorites</button>
+    </div>
+    </aside>
+
+    <main class="mainBoard">
+        <div class="toolbar">
+    <span class="badge">Pan: Middle-mouse drag</span>
+    <span class="badge">Zoom: Mouse wheel</span>
+    <span class="badge">Reset</span>
+    <button id="resetBtn">Reset view</button>
+    <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
+    <button id="lasso_Button">Lasso</button>
+    <span class="hint" id="lasso-hint">Ctrl+L</span>
+  </div>
+
+  <div class="wrap" id="wrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <script>
+    // --- minimal pan & zoom controller ---
+    const wrap  = document.getElementById('wrap');
+    const board = document.getElementById('board');
+    const resetBtn = document.getElementById('resetBtn');
+    const diceBtn = document.getElementById('diceBtn')
+    const tokenBtn = document.getElementById('tokenBtn')
+    const cardsBtn = document.getElementById('cardsBtn');
+    const counterBtn = document.getElementById('counterBtn');
+    counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
+
+const lasso_Button = document.getElementById('lasso_Button');
+let usingLasso = false;
+let draggingLasso = false;
+let lasso_Start = { x: 0, y: 0 };
+let lasso_box = null;
+
+lasso_Button.addEventListener('click', () => {
+  usingLasso = !usingLasso;
+  lasso_Button.classList.toggle('active', usingLasso);
+});
+
+// stop right-click menu when we’re lassoing
+wrap.addEventListener('contextmenu', (e) => {
+  if (usingLasso) e.preventDefault();
+});
+
+// Ctrl+L keyboard shortcut to toggle lasso
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+    e.preventDefault();
+    lasso_Button.click(); 
+  }
+});
+
+// get all things we want to be selectable
+function getSelectableWidgets() {
+  return Array.from(document.querySelectorAll(
+    '.token, .playing-card.draggable, .image-widget, .widget'
+  ));
+}
+
+wrap.addEventListener('mousedown', (e) => {
+  // must be selected
+  if (!usingLasso) return;
+  // left mouse button only
+  if (e.button !== 0) return;
+
+  const rect = wrap.getBoundingClientRect();
+  draggingLasso = true;
+
+  // start inside wrap coords
+  lasso_Start = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+
+  lasso_box = document.createElement('div');
+  lasso_box.className = 'lasso_box';
+  lasso_box.style.left = lasso_Start.x + 'px';
+  lasso_box.style.top = lasso_Start.y + 'px';
+  lasso_box.style.width = '0px';
+  lasso_box.style.height = '0px';
+  wrap.appendChild(lasso_box);
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!draggingLasso || !lasso_box) return;
+
+  const rect = wrap.getBoundingClientRect();
+  const curX = e.clientX - rect.left;
+  const curY = e.clientY - rect.top;
+
+  const left = Math.min(lasso_Start.x, curX);
+  const top = Math.min(lasso_Start.y, curY);
+  const width = Math.abs(curX - lasso_Start.x);
+  const height = Math.abs(curY - lasso_Start.y);
+
+  lasso_box.style.left = left + 'px';
+  lasso_box.style.top = top + 'px';
+  lasso_box.style.width = width + 'px';
+  lasso_box.style.height = height + 'px';
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!draggingLasso) return;
+  draggingLasso = false;
+
+  const boxRect = lasso_box.getBoundingClientRect();
+  lasso_box.remove();
+  lasso_box = null;
+
+  // removes previously selected widgets
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+
+  // checks for overlapping widgets
+  const widgets = getSelectableWidgets();
+  widgets.forEach(widget => {
+    const r = widget.getBoundingClientRect();
+    const overlap =
+      r.right  > boxRect.left &&
+      r.left   < boxRect.right &&
+      r.bottom > boxRect.top &&
+      r.top    < boxRect.bottom;
+
+    if (overlap) {
+      widget.classList.add('selected');
+    }
+  });
+});
+
+
+    let scale = 1;     // zoom factor
+    let panX  = 0;     // translation in px
+    let panY  = 0;
+
+    function applyTransform() {
+      board.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+    }
+    function resetView() {
+      scale = 1; panX = 0; panY = 0; applyTransform();
+    }
+    resetBtn.addEventListener('click', resetView);
+    applyTransform();
+
+    // Mouse wheel zoom around cursor
+    // Replace your current wheel handler with this:
+wrap.addEventListener('wheel', (e) => {
+  e.preventDefault();
+
+  // clamp zoom step
+  const direction = Math.sign(e.deltaY);        // -1 in, +1 out
+  const factor    = direction > 0 ? 0.9 : 1.1;
+  const newScale  = Math.min(3, Math.max(0.2, scale * factor));
+  if (newScale === scale) return;
+
+  // Use WRAP rect for stable math across fixed headers/sidebars
+  const wrect = wrap.getBoundingClientRect();
+
+  // Board-space coords of the cursor BEFORE zoom
+  // screenX = wrect.left + (panX + bx * scale)
+  // => bx = (clientX - wrect.left - panX) / scale
+  const bx = (e.clientX - wrect.left - panX) / scale;
+  const by = (e.clientY - wrect.top  - panY) / scale;
+
+  // Keep cursor anchored:
+  // clientX = wrect.left + (newPanX + bx * newScale)
+  // => newPanX = clientX - wrect.left - bx * newScale
+  panX = e.clientX - wrect.left - bx * newScale;
+  panY = e.clientY - wrect.top  - by * newScale;
+
+  scale = newScale;
+  applyTransform();
+}, { passive: false });
+
+
+    // Middle-mouse panning (button === 1)
+    let panning = false;
+    let startX = 0, startY = 0;
+    let basePanX = 0, basePanY = 0;
+
+    wrap.addEventListener('mousedown', (e) => {
+      if (e.button !== 1) return;      // only middle button
+      panning = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      basePanX = panX;
+      basePanY = panY;
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!panning) return;
+      panX = basePanX + (e.clientX - startX);
+      panY = basePanY + (e.clientY - startY);
+      applyTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      panning = false;
+    });
+
+    // Optional: Spacebar to toggle temporary panning with left mouse
+    // (handy trackpad mode—comment out if you don’t want it)
+    let spacePan = false;
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space') spacePan = true; });
+    window.addEventListener('keyup',   (e) => { if (e.code === 'Space') spacePan = false; });
+
+    wrap.addEventListener('mousedown', (e) => {
+      if (!(spacePan && e.button === 0)) return;  // left click with Space held
+      panning = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      basePanX = panX;
+      basePanY = panY;
+      e.preventDefault();
+    }, true);
+  </script>
+  <script>
+  // ===== Shared constants/helpers =====
+  const CELL = 40; // match your CSS grid size in layoutStyle.css
+  function toBoardCoords(clientX, clientY) {
+    const rect = board.getBoundingClientRect();
+    return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
+  }
+  function snap(v) { return Math.round(v / CELL) * CELL; }
+
+// Bring-to-front counter (keep this if you had it)
+let zTop = 1;
+
+// draggable that supports multi-select drag
+function makeDraggable(el, handle = el) {
+  let dragging = false;
+  let dragStartBoard = { x: 0, y: 0 };
+  // array of {el, startLeft, startTop}
+  let dragTargets = [];
+
+  handle.addEventListener('mousedown', (e) => {
+    // only left mouse
+    if (e.button !== 0) return;
+
+    dragging = true;
+
+    // which things are we going to move?
+    // if this element is selected, move *all* selected
+    const selected = Array.from(document.querySelectorAll('.selected'));
+    if (el.classList.contains('selected') && selected.length > 0) {
+      dragTargets = selected.map(node => {
+        return {
+          el: node,
+          startLeft: parseFloat(node.style.left) || 0,
+          startTop: parseFloat(node.style.top) || 0
+        };
+      });
+    } else {
+      // just this one
+      dragTargets = [{
+        el,
+        startLeft: parseFloat(el.style.left) || 0,
+        startTop: parseFloat(el.style.top) || 0
+      }];
+      // also make this one the only selected one (optional)
+      document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // z-index bump for the one we actually grabbed
+    if (!el.classList.contains('image-widget')) {
+      el.style.zIndex = ++zTop;
+    } else {
+      el.style.zIndex = 0;
+    }
+
+    // where on the board did we start the drag
+    dragStartBoard = toBoardCoords(e.clientX, e.clientY);
+
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+
+    const curBoard = toBoardCoords(e.clientX, e.clientY);
+    const dx = curBoard.x - dragStartBoard.x;
+    const dy = curBoard.y - dragStartBoard.y;
+
+    // move every target by the same delta
+    dragTargets.forEach(t => {
+      t.el.style.left = (t.startLeft + dx) + 'px';
+      t.el.style.top  = (t.startTop + dy) + 'px';
+    });
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+
+    // snap them all to grid
+    dragTargets.forEach(t => {
+      t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
+      t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
+    });
+    dragTargets = [];
+  });
+  // clear selection when clicking empty board, but not while lasso is on
+board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
+}
+
+
+  // Tiny widget “registry”
+  const Widget = {
+    builders: {},
+    create(type, x=0, y=0, props={}) {
+      if (!this.builders[type]) throw new Error(`Unknown widget: ${type}`);
+      const el = this.builders[type](props);
+      el.style.position = 'absolute';
+      el.style.left = snap(x) + 'px';
+      el.style.top  = snap(y) + 'px';
+      // common close button behavior if present
+      el.querySelector?.('.close')?.addEventListener('click', ()=> el.remove());
+      board.appendChild(el);
+      return el;
+    }
+  };
+
+// Global keydown for delete and flip (installed once so it works even if the
+// standard Cards widget hasn't been created). Uses the same semantics as the
+// original handler: Delete removes selected cards, F flips selected cards.
+if (!window._flatTopCardKeyHandlerInstalled) {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Delete') {
+      // remove selected playing cards
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
+      // remove selected tokens
+      document.querySelectorAll('.token.selected').forEach(t => t.remove());
+      // prevent browser navigation on Backspace
+      if (e.key === 'Backspace') e.preventDefault();
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
+        if (typeof c.flipCard === 'function') c.flipCard();
+      });
+    }
+  });
+  window._flatTopCardKeyHandlerInstalled = true;
+}
+
+  // ===== Dice Roller widget =====
+  Widget.builders.dice = function(props={}){
+    const el = document.createElement('div');
+    el.className = 'widget';
+    el.dataset.type = 'dice';
+    el.innerHTML = `
+      <div class="header">
+        <div>🎲 Dice Roller</div>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+      <div class="body">
+        <div class="row">
+          <input type="text" class="expr" placeholder="Ex: d20, 3d6+2, 2d8-1" value="${props.expr||''}" />
+          <button class="roll">Roll</button>
+        </div>
+        <div class="results"><div class="muted">No rolls yet.</div></div>
+      </div>
+    `;
+    makeDraggable(el, el.querySelector('.header'));
+    const input = el.querySelector('.expr');
+    const rollBt = el.querySelector('.roll');
+    const out = el.querySelector('.results');
+
+    rollBt.addEventListener('click', ()=>{
+      const text = (input.value||'d20').trim();
+      const spec = parseDice(text);
+      if (!spec) {
+        out.insertAdjacentHTML('afterbegin', `<div>⚠️ Invalid: <code>${escapeHtml(text)}</code></div>`);
+        return;
+      }
+      const rolls = roll(spec.n, spec.sides);
+      const total = rolls.reduce((a,b)=>a+b,0) + spec.mod;
+      if (out.firstElementChild?.classList.contains('muted')) out.firstElementChild.remove();
+      const ts = new Date().toLocaleTimeString();
+      const detail = `${spec.n}d${spec.sides}${spec.mod? (spec.mod>0?`+${spec.mod}`:`${spec.mod}`):''}`;
+      out.insertAdjacentHTML('afterbegin', `<div>[${ts}] <b>${detail}</b> → <b>${total}</b> <span class="muted">(rolls: ${rolls.join(', ')})</span></div>`);
+    });
+    input.addEventListener('keydown', e=>{ if (e.key==='Enter') rollBt.click(); });
+
+    return el;
+  };
+
+  function parseDice(s){
+    const m = /^\s*(\d*)\s*[dD]\s*(\d+)\s*([+-]\s*\d+)?\s*$/.exec(s);
+    if (!m) return null;
+    const n = m[1]? parseInt(m[1],10):1;
+    const sides = parseInt(m[2],10);
+    const mod = m[3]? parseInt(m[3].replace(/\s+/g,''),10):0;
+    if (!(n>0 && sides>0)) return null;
+    return { n, sides, mod };
+  }
+  function roll(n, sides){ const out=[]; for(let i=0;i<n;i++) out.push(1+Math.floor(Math.random()*sides)); return out; }
+  function escapeHtml(t){ return t.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ===== Token widget (simple circular token with resize handle and x) =====
+Widget.builders.token = function(props = {}) {
+  const token = document.createElement('div');
+  token.className = 'token circle'; // default circle; we’ll support square
+  token.dataset.type = 'token';
+
+  // apply initial shape if provided
+  if (props.shape === 'square') token.classList.replace('circle','square');
+
+  // size & initial label
+  const size = props.size || 40;
+  token.style.width  = size + 'px';
+  token.style.height = size + 'px';
+  token.textContent  = (props.label || 'Token'); // put text node first
+
+  // if created with an image URL, set it
+  if (props.image) {
+  token.dataset.imageSrc = props.image;
+  token.style.backgroundImage = `url("${props.image}")`;
+  token.classList.add('has-image');
+}
+
+  
+
+  // --- image drop helpers ---
+  function extractUrlFromDataTransfer(dt) {
+    // Prefer standard URI list (dragged from another tab)
+    const uriList = dt.getData('text/uri-list');
+    if (uriList) {
+      const first = uriList.split('\n').find(line => line && !line.startsWith('#'));
+      if (first) return first.trim();
+    }
+    // Fallback: some browsers put the URL in plain text
+    const plain = dt.getData('text/plain');
+    if (plain && /^https?:\/\//i.test(plain.trim())) return plain.trim();
+    return null;
+  }
+
+  async function setTokenImageFromFile(file) {
+  // Persist as data URL so it survives reloads
+  const reader = new FileReader();
+  const dataUrl = await new Promise((res, rej) => {
+    reader.onerror = () => rej(reader.error);
+    reader.onload = () => res(reader.result);
+    reader.readAsDataURL(file);
+  });
+  token.dataset.imageSrc = dataUrl;
+  token.style.backgroundImage = `url("${dataUrl}")`;
+  token.classList.add('has-image');
+}
+
+function setTokenImageFromUrl(url) {
+  // Persist the canonical URL (works for http/https)
+  token.dataset.imageSrc = url;
+  token.style.backgroundImage = `url("${url}")`;
+  token.classList.add('has-image');
+}
+
+
+
+  // resize handle
+  const handle = document.createElement('div');
+  handle.className = 'resize-handle';
+  token.appendChild(handle);
+
+  // close (×) button
+  const close = document.createElement('button');
+  close.className = 'close';
+  close.innerHTML = '&times;';
+  token.appendChild(close);
+  close.addEventListener('click', (e) => {
+    e.stopPropagation();   // don’t start drag/select
+    token.remove();
+  });
+
+  // Make the token accept image drops *and* stop the event from reaching the board
+token.addEventListener('dragenter', (e) => {
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const hasImgFile = Array.from(dt.items || [])
+    .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
+  const maybeUrl = extractUrlFromDataTransfer(dt);
+  if (hasImgFile || maybeUrl) {
+    e.preventDefault();
+    e.stopPropagation();            // <-- important
+    token.classList.add('drop-target');
+  }
+});
+
+token.addEventListener('dragover', (e) => {
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const hasImgFile = Array.from(dt.items || [])
+    .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
+  const maybeUrl = extractUrlFromDataTransfer(dt);
+  if (hasImgFile || maybeUrl) {
+    e.preventDefault();
+    e.stopPropagation();            // <-- important
+    token.classList.add('drop-target');
+    if (dt.dropEffect) dt.dropEffect = 'copy';
+  }
+});
+
+token.addEventListener('dragleave', (e) => {
+  e.stopPropagation();              // <-- so board doesn't “un-highlight” itself
+  token.classList.remove('drop-target');
+});
+
+token.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  e.stopPropagation();              // <-- critical: keep board handler from firing
+  token.classList.remove('drop-target');
+
+  const dt = e.dataTransfer;
+  if (!dt) return;
+
+  if (dt.files && dt.files.length) {
+    const file = dt.files[0];
+    if (file && file.type && file.type.startsWith('image/')) {
+      await setTokenImageFromFile(file);
+      return;
+    }
+  }
+  const url = extractUrlFromDataTransfer(dt);
+  if (url) {
+    setTokenImageFromUrl(url);
+  }
+});
+
+
+
+  // shape toggle (◯ / ◻)
+  const shapeBtn = document.createElement('button');
+  shapeBtn.className = 'shape';
+  shapeBtn.title = 'Toggle shape (circle/square)';
+  shapeBtn.textContent = '◯';
+  token.appendChild(shapeBtn);
+
+  function refreshShapeIcon() {
+    shapeBtn.textContent = token.classList.contains('square') ? '◻' : '◯';
+  }
+  refreshShapeIcon();
+
+  shapeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (token.classList.contains('square')) {
+      token.classList.replace('square','circle');
+    } else {
+      token.classList.replace('circle','square');
+    }
+    refreshShapeIcon();
+  });
+
+
+  // dragging (use the whole token as handle)
+  makeDraggable(token, token);
+
+  // ----- resizing -----
+  let resizing = false, start = {x:0, y:0}, baseSize = size;
+  handle.addEventListener('mousedown', (e) => {
+    e.stopPropagation();                 // don’t start a drag
+    resizing = true;
+    start = toBoardCoords(e.clientX, e.clientY);
+    baseSize = parseFloat(token.style.width) || size;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!resizing) return;
+    const cur = toBoardCoords(e.clientX, e.clientY);
+    const delta = Math.max(cur.x - start.x, cur.y - start.y);
+    const newSize = Math.max(24, baseSize + delta);
+    token.style.width  = newSize + 'px';
+    token.style.height = newSize + 'px';
+    token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!resizing) return;
+    resizing = false;
+    // snap size to grid
+    const s = parseFloat(token.style.width);
+    const snapped = Math.max(CELL, snap(s));
+    token.style.width  = snapped + 'px';
+    token.style.height = snapped + 'px';
+  });
+
+  // ----- rename on double-click (quick patch version) -----
+  token.addEventListener('dblclick', () => {
+    // get current label text WITHOUT the × (read the first text node if present)
+    let currentLabel = '';
+    if (token.firstChild && token.firstChild.nodeType === Node.TEXT_NODE) {
+      currentLabel = token.firstChild.nodeValue;
+    } else {
+      currentLabel = token.textContent.replace('×', '').trim();
+    }
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentLabel || 'Token';
+    input.className = 'rename';
+
+    // Clearing textContent removes ALL children (including handle/close),
+    // so we will re-append them immediately after adding the input.
+    token.textContent = '';
+    token.appendChild(input);
+    token.appendChild(handle);
+    token.appendChild(close);
+    token.appendChild(shapeBtn);
+
+
+    input.focus();
+    input.addEventListener('blur', () => {
+      token.textContent = input.value || 'Token'; // put label back as text node
+      token.appendChild(handle);                  // re-attach again
+      token.appendChild(close);
+      token.appendChild(shapeBtn);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') input.blur();
+      e.stopPropagation();
+    });
+  });
+
+  // ----- selection outline -----
+  token.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+    token.classList.add('selected');
+  });
+  /*
+  board.addEventListener('click', () => {
+    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+  });
+  */
+ board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
+
+  return token;
+};
+
+
+  // ===== Hook the sidebar buttons =====
+  diceBtn.addEventListener('click', ()=> Widget.create('dice', 0, 0));
+  tokenBtn.addEventListener('click', ()=> Widget.create('token', 0, 0));
+  const scoreBtn = document.getElementById('scoreBtn');
+  scoreBtn.addEventListener('click', ()=> Widget.create('scorecard', 0, 0));
+  // new dropdown menu items
+  const cardsDeckBtn = document.getElementById('cardsDeckBtn');
+  const cardsCustomBtn = document.getElementById('cardsCustomBtn');
+  cardsDeckBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('cards', 0, 0); });
+  cardsCustomBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('customCards', 0, 0); });
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
+  const addNotesBtn = document.getElementById('addNotesWidget');
+  addNotesBtn.addEventListener('click', ()=> Widget.create('notes', 0, 0));
+  const addChatBtn = document.getElementById('addChatWidget');
+  addChatBtn.addEventListener('click', ()=> Widget.create('chat', 0, 0));
+
+  // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
+Widget.builders.cards = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget cards-widget';
+  el.dataset.type = 'cards';
+  el.innerHTML = `
+    <div class="header">
+      <div>🃏 Standard Card Deck</div>
+      <button class="close" title="Remove">&times;</button>
+    </div>
+    <div class="body">
+      <div class="btnrow">
+        <button class="draw">Draw</button>
+        <button class="shuffle">Shuffle</button>
+        <button class="reset">Reset</button>
+        <button class="flip">Flip</button>
+      </div>
+      <div class="count"></div>
+      <div class="playing-card back" aria-label="card" style="width:80px;height:120px;"></div>
+      <div class="widget-footer-note muted">
+        Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
+      </div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  // --- deck model ---
+  const SUITS = [
+    { sym: "♠", color: "black" },
+    { sym: "♥", color: "red"   },
+    { sym: "♣", color: "black" },
+    { sym: "♦", color: "red"   },
+  ];
+  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+  function buildDeck(){ const d=[]; for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s.sym, color:s.color}); return d; }
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+  let deck = shuffle(buildDeck());
+  let discard = [];
+  let showBack = true;
+
+  const cardEl = el.querySelector('.playing-card');
+  const countEl = el.querySelector('.count');
+  const flipBtn = el.querySelector('.flip');
+
+  function updateFlipUi() {
+    if (flipBtn) flipBtn.textContent = showBack ? 'Flip: On' : 'Flip: Off';
+  }
+
+  function renderTop() {
+    countEl.textContent = `Deck: ${deck.length}`;
+    if (showBack) {
+      cardEl.classList.add('back');
+      cardEl.textContent = '';
+      cardEl.classList.remove('red');
+    } else {
+      cardEl.classList.remove('back');
+      if (deck.length === 0) {
+        cardEl.textContent = '';
+        cardEl.classList.remove('red');
+      } else {
+        cardEl.textContent = 'A♠'; // Default face for deck (front)
+        cardEl.classList.remove('red');
+      }
+    }
+    updateFlipUi();
+  }
+
+  // Helper to create a draggable card on the board
+  function createDraggableCard(card, x, y) {
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'playing-card draggable';
+    cardDiv.style.position = 'absolute';
+    cardDiv.style.left = snap(x) + 'px';
+    cardDiv.style.top = snap(y) + 'px';
+    cardDiv.style.width = '40px';
+    cardDiv.style.height = '60px';
+    cardDiv.style.zIndex = 9999;
+    // Store card data and flip state on the element
+    cardDiv._cardData = card;
+    cardDiv._flipped = showBack;
+    function renderCardFace() {
+      if (cardDiv._flipped) {
+        cardDiv.classList.add('back');
+        cardDiv.textContent = '';
+        cardDiv.classList.remove('red');
+      } else {
+        cardDiv.classList.remove('back');
+        cardDiv.textContent = `${card.rank}${card.suit}`;
+        if (card.color === 'red') cardDiv.classList.add('red');
+        else cardDiv.classList.remove('red');
+      }
+    }
+    renderCardFace();
+    makeDraggable(cardDiv, cardDiv);
+    // Selection logic
+    cardDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+      // also deselect tokens when selecting a card
+      document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+      cardDiv.classList.add('selected');
+    });
+    // Deselect on board click
+    /*board.addEventListener('click', () => {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+    });
+    */
+   board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
+    // Flip on 'f' key
+    cardDiv.flipCard = function() {
+      cardDiv._flipped = !cardDiv._flipped;
+      renderCardFace();
+    };
+    board.appendChild(cardDiv);
+  }
+
+
+
+  // buttons
+  el.querySelector('.draw').addEventListener('click', () => {
+    if (deck.length === 0) return; // empty
+    const card = deck.pop();
+    // Get widget position relative to board
+    const widgetRect = el.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+    const x = widgetRect.left - boardRect.left + 100; // offset so card doesn't overlap widget
+    const y = widgetRect.top - boardRect.top;
+    createDraggableCard(card, x, y);
+    discard.push(card);
+    renderTop(); // keep showBack state
+  });
+
+  el.querySelector('.shuffle').addEventListener('click', () => {
+    deck = shuffle(deck);
+    renderTop();
+  });
+
+  el.querySelector('.reset').addEventListener('click', () => {
+    deck = shuffle(buildDeck());
+    discard = [];
+    showBack = true;
+    renderTop();
+  });
+
+  el.querySelector('.flip').addEventListener('click', () => {
+    showBack = !showBack;
+    updateFlipUi();
+    renderTop();
+  });
+
+  // click card to draw
+  cardEl.addEventListener('click', () => el.querySelector('.draw').click());
+
+  renderTop();
+  return el;
+};
+
+// ===== Custom Cards widget (simple custom-deck with a text area to define cards) =====
+Widget.builders.customCards = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget cards-widget';
+  el.dataset.type = 'customCards';
+  el.innerHTML = `
+    <div class="header">
+      <div>🃏 Custom Card Deck</div>
+      <button class="close" title="Remove">&times;</button>
+    </div>
+    <div class="body">
+      <div class="btnrow">
+        <button class="draw">Draw</button>
+        <button class="shuffle">Shuffle</button>
+        <button class="reset">Reset</button>
+        <button class="flip">Flip</button>
+      </div>
+    <div class="count"></div>
+  <div class="card-size-controls" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+        <label style="font-size:13px;">W:<input type="number" class="card-width" value="60" min="10" style="width:72px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;"/></label>
+        <label style="font-size:13px;">H:<input type="number" class="card-height" value="90" min="10" style="width:72px;margin-left:6px;padding:4px;border:1px solid #ccc;border-radius:4px;"/></label>
+        <div style="font-size:12px;color:#666;margin-left:6px;">px</div>
+      </div>
+
+      <div class="card-uploader" style="margin-top:8px;">
+        <label style="display:block;margin-bottom:6px;">Upload images: <input type="file" class="card-images-input" accept="image/*" multiple/></label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <button class="toggle-list" type="button" style="font-size:12px;padding:4px 8px;">Hide list</button>
+          <div class="muted" style="font-size:12px;">Toggle uploaded files list</div>
+        </div>
+        <div class="card-list" style="display:flex;flex-direction:column;gap:6px; margin-top:6px; max-height:220px; overflow:auto;"></div>
+  <div class="muted small-hint" style="font-size:12px;">Define one card per line in the box below.</div>
+        <textarea class="card-defs" style="width:100%;height:80px;margin-top:8px;border:1px solid #ccc;border-radius:6px;padding:6px;" placeholder="Ace of Spades\nTwo of Hearts\n...">${(props.defs||'').toString()}</textarea>
+      </div>
+    <div class="widget-footer-note muted">
+        Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
+      </div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  let cards = [];
+  // persist uploaded images separately so Reset can fully rebuild the deck
+  // even after some cards have been drawn/removed from `cards`.
+  let uploadedImageCards = [];
+  let showBack = false; // whether newly drawn cards should start face-down
+  const countEl = el.querySelector('.count');
+  const defs = el.querySelector('.card-defs');
+  const fileInput = el.querySelector('.card-images-input');
+  const cardListEl = el.querySelector('.card-list');
+  const toggleListBtn = el.querySelector('.toggle-list');
+
+  // Make list collapsible and bounded in height to avoid huge widgets
+  if (toggleListBtn) {
+    toggleListBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (cardListEl.style.display === 'none') {
+        cardListEl.style.display = 'flex';
+        toggleListBtn.textContent = 'Hide list';
+      } else {
+        cardListEl.style.display = 'none';
+        toggleListBtn.textContent = 'Show list';
+      }
+    });
+  }
+
+  // CSRF helper for safe POSTs
+  function getCookie(name) {
+    const v = document.cookie.split(';').map(c => c.trim()).filter(c => c.startsWith(name + '='));
+    if (v.length === 0) return null;
+    return decodeURIComponent(v[0].split('=')[1]);
+  }
+
+  function getCSRFToken() {
+    // Try to get CSRF token from cookie first
+    let token = getCookie('csrftoken');
+    // If not available, try to get from meta tag
+    if (!token) {
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      token = meta ? meta.getAttribute('content') : '';
+    }
+    return token;
+  }
+
+  async function uploadFile(file) {
+    const fd = new FormData();
+    fd.append('image', file);
+    const res = await fetch('/board/api/upload_card_image/', {
+      method: 'POST',
+      body: fd,
+      headers: {
+        'X-CSRFToken': getCSRFToken()
+      }
+    });
+    if (!res.ok) {
+      let errorMsg = `HTTP ${res.status}`;
+      try {
+        const txt = await res.text();
+        // Try to parse as JSON first (in case it's our API error)
+        try {
+          const errorJson = JSON.parse(txt);
+          errorMsg = errorJson.error || errorMsg;
+        } catch {
+          // Not JSON, check if it's HTML (login redirect)
+          if (txt.includes('<!doctype') || txt.includes('<html')) {
+            errorMsg = 'Please log in first';
+          } else {
+            errorMsg = txt.substring(0, 100); // First 100 chars
+          }
+        }
+      } catch {
+        // Could not read response text
+      }
+      throw new Error(errorMsg);
+    }
+    const j = await res.json();
+    return j.url;
+  }
+
+  function buildFromDefs(){
+    // parse the textarea for plain-label cards
+    const lines = defs.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    // use the persistent uploadedImageCards (not the current `cards` which may have been drawn)
+    const imageCards = uploadedImageCards.slice();
+    const labelCards = lines.map(l => ({ label: l }));
+    cards = imageCards.concat(labelCards);
+  }
+
+  // Reset the deck to the current uploaded images + textarea definitions
+  // (reconstructs the deck even if cards were previously drawn)
+  function resetToDefs() {
+    buildFromDefs();
+    renderCardsList();
+    renderCount();
+  }
+
+  function renderCardsList(){
+    cardListEl.innerHTML = '';
+    cards.forEach((c, idx) => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '8px';
+
+  const thumb = document.createElement('div');
+  thumb.style.width = '48px';
+  thumb.style.height = '36px';
+  // prevent the thumbnail box from shrinking when there's a scrollbar
+  thumb.style.flex = '0 0 48px';
+  thumb.style.background = '#f6f6f6';
+  thumb.style.display = 'flex';
+  thumb.style.alignItems = 'center';
+  thumb.style.justifyContent = 'center';
+  thumb.style.border = '1px solid #ddd';
+      if (c.image) {
+  const img = document.createElement('img');
+  img.src = c.image;
+  // use max-width / max-height + object-fit to preserve aspect ratio and avoid distortion
+  img.style.maxWidth = '100%';
+  img.style.maxHeight = '100%';
+  img.style.objectFit = 'contain';
+  img.draggable = false;
+  thumb.style.overflow = 'hidden';
+  thumb.appendChild(img);
+      } else {
+        thumb.textContent = c.label || 'Text';
+        thumb.style.fontSize = '12px';
+        thumb.style.padding = '4px';
+      }
+
+  const label = document.createElement('input');
+  label.type = 'text'; label.value = c.label || '';
+  label.style.flex = '1';
+  // allow the input to shrink when the container is narrow (prevents pushing/shrinking the thumb)
+  label.style.minWidth = '0';
+      label.addEventListener('change', () => { c.label = label.value; });
+
+      const remove = document.createElement('button'); remove.innerHTML = '🗑'; remove.title = 'Remove'; remove.className = 'trash'; remove.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        // If this item is an uploaded image, remove from uploadedImageCards; otherwise remove from textarea defs
+        if (c.image) {
+          const i = uploadedImageCards.findIndex(ic => ic.image === c.image && ic.label === c.label);
+          if (i !== -1) uploadedImageCards.splice(i, 1);
+        } else {
+          // remove the corresponding label line
+          const lines = defs.value.split('\n').map(s=>s.trim()).filter(Boolean);
+          const imageCount = uploadedImageCards.length;
+          const labelIndex = idx - imageCount;
+          if (labelIndex >= 0 && labelIndex < lines.length) {
+            lines.splice(labelIndex, 1);
+            defs.value = lines.join('\n');
+          }
+        }
+        buildFromDefs();
+        renderCardsList();
+        renderCount();
+      });
+
+      row.appendChild(thumb);
+      row.appendChild(label);
+      row.appendChild(remove);
+      cardListEl.appendChild(row);
+    });
+  }
+  function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+  function renderCount(){ countEl.textContent = `Deck: ${cards.length}`; }
+
+  // wire file input -> upload
+  fileInput.addEventListener('change', async (e)=>{
+    const files = Array.from(e.target.files || []);
+    for (const f of files) {
+      try {
+        const url = await uploadFile(f);
+        // persist uploaded images so Reset/rebuild uses them even after draws
+        uploadedImageCards.unshift({ label: f.name, image: url });
+        buildFromDefs();
+        renderCardsList();
+        renderCount();
+      } catch (err) {
+        console.error('Upload failed', err);
+        alert('Upload failed: ' + err.message);
+      }
+    }
+    // clear input
+    fileInput.value = '';
+  });
+
+  // actions
+  el.querySelector('.draw').addEventListener('click', () => {
+    if (cards.length === 0) return;
+    const card = cards.pop();
+    const widgetRect = el.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+    const x = widgetRect.left - boardRect.left + 100;
+    const y = widgetRect.top - boardRect.top;
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'playing-card draggable';
+    cardDiv.style.position = 'absolute';
+    cardDiv.style.left = snap(x) + 'px';
+    cardDiv.style.top = snap(y) + 'px';
+    // use configured size values (fallbacks: 60x90)
+    const w = parseInt((el.querySelector('.card-width')?.value) || '60', 10) || 60;
+    const h = parseInt((el.querySelector('.card-height')?.value) || '90', 10) || 90;
+    cardDiv.style.width = w + 'px';
+    cardDiv.style.height = h + 'px';
+    cardDiv.style.zIndex = 9999;
+    // store card data and flip state similar to the standard deck cards
+    cardDiv._cardData = card;
+  cardDiv._flipped = !!showBack; // default to current showBack setting
+
+    function renderCardFace() {
+      if (cardDiv._flipped) {
+        cardDiv.classList.add('back');
+        cardDiv.textContent = '';
+        cardDiv.classList.remove('red');
+      } else {
+        cardDiv.classList.remove('back');
+        // if card has an image, render it; otherwise render text label
+        cardDiv.textContent = '';
+        if (card.image) {
+          const img = document.createElement('img');
+          img.src = card.image;
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.draggable = false;
+          cardDiv.appendChild(img);
+        } else {
+          cardDiv.textContent = card.label;
+        }
+        cardDiv.classList.remove('red');
+      }
+    }
+    renderCardFace();
+
+    makeDraggable(cardDiv, cardDiv);
+
+    // Selection logic (single-select)
+    cardDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+      cardDiv.classList.add('selected');
+    });
+    // Deselect on board click
+    /*
+    board.addEventListener('click', () => {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+    });
+    */
+   board.addEventListener('click', () => {
+  if (usingLasso) return;
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+});
+
+
+    // flip method used by global key handler
+    cardDiv.flipCard = function() {
+      cardDiv._flipped = !cardDiv._flipped;
+      renderCardFace();
+    };
+
+    board.appendChild(cardDiv);
+    renderCount();
+  });
+
+  el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); });
+  el.querySelector('.reset').addEventListener('click', () => {
+    // Rebuild the deck from uploaded images + textarea, then shuffle — this restarts the deck
+    resetToDefs();
+    shuffleArr(cards);
+    renderCount();
+  });
+
+  // flip button toggles whether new cards come out face-down (and updates preview)
+  const flipBtn = el.querySelector('.flip');
+  function updateFlipUi() {
+    flipBtn.textContent = showBack ? 'Flip: On' : 'Flip: Off';
+  }
+  flipBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    showBack = !showBack;
+    updateFlipUi();
+  });
+  updateFlipUi();
+
+  // live update when defs change
+  defs.addEventListener('blur', () => { buildFromDefs(); renderCount(); });
+  defs.addEventListener('keydown', (e)=>{ if (e.key==='Escape') defs.blur(); });
+
+  // init
+  buildFromDefs(); shuffleArr(cards); renderCount();
+
+  // close
+  el.querySelector('.close').addEventListener('click', ()=> el.remove());
+
+  return el;
+};
+
+// ===== Counters widget (multi named counters with +/-1, +/-5, type-to-edit) =====
+Widget.builders.counters = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget counters-widget';
+  el.dataset.type = 'counters';
+  el.innerHTML = `
+    <div class="header">
+      <div>🔢 Counters</div>
+      <div class="header-actions">
+        <button class="add-row" title="Add counter">＋</button>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+    </div>
+    <div class="body">
+      <div class="rows"></div>
+      <div class="muted small-hint">Tip: type a value, press Enter; use ArrowUp/ArrowDown to change by 1 (hold Shift for 5).</div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  const rows = el.querySelector('.rows');
+  const addBtn = el.querySelector('.add-row');
+  const close  = el.querySelector('.close');
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+
+  // helpers
+  const clampInt = (v) => {
+    // allow negative; limit to 32-bit-ish range
+    if (Number.isNaN(v)) return 0;
+    return Math.max(-2147483648, Math.min(2147483647, v|0));
+  };
+
+  function createRow(data = {}) {
+    const row = document.createElement('div');
+    row.className = 'counter-row';
+    row.innerHTML = `
+    <input class="name" type="text" placeholder="Name" value="${data.name ?? ''}" />
+    <input class="value" type="number" inputmode="numeric" value="${clampInt(+data.value || 0)}" />
+    <button class="trash" title="Delete counter">🗑</button>
+    `;
+
+
+    const valueInput = row.querySelector('.value');
+
+    function n() { return clampInt(parseInt(valueInput.value, 10)); }
+    function set(v) { valueInput.value = clampInt(v); }
+
+    
+
+    // typing: commit on Enter / blur; sanitize on input
+    valueInput.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') valueInput.blur();
+      // Arrow controls: ±1; hold Shift for ±5
+      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+      e.stopPropagation();
+    });
+    valueInput.addEventListener('blur', ()=> set(n()));
+    valueInput.addEventListener('input', ()=>{
+      // live-clean non-digits except leading '-'
+      const m = valueInput.value.match(/^-?\d*/);
+      valueInput.value = m ? m[0] : '0';
+    });
+
+    // delete this row
+    row.querySelector('.trash').addEventListener('click', (e)=> {
+      e.stopPropagation();
+      row.remove();
+    });
+
+    rows.appendChild(row);
+  }
+
+  // initial rows (if provided); else one empty row
+  const initial = Array.isArray(props.counters) && props.counters.length ? props.counters : [{}];
+  initial.forEach(c => createRow(c));
+
+  addBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    createRow({});
+  });
+
+  return el;
+};
+
+// ===== Scorecard widget =====
+Widget.builders.scorecard = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'widget scorecard-widget';
+  el.dataset.type = 'scorecard'; 
+  el.innerHTML = `
+    <div class="header">
+      <div>🏆 Scorecard</div>
+      <div class="header-actions">
+        <button class="add-row" title="Add row">＋Row</button>
+        <button class="add-col" title="Add column">＋Col</button>
+        <button class="expand" title="Expand">⤢</button>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+    </div>
+    <div class="body">
+      <div class="table-wrap">
+        <table class="score-table" cellspacing="0" cellpadding="0"></table>
+      </div>
+      <div class="muted small-hint">Double-click a header to rename. Hold shift to adjust by 5.</div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  const tbl = el.querySelector('.score-table');
+  const addRowBtn = el.querySelector('.add-row');
+  const addColBtn = el.querySelector('.add-col');
+  const close = el.querySelector('.close');
+  // keyboard handler: Shift+ArrowUp/ArrowDown adjusts selected cell by ±5
+  const _scoreKeyHandler = (e) => {
+    if (!e.shiftKey) return;
+    if (e.key === 'ArrowUp') { e.preventDefault(); adjustSelected(5); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); adjustSelected(-5); }
+  };
+  window.addEventListener('keydown', _scoreKeyHandler);
+  close.addEventListener('click', (e) => { e.stopPropagation(); window.removeEventListener('keydown', _scoreKeyHandler); el.remove(); });
+  const expandBtn = el.querySelector('.expand');
+  expandBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    el.classList.toggle('expanded');
+    expandBtn.textContent = el.classList.contains('expanded') ? '⤡' : '⤢';
+  });
+
+  // internal state: number of rows & cols (excluding header row/col)
+  let rows = Math.max(1, (props.rowsCount || 2));
+  let cols = Math.max(1, (props.colsCount || 2));
+  let selectedCell = null; // {r,c,el}
+
+  function buildTable() {
+    // clear
+    tbl.innerHTML = '';
+
+    // header row (top-left empty cell + column headers)
+    const thead = document.createElement('tr');
+    thead.className = 'hdr-row';
+    thead.appendChild(document.createElement('th')); // empty corner
+    for (let c = 0; c < cols; c++) {
+      const th = document.createElement('th');
+      th.className = 'col-hdr';
+      th.dataset.c = c;
+      th.textContent = (props.colLabels && props.colLabels[c]) || `Col ${c+1}`;
+      th.addEventListener('dblclick', (e)=> { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
+      th.addEventListener('blur', ()=> { th.contentEditable = 'false'; });
+      thead.appendChild(th);
+    }
+    tbl.appendChild(thead);
+
+    // body rows
+    for (let r = 0; r < rows; r++) {
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      // row header
+      const th = document.createElement('th');
+      th.className = 'row-hdr';
+      th.dataset.r = r;
+      th.textContent = (props.rowLabels && props.rowLabels[r]) || `Row ${r+1}`;
+      th.addEventListener('dblclick', (e)=> { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
+      th.addEventListener('blur', ()=> { th.contentEditable = 'false'; });
+      tr.appendChild(th);
+
+      for (let c = 0; c < cols; c++) {
+        const td = document.createElement('td');
+        td.className = 'cell';
+        td.dataset.r = r; td.dataset.c = c;
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.className = 'cell-input';
+        inp.value = (props.values && props.values[`${r},${c}`]) ?? 0;
+        inp.addEventListener('mousedown', (ev)=> ev.stopPropagation());
+        inp.addEventListener('click', (ev)=> { ev.stopPropagation(); selectCell(td); inp.focus(); });
+  inp.addEventListener('keydown', (ev)=> { if (ev.key === 'Enter') { inp.blur(); ev.stopPropagation(); } });
+        td.appendChild(inp);
+        tr.appendChild(td);
+      }
+      tbl.appendChild(tr);
+    }
+  }
+
+  function selectCell(td) {
+    if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected');
+    selectedCell = { r: parseInt(td.dataset.r,10), c: parseInt(td.dataset.c,10), el: td };
+    td.classList.add('selected');
+  }
+
+  function addRow() { rows++; buildTable(); }
+  function addCol() { cols++; buildTable(); }
+  function adjustSelected(delta) {
+    if (!selectedCell) return;
+    const td = selectedCell.el;
+    const inp = td.querySelector('.cell-input');
+    const cur = parseInt(inp.value || 0, 10);
+    inp.value = cur + delta;
+  }
+
+  addRowBtn.addEventListener('click', (e)=> { e.stopPropagation(); addRow(); });
+  addColBtn.addEventListener('click', (e)=> { e.stopPropagation(); addCol(); });
+
+  // click outside clears selection
+  board.addEventListener('click', ()=> { if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected'); selectedCell = null; });
+
+  // initialize
+  buildTable();
+
+  return el;
+};
+
+
+
+
+// ===== Image widget (draggable, resizable, deletable) =====
+Widget.builders.image = function(props = {}) {
+  const el = document.createElement('div');
+  el.className = 'image-widget';
+  el.dataset.type = 'image';
+  el.style.width  = (props.width  ?? 200) + 'px';
+  el.style.height = (props.height ?? 200) + 'px';
+  el.style.position = 'absolute';
+
+  // inner elements
+  const img = document.createElement('img');
+  img.className = 'image';
+  img.draggable = false; // prevent native browser drag
+  img.src = props.src || '';
+  el.appendChild(img);
+
+  const handle = document.createElement('div');
+  handle.className = 'resize-handle';
+  el.appendChild(handle);
+
+  const close = document.createElement('button');
+  close.className = 'close';
+  close.innerHTML = '&times;';
+  close.title = 'Remove';
+  el.appendChild(close);
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+
+  // place on board (Widget.create handles left/top normally)
+  makeDraggable(el, el); // drag anywhere on the image widget
+
+  // ----- resizing (keep aspect if Shift is held) -----
+  let resizing = false, start={x:0,y:0}, baseW=0, baseH=0, aspect=1;
+  img.addEventListener('load', ()=>{ if (img.naturalWidth && img.naturalHeight) aspect = img.naturalWidth / img.naturalHeight; });
+  handle.addEventListener('mousedown', (e)=>{
+    e.stopPropagation();
+    resizing = true;
+    const p = toBoardCoords(e.clientX, e.clientY);
+    start = p;
+    baseW = parseFloat(getComputedStyle(el).width);
+    baseH = parseFloat(getComputedStyle(el).height);
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if (!resizing) return;
+    const cur = toBoardCoords(e.clientX, e.clientY);
+    let dx = cur.x - start.x;
+    let dy = cur.y - start.y;
+
+    // size proposal
+    let newW = Math.max(40, baseW + dx);
+    let newH = Math.max(40, baseH + dy);
+
+    // keep aspect while Shift is held
+    if (e.shiftKey) {
+      if (newW / newH > aspect) newW = newH * aspect; else newH = newW / aspect;
+    }
+    el.style.width  = newW + 'px';
+    el.style.height = newH + 'px';
+  });
+  window.addEventListener('mouseup', ()=>{
+    if (!resizing) return;
+    resizing = false;
+    // snap size to grid
+    const w = parseFloat(getComputedStyle(el).width);
+    const h = parseFloat(getComputedStyle(el).height);
+    el.style.width  = Math.max(CELL, snap(w)) + 'px';
+    el.style.height = Math.max(CELL, snap(h)) + 'px';
+  });
+  // ROTATE 90° button (next to the close button)
+const rotateBtn = document.createElement('button');
+rotateBtn.className = 'rotate';
+rotateBtn.innerHTML = '⟳';
+rotateBtn.title = 'Rotate 90°';
+el.appendChild(rotateBtn);
+
+let rotation = props.rotation ? (props.rotation % 360) : 0;
+img.style.transformOrigin = 'center center';
+img.style.transform = `rotate(${rotation}deg)`;
+
+rotateBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  rotation = (rotation + 90) % 360;
+  img.style.transform = `rotate(${rotation}deg)`;
+
+  
+});
+
+  return el;
+};
+
+
+// ===== Drag-and-drop images onto the board =====
+
+// Prevent default to allow drop
+['dragenter','dragover'].forEach(evt =>
+  wrap.addEventListener(evt, e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }, { passive:false })
+);
+wrap.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  // Drop position in BOARD coords
+  const { x, y } = toBoardCoords(e.clientX, e.clientY);
+
+  // 1) If we got files (local images)
+  const files = Array.from(e.dataTransfer.files || []);
+  const imageFiles = files.filter(f => f.type && f.type.startsWith('image/'));
+  if (imageFiles.length > 0) {
+    for (const file of imageFiles) {
+      const dataUrl = await fileToDataURL(file);
+      const el = Widget.create('image', x, y, { src: dataUrl, width: 240, height: 240 });
+      // small offset so multiple files don’t stack exactly
+      el.style.left = snap((parseFloat(el.style.left)||0) + 10) + 'px';
+      el.style.top  = snap((parseFloat(el.style.top)||0) + 10) + 'px';
+    }
+    return;
+  }
+
+  // 2) Otherwise, check for a URL (dragged from another tab)
+  // Prefer 'text/uri-list'; fall back to plain text or HTML.
+  const dt = e.dataTransfer;
+  let url = dt.getData('text/uri-list') || dt.getData('text/plain');
+
+  // If HTML was dragged (e.g., an <img>), try to extract the first <img src>
+  if ((!url || !/^https?:/i.test(url)) && dt.types.includes('text/html')) {
+    const html = dt.getData('text/html');
+    const m = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+    if (m) url = m[1];
+  }
+
+  if (url && /^https?:/i.test(url)) {
+    // Create an image widget that hot-links the remote asset
+    Widget.create('image', x, y, { src: url, width: 320, height: 220 });
+  }
+});
+
+// helper: file -> data URL
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+</script>
+
+<script>
+// ===== SAVE / LOAD =====
+
+// Keep JSON stable in "board pixels"
+function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
+
+// Read rotation in degrees from a CSS matrix()
+function matrixToDeg(mstr){
+  if (!mstr || mstr === 'none') return 0;
+  const m = mstr.match(/matrix\(([-\d.e, ]+)\)/);
+  if (!m) return 0;
+  const [a,b] = m[1].split(',').map(Number);
+  return Math.round(Math.atan2(b, a) * 180 / Math.PI);
+}
+
+// Build a snapshot of the board
+function collectBoardState(){
+  const items = [];
+
+  // 1) Panel widgets (anything with #board > .widget)
+document.querySelectorAll('#board > .widget').forEach(el => {
+  const kind  = el.dataset.type || 'widget';
+  const title = el.querySelector('.header div')?.textContent?.trim() || '';
+
+  // default payload
+  const base = {
+    kind,
+    label: title,
+    x: pxToNum(el.style.left),
+    y: pxToNum(el.style.top),
+    w: pxToNum(el.style.width)  || el.offsetWidth,
+    h: pxToNum(el.style.height) || el.offsetHeight,
+    z: pxToNum(el.style.zIndex) || 1,
+    data: null
+  };
+
+  // Capture per-widget state
+  if (kind === 'notes') {
+    // try common selectors; adjust if your notes.js uses a specific class
+    const ta = el.querySelector('textarea, .notes-text, .note-text');
+    base.data = { text: ta ? ta.value : '' };
+  } else if (kind === 'counters') {
+    const rows = [];
+    el.querySelectorAll('.counter-row').forEach(r => {
+      const name  = r.querySelector('.name')?.value ?? '';
+      const value = parseInt(r.querySelector('.value')?.value ?? '0', 10) || 0;
+      rows.push({ name, value });
+    });
+    base.data = { counters: rows };
+  } else if (kind === 'scorecard') {
+    // headers
+    const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
+    const rowHdrs = Array.from(el.querySelectorAll('tr.data-row th.row-hdr')).map(th => th.textContent.trim());
+
+    // values keyed by "r,c"
+    const values = {};
+    el.querySelectorAll('tr.data-row').forEach((tr, r) => {
+      tr.querySelectorAll('td.cell').forEach((td, c) => {
+        const v = parseInt(td.querySelector('input.cell-input')?.value ?? '0', 10) || 0;
+        values[`${r},${c}`] = v;
+      });
+    });
+
+    base.data = {
+      rowsCount: rowHdrs.length,
+      colsCount: colHdrs.length,
+      rowLabels: rowHdrs,
+      colLabels: colHdrs,
+      values
+    };
+  } else if (kind === 'chat') {
+    // capture chat data if the widget has the getChatData method
+    if (typeof el.getChatData === 'function') {
+      base.data = el.getChatData();
+    }
+  }
+
+  items.push(base);
+});
+
+
+  // 2) Tokens
+document.querySelectorAll('#board > .token').forEach(el => {
+  // Prefer the persisted source if present
+  let imageUrl = el.dataset.imageSrc || '';
+  if (!imageUrl) {
+    const bg = getComputedStyle(el).backgroundImage;
+    if (bg && bg !== 'none') {
+      const m = bg.match(/url\(["']?(.*?)["']?\)/i);
+      if (m && m[1] && !m[1].startsWith('blob:')) {
+        imageUrl = m[1]; // only keep durable (non-blob) URLs
+      }
+    }
+  }
+
+  // read label from first text node
+  let label = '';
+  const fc = el.firstChild;
+  if (fc && fc.nodeType === Node.TEXT_NODE) {
+    label = (fc.nodeValue || '').trim();
+  }
+
+  items.push({
+    kind: 'token',
+    shape: el.classList.contains('square') ? 'square' : 'circle',
+    label,
+    x: pxToNum(el.style.left),
+    y: pxToNum(el.style.top),
+    w: pxToNum(el.style.width)  || el.offsetWidth,
+    h: pxToNum(el.style.height) || el.offsetHeight,
+    z: pxToNum(el.style.zIndex) || 1,
+    imageUrl
+  });
+});
+
+
+
+  // 3) Image widgets (note: your rotation is on the IMG, not the wrapper)
+  document.querySelectorAll('#board > .image-widget').forEach(el => {
+    const img = el.querySelector('img.image');
+    const src = img ? img.getAttribute('src') : '';
+    const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
+    items.push({
+      kind: 'image',
+      src,
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width)  || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      rotation
+    });
+  });
+
+  return { version: 1, cell: CELL, items };
+}
+
+function downloadJSON(data, filename='flattop-board.json'){
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+
+function clearBoard(){
+  document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget')
+    .forEach(el => el.remove());
+}
+
+function applyBoardState(state){
+  clearBoard();
+  const items = state?.items || [];
+  for (const it of items) {
+    // Tokens
+    if (it.kind === 'token') {
+      // your Widget.create(type, x, y, props)
+      if (typeof Widget?.create === 'function' && Widget.builders?.token) {
+        const el = Widget.create('token', it.x, it.y, {
+          size: Math.max(it.w, it.h),
+          label: it.label || '',
+          image: it.imageUrl || '',
+          shape: it.shape || 'circle'
+        });
+        el.style.zIndex = it.z || '';
+      } else {
+        const el = document.createElement('div');
+        el.className = `token ${it.shape === 'square' ? 'square' : 'circle'}`;
+        el.style.left = it.x + 'px';
+        el.style.top  = it.y + 'px';
+        el.style.width  = it.w + 'px';
+        el.style.height = it.h + 'px';
+        el.style.zIndex = it.z || '';
+        if (it.imageUrl) { el.style.backgroundImage = `url("${it.imageUrl}")`; el.classList.add('has-image'); }
+        else { el.textContent = it.label || ''; }
+        board.appendChild(el);
+      }
+      continue;
+    }
+
+    // Image widgets
+    if (it.kind === 'image') {
+      if (typeof Widget?.create === 'function' && Widget.builders?.image) {
+        const el = Widget.create('image', it.x, it.y, {
+          src: it.src || '',
+          width: it.w,
+          height: it.h,
+          rotation: it.rotation || 0
+        });
+        el.style.zIndex = it.z || '';
+        // ensure the <img> picks up rotation if builder didn’t already
+        const img = el.querySelector('img.image');
+        if (img && (it.rotation || 0) !== 0) {
+          img.style.transformOrigin = 'center center';
+          img.style.transform = `rotate(${(it.rotation||0)%360}deg)`;
+        }
+      } else {
+        const el = document.createElement('div');
+        el.className = 'image-widget';
+        el.style.left = it.x + 'px';
+        el.style.top  = it.y + 'px';
+        el.style.width  = it.w + 'px';
+        el.style.height = it.h + 'px';
+        el.style.zIndex = it.z || '';
+        el.innerHTML = `<img class="image" src="${it.src || ''}" alt="">` +
+                       `<div class="resize-handle"></div>`;
+        const img = el.querySelector('img.image');
+        if (img && (it.rotation || 0) !== 0) {
+          img.style.transformOrigin = 'center center';
+          img.style.transform = `rotate(${(it.rotation||0)%360}deg)`;
+        }
+        board.appendChild(el);
+      }
+      continue;
+    }
+
+// Panel widgets — restore position/size/title + inner state if we know it
+if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
+  let props = {};
+
+  if (it.kind === 'notes' && it.data) {
+    props.text = it.data.text || '';
+  } else if (it.kind === 'counters' && it.data) {
+    // our builder already supports props.counters
+    props.counters = Array.isArray(it.data.counters) ? it.data.counters : [];
+  } else if (it.kind === 'scorecard' && it.data) {
+    props = {
+      rowsCount: it.data.rowsCount ?? 2,
+      colsCount: it.data.colsCount ?? 2,
+      rowLabels: it.data.rowLabels ?? null,
+      colLabels: it.data.colLabels ?? null,
+      values:    it.data.values    ?? {}
+    };
+  } else if (it.kind === 'chat' && it.data) {
+    props = {
+      messages: it.data.messages || [],
+      username: it.data.username || 'Player',
+      width: it.w,
+      height: it.h
+    };
+  }
+
+  const el = Widget.create(it.kind, it.x, it.y, props);
+  el.style.width  = (it.w||el.offsetWidth)  + 'px';
+  el.style.height = (it.h||el.offsetHeight) + 'px';
+  el.style.zIndex = it.z || '';
+
+  const hdr = el.querySelector('.header div');
+  if (hdr && it.label) hdr.textContent = it.label;
+
+  // If notes builder didn’t consume props.text directly, set it post-create
+  if (it.kind === 'notes' && it.data?.text != null) {
+    const ta = el.querySelector('textarea, .notes-text, .note-text');
+    if (ta) ta.value = it.data.text;
+  }
+
+  // If chat widget, restore chat data
+  if (it.kind === 'chat' && it.data && typeof el.setChatData === 'function') {
+    el.setChatData(it.data);
+  }
+
+  continue;
+}
+
+
+    // Fallback plain box if we don't recognize the kind
+    const el = document.createElement('div');
+    el.className = 'widget';
+    el.style.left = it.x + 'px';
+    el.style.top  = it.y + 'px';
+    el.style.width  = it.w + 'px';
+    el.style.height = it.h + 'px';
+    el.style.zIndex = it.z || '';
+    el.innerHTML = `
+      <div class="header">
+        <div>${it.label || (it.kind || 'Widget')}</div>
+        <button class="close" title="Remove">&times;</button>
+      </div>
+      <div class="body"><div class="muted">Restored from save.</div></div>
+    `;
+    el.querySelector('.close')?.addEventListener('click', () => el.remove());
+    board.appendChild(el);
+  }
+}
+
+// Wire File menu
+const fileSaveBtn  = document.getElementById('menu-save');
+const fileLoadBtn  = document.getElementById('menu-load');
+const fileLoadIn   = document.getElementById('menu-load-input');
+
+fileSaveBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  downloadJSON(collectBoardState(), 'flattop-board.json');
+});
+fileLoadBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  fileLoadIn?.click();
+});
+fileLoadIn?.addEventListener('change', async (e) => {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  try {
+    const text = await f.text();
+    applyBoardState(JSON.parse(text));
+  } catch (err) {
+    alert('Invalid save file.');
+    console.error(err);
+  } finally {
+    fileLoadIn.value = '';
+  }
+});
+
+// Optional: Ctrl/Cmd+S and Ctrl/Cmd+O
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    downloadJSON(collectBoardState(), 'flattop-board.json');
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+    e.preventDefault();
+    document.getElementById('menu-load-input')?.click();
+  }
+});
+</script>
+
+
+    </main>
+<script src="{% static 'board/widgets/notes.js' %}"></script>
+<script src="{% static 'board/widgets/soundboard.js' %}"></script>
+<script src="{% static 'board/widgets/chat.js' %}"></script>
+
+</body>
+
+</html>
