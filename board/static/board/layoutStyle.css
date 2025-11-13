@@ -156,8 +156,8 @@ body {
     .board {
         top: 0;               /* anchor top-left */
         left: 0;
-        width: 8000px;        /* ← hard-code your exact board width */
-        height: 8000px;       /* ← hard-code your exact board height */
+        width: 8000px;        /* ← hard-code exact board width */
+        height: 8000px;       /* ← hard-code exact board height */
         transform-origin: 0 0;
         
         /* Grid lines for a 48px cell: */
@@ -177,4 +177,23 @@ body {
       border-radius: 999px;
       padding: 2px 8px;
       font-size: 12px;
+    }
+
+    /* Lasso button styling */
+    #lasso_Button {
+      transition: all 0.1s ease;
+    }
+    
+    #lasso_Button.active {
+      background-color: #e0e0e0;
+      border-color: #999;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+      transform: translateY(1px);
+    }
+    
+    /* Lasso hint styling */
+    #lasso-hint {
+      color: #666;
+      font-size: 12px;
+      margin-left: 8px;
     }

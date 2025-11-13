@@ -95,9 +95,10 @@
 
       <button id = "tokenBtn">Tokens</button>
       <button id = "counterBtn">Counters</button>
-  <button id = "scoreBtn">Scorecard</button>
+      <button id = "scoreBtn">Scorecard</button>
       <button id = "soundBtn">Soundboard</button>
       <button id="addNotesWidget">Notes</button>
+      <button id="addChatWidget">Chat</button>
       <button>Boards</button>
       <button>Rules</button>
       <button>Favorites</button>
@@ -111,7 +112,8 @@
     <span class="badge">Reset</span>
     <button id="resetBtn">Reset view</button>
     <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
-    <button id = "lasso_Button">Lasso</button>
+    <button id="lasso_Button">Lasso</button>
+    <span class="hint" id="lasso-hint">Ctrl+L</span>
   </div>
 
   <div class="wrap" id="wrap">
@@ -129,7 +131,6 @@
     const counterBtn = document.getElementById('counterBtn');
     counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
 
-    // lasso shift click and drag
 const lasso_Button = document.getElementById('lasso_Button');
 let usingLasso = false;
 let draggingLasso = false;
@@ -146,6 +147,14 @@ wrap.addEventListener('contextmenu', (e) => {
   if (usingLasso) e.preventDefault();
 });
 
+// Ctrl+L keyboard shortcut to toggle lasso
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+    e.preventDefault();
+    lasso_Button.click(); 
+  }
+});
+
 // get all things we want to be selectable
 function getSelectableWidgets() {
   return Array.from(document.querySelectorAll(
@@ -156,8 +165,7 @@ function getSelectableWidgets() {
 wrap.addEventListener('mousedown', (e) => {
   // must be selected
   if (!usingLasso) return;
-  // must hold Shift
-  if (!e.shiftKey) return;
+  // left mouse button only
   if (e.button !== 0) return;
 
   const rect = wrap.getBoundingClientRect();
@@ -755,6 +763,8 @@ token.addEventListener('drop', async (e) => {
   soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
   const addNotesBtn = document.getElementById('addNotesWidget');
   addNotesBtn.addEventListener('click', ()=> Widget.create('notes', 0, 0));
+  const addChatBtn = document.getElementById('addChatWidget');
+  addChatBtn.addEventListener('click', ()=> Widget.create('chat', 0, 0));
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
@@ -1690,6 +1700,11 @@ document.querySelectorAll('#board > .widget').forEach(el => {
       colLabels: colHdrs,
       values
     };
+  } else if (kind === 'chat') {
+    // capture chat data if the widget has the getChatData method
+    if (typeof el.getChatData === 'function') {
+      base.data = el.getChatData();
+    }
   }
 
   items.push(base);
@@ -1850,6 +1865,13 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
       colLabels: it.data.colLabels ?? null,
       values:    it.data.values    ?? {}
     };
+  } else if (it.kind === 'chat' && it.data) {
+    props = {
+      messages: it.data.messages || [],
+      username: it.data.username || 'Player',
+      width: it.w,
+      height: it.h
+    };
   }
 
   const el = Widget.create(it.kind, it.x, it.y, props);
@@ -1864,6 +1886,11 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
   if (it.kind === 'notes' && it.data?.text != null) {
     const ta = el.querySelector('textarea, .notes-text, .note-text');
     if (ta) ta.value = it.data.text;
+  }
+
+  // If chat widget, restore chat data
+  if (it.kind === 'chat' && it.data && typeof el.setChatData === 'function') {
+    el.setChatData(it.data);
   }
 
   continue;
@@ -1934,6 +1961,7 @@ document.addEventListener('keydown', (e) => {
     </main>
 <script src="{% static 'board/widgets/notes.js' %}"></script>
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
+<script src="{% static 'board/widgets/chat.js' %}"></script>
 
 </body>
 
