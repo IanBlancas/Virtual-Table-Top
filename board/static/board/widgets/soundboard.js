@@ -6,6 +6,7 @@ const GLOBAL_SOUNDS = new Set();
 Widget.builders.soundboard = function (props = {}) {
   const el = document.createElement("div");
   el.className = "widget soundboard-widget";
+  el.dataset.type = "soundboard";
   el.innerHTML = `
     <div class="header">
       <div>🎵 Soundboard</div>
