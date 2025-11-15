@@ -567,3 +567,80 @@
   outline-offset: 0;
   box-shadow: inset 0 0 0 3px rgba(59,130,246,0.35); /* a bit of glow */
 }
+
+
+/* === Drawing Options Widget: Modern UI (matches Counters widget) === */
+.draw-options-widget {
+    width: 260px;
+    background: #ffffff;
+    border: 1px solid #dcdcdc;
+    border-radius: 10px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    color: #222;
+    user-select: none;
+    z-index: 15;
+}
+
+.draw-options-widget .header {
+    background: #f7f7f7;
+    padding: 8px 10px;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 10px 10px 0 0;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.draw-options-widget .close {
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.draw-options-widget .body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.draw-options-widget label {
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+.draw-options-widget input[type="color"] {
+    width: 40px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.draw-options-widget input[type="range"] {
+    width: 140px;
+}
+
+.draw-options-widget button {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.15s;
+}
+
+.draw-options-widget button:hover {
+    background: #f3f3f3;
+}
+
+/* Active state for eraser button */
+#eraser_Button.active {
+    background: #ffdddd;
+    border-color: #d33;
+}

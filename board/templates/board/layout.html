@@ -112,11 +112,16 @@
     <button id="resetBtn">Reset view</button>
     <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
     <button id = "lasso_Button">Lasso</button>
+    <button id="draw_Button">Draw</button>
+
   </div>
 
   <div class="wrap" id="wrap">
     <div class="board" id="board"></div>
+    <canvas id="drawCanvas"></canvas>
   </div>
+
+<script src="{% static 'board/widgets/drawing.js' %}"></script>
 
   <script>
     // --- minimal pan & zoom controller ---
@@ -140,6 +145,25 @@ lasso_Button.addEventListener('click', () => {
   usingLasso = !usingLasso;
   lasso_Button.classList.toggle('active', usingLasso);
 });
+
+// Draw mode toggle
+document.getElementById("draw_Button").addEventListener("click", () => {
+    const active = Drawing.toggle();
+    draw_Button.classList.toggle("active", active);
+
+    if (active) {
+        usingLasso = false;
+        lasso_Button.classList.remove("active");
+        // spawn drawing tool widget
+        Widget.create('drawOptions', 100, 100);
+    } else {   
+        // remove drawing widget when turned off
+        document.querySelectorAll('.draw-options-widget').forEach(w => w.remove());
+
+    }
+});
+
+
 
 // stop right-click menu when we’re lassoing
 wrap.addEventListener('contextmenu', (e) => {
@@ -223,10 +247,12 @@ window.addEventListener('mouseup', (e) => {
   });
 });
 
+    var scale = 1;     // zoom factor
+    var panX  = 0;     // translation in px
+    var panY  = 0;
 
-    let scale = 1;     // zoom factor
-    let panX  = 0;     // translation in px
-    let panY  = 0;
+    // Initialize the Drawing Engine
+    Drawing.init(document.getElementById("drawCanvas"));
 
     function applyTransform() {
       board.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
@@ -265,6 +291,7 @@ wrap.addEventListener('wheel', (e) => {
 
   scale = newScale;
   applyTransform();
+  Drawing.render();
 }, { passive: false });
 
 
@@ -288,6 +315,7 @@ wrap.addEventListener('wheel', (e) => {
       panX = basePanX + (e.clientX - startX);
       panY = basePanY + (e.clientY - startY);
       applyTransform();
+      Drawing.render();
     });
 
     window.addEventListener('mouseup', () => {
@@ -1472,7 +1500,85 @@ Widget.builders.scorecard = function(props = {}) {
   return el;
 };
 
+//here goes mini draw widget
+Widget.builders.drawOptions = function(props={}) {
+  const el = document.createElement('div');
+  el.className = 'widget draw-options-widget';
+  el.dataset.type = 'drawOptions';
 
+  el.innerHTML = `
+    <div class="header">
+      <div>✏️ Drawing Options</div>
+      <button class="close">&times;</button>
+    </div>
+    <div class="body">
+      <div class="row">
+        <label>Color:</label>
+        <input type="color" id="drawColor" value="#000000">
+      </div>
+      <div class="row">
+        <label>Size:</label>
+        <input type="range" id="drawSize" min="1" max="25" value="4">
+      </div>
+      <div class="row">
+        <button id="eraser_Button">Eraser</button>
+      </div>
+      <div class="row">
+        <button id="clearDraw">Clear</button>
+      </div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  const colorInput = el.querySelector('#drawColor');
+  const sizeInput  = el.querySelector('#drawSize');
+  const eraserBtn  = el.querySelector('#eraser_Button');
+  const clearBtn   = el.querySelector('#clearDraw');
+  const closeBtn   = el.querySelector('.close');
+
+  // ===== DRAWING TOOL LOGIC =====
+
+  // Global defaults
+  window.drawColor = "#000000";
+  window.drawSize  = 4;
+  let erasing = false;
+
+  // COLOR PICKER
+  colorInput.addEventListener("input", e => {
+      window.drawColor = e.target.value;
+      erasing = false;
+      eraserBtn.classList.remove("active");
+  });
+
+  // SIZE SLIDER
+  sizeInput.addEventListener("input", e => {
+      window.drawSize = parseInt(e.target.value, 10);
+      window.eraseSize = window.drawSize; // scale eraser radius
+  });
+
+  // ERASER BUTTON
+  eraserBtn.addEventListener("click", () => {
+    eraserArmed = !eraserArmed;
+    eraserBtn.classList.toggle("active", eraserArmed);
+  });
+
+  // CLEAR CANVAS
+  clearBtn.addEventListener("click", () => {
+      Drawing.strokes = [];
+      Drawing.render();
+  });
+
+  // CLOSE BUTTON
+  closeBtn.addEventListener("click", () => {
+      el.remove();
+      Drawing.disable();
+      draw_Button.classList.remove("active");
+  });
+
+  return el;
+};
+//end of mini draw widget
 
 
 // ===== Image widget (draggable, resizable, deletable) =====

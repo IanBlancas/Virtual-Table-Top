@@ -178,3 +178,15 @@ body {
       padding: 2px 8px;
       font-size: 12px;
     }
+/* Canvas for drawing on top of the board */
+#drawCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;  /* behind widgets */
+    pointer-events: none !important;
+}
+
+
+
+
