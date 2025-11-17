@@ -9,6 +9,8 @@
 </head>
 <body>
 
+<!-- Login -->
+
   <div class="card">
     <h1>Sign into Flattop to host</h1>
 
@@ -18,6 +20,8 @@
 
     <form method="post" action="{% url 'login' %}">
       {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
       <label>
         <span>Username</span>
         <input type="text" name="username" placeholder="Enter your username here" required>
@@ -32,6 +36,47 @@
     </form>
   </div>
 
+  <!-- Register -->
+<div class="card">
+  <h1>Create an account</h1>
+
+  {% if reg_form.errors %}
+    <div class="error">
+      {{ reg_form.non_field_errors }}
+      {% for field in reg_form %}
+        {%for err in field.errors %}
+          <div>{{ field.label }}: {{ err }}</div>
+        {%endfor %}
+      {%endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'register' %}">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{next}}">
+    {% endif %}
+
+      <label>
+        <span>Username</span>
+        <input type="text" name="username" required>
+      </label>
+      
+      <label>
+        <span>Password</span>
+        <input type="password" name="password1" required>
+      </label>
+
+      <label>
+        <span>Confirm Password</span>
+        <input type="password" name="password2" required>
+      </label>
+
+      <button type="submit">Register</button>
+  </form>
+
+</div>
+
+  <!-- Lobby Code -->
   <div class="card">
     <h1>Enter join code to join a lobby</h1>
     <form onsubmit="event.preventDefault(); window.location.href='/board/';">
