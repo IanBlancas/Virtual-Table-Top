@@ -95,10 +95,9 @@
 
       <button id = "tokenBtn">Tokens</button>
       <button id = "counterBtn">Counters</button>
-      <button id = "scoreBtn">Scorecard</button>
+  <button id = "scoreBtn">Scorecard</button>
       <button id = "soundBtn">Soundboard</button>
       <button id="addNotesWidget">Notes</button>
-      <button id="addChatWidget">Chat</button>
       <button>Boards</button>
       <button>Rules</button>
       <button>Favorites</button>
@@ -112,13 +111,17 @@
     <span class="badge">Reset</span>
     <button id="resetBtn">Reset view</button>
     <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
-    <button id="lasso_Button">Lasso</button>
-    <span class="hint" id="lasso-hint">Ctrl+L</span>
+    <button id = "lasso_Button">Lasso</button>
+    <button id="draw_Button">Draw</button>
+
   </div>
 
   <div class="wrap" id="wrap">
     <div class="board" id="board"></div>
+    <canvas id="drawCanvas"></canvas>
   </div>
+
+<script src="{% static 'board/widgets/drawing.js' %}"></script>
 
   <script>
     // --- minimal pan & zoom controller ---
@@ -131,6 +134,7 @@
     const counterBtn = document.getElementById('counterBtn');
     counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
 
+    // lasso shift click and drag
 const lasso_Button = document.getElementById('lasso_Button');
 let usingLasso = false;
 let draggingLasso = false;
@@ -142,17 +146,28 @@ lasso_Button.addEventListener('click', () => {
   lasso_Button.classList.toggle('active', usingLasso);
 });
 
+// Draw mode toggle
+document.getElementById("draw_Button").addEventListener("click", () => {
+    const active = Drawing.toggle();
+    draw_Button.classList.toggle("active", active);
+
+    if (active) {
+        usingLasso = false;
+        lasso_Button.classList.remove("active");
+        // spawn drawing tool widget
+        Widget.create('drawOptions', 100, 100);
+    } else {   
+        // remove drawing widget when turned off
+        document.querySelectorAll('.draw-options-widget').forEach(w => w.remove());
+
+    }
+});
+
+
+
 // stop right-click menu when we’re lassoing
 wrap.addEventListener('contextmenu', (e) => {
   if (usingLasso) e.preventDefault();
-});
-
-// Ctrl+L keyboard shortcut to toggle lasso
-window.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key.toLowerCase() === 'l') {
-    e.preventDefault();
-    lasso_Button.click(); 
-  }
 });
 
 // get all things we want to be selectable
@@ -165,7 +180,8 @@ function getSelectableWidgets() {
 wrap.addEventListener('mousedown', (e) => {
   // must be selected
   if (!usingLasso) return;
-  // left mouse button only
+  // must hold Shift
+  if (!e.shiftKey) return;
   if (e.button !== 0) return;
 
   const rect = wrap.getBoundingClientRect();
@@ -231,10 +247,12 @@ window.addEventListener('mouseup', (e) => {
   });
 });
 
+    var scale = 1;     // zoom factor
+    var panX  = 0;     // translation in px
+    var panY  = 0;
 
-    let scale = 1;     // zoom factor
-    let panX  = 0;     // translation in px
-    let panY  = 0;
+    // Initialize the Drawing Engine
+    Drawing.init(document.getElementById("drawCanvas"));
 
     function applyTransform() {
       board.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
@@ -273,6 +291,7 @@ wrap.addEventListener('wheel', (e) => {
 
   scale = newScale;
   applyTransform();
+  Drawing.render();
 }, { passive: false });
 
 
@@ -296,6 +315,7 @@ wrap.addEventListener('wheel', (e) => {
       panX = basePanX + (e.clientX - startX);
       panY = basePanY + (e.clientY - startY);
       applyTransform();
+      Drawing.render();
     });
 
     window.addEventListener('mouseup', () => {
@@ -763,8 +783,6 @@ token.addEventListener('drop', async (e) => {
   soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
   const addNotesBtn = document.getElementById('addNotesWidget');
   addNotesBtn.addEventListener('click', ()=> Widget.create('notes', 0, 0));
-  const addChatBtn = document.getElementById('addChatWidget');
-  addChatBtn.addEventListener('click', ()=> Widget.create('chat', 0, 0));
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
@@ -1482,7 +1500,85 @@ Widget.builders.scorecard = function(props = {}) {
   return el;
 };
 
+//here goes mini draw widget
+Widget.builders.drawOptions = function(props={}) {
+  const el = document.createElement('div');
+  el.className = 'widget draw-options-widget';
+  el.dataset.type = 'drawOptions';
 
+  el.innerHTML = `
+    <div class="header">
+      <div>✏️ Drawing Options</div>
+      <button class="close">&times;</button>
+    </div>
+    <div class="body">
+      <div class="row">
+        <label>Color:</label>
+        <input type="color" id="drawColor" value="#000000">
+      </div>
+      <div class="row">
+        <label>Size:</label>
+        <input type="range" id="drawSize" min="1" max="25" value="4">
+      </div>
+      <div class="row">
+        <button id="eraser_Button">Eraser</button>
+      </div>
+      <div class="row">
+        <button id="clearDraw">Clear</button>
+      </div>
+    </div>
+  `;
+
+  makeDraggable(el, el.querySelector('.header'));
+
+  const colorInput = el.querySelector('#drawColor');
+  const sizeInput  = el.querySelector('#drawSize');
+  const eraserBtn  = el.querySelector('#eraser_Button');
+  const clearBtn   = el.querySelector('#clearDraw');
+  const closeBtn   = el.querySelector('.close');
+
+  // ===== DRAWING TOOL LOGIC =====
+
+  // Global defaults
+  window.drawColor = "#000000";
+  window.drawSize  = 4;
+  let erasing = false;
+
+  // COLOR PICKER
+  colorInput.addEventListener("input", e => {
+      window.drawColor = e.target.value;
+      erasing = false;
+      eraserBtn.classList.remove("active");
+  });
+
+  // SIZE SLIDER
+  sizeInput.addEventListener("input", e => {
+      window.drawSize = parseInt(e.target.value, 10);
+      window.eraseSize = window.drawSize; // scale eraser radius
+  });
+
+  // ERASER BUTTON
+  eraserBtn.addEventListener("click", () => {
+    eraserArmed = !eraserArmed;
+    eraserBtn.classList.toggle("active", eraserArmed);
+  });
+
+  // CLEAR CANVAS
+  clearBtn.addEventListener("click", () => {
+      Drawing.strokes = [];
+      Drawing.render();
+  });
+
+  // CLOSE BUTTON
+  closeBtn.addEventListener("click", () => {
+      el.remove();
+      Drawing.disable();
+      draw_Button.classList.remove("active");
+  });
+
+  return el;
+};
+//end of mini draw widget
 
 
 // ===== Image widget (draggable, resizable, deletable) =====
@@ -1700,11 +1796,6 @@ document.querySelectorAll('#board > .widget').forEach(el => {
       colLabels: colHdrs,
       values
     };
-  } else if (kind === 'chat') {
-    // capture chat data if the widget has the getChatData method
-    if (typeof el.getChatData === 'function') {
-      base.data = el.getChatData();
-    }
   }
 
   items.push(base);
@@ -1865,13 +1956,6 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
       colLabels: it.data.colLabels ?? null,
       values:    it.data.values    ?? {}
     };
-  } else if (it.kind === 'chat' && it.data) {
-    props = {
-      messages: it.data.messages || [],
-      username: it.data.username || 'Player',
-      width: it.w,
-      height: it.h
-    };
   }
 
   const el = Widget.create(it.kind, it.x, it.y, props);
@@ -1886,11 +1970,6 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
   if (it.kind === 'notes' && it.data?.text != null) {
     const ta = el.querySelector('textarea, .notes-text, .note-text');
     if (ta) ta.value = it.data.text;
-  }
-
-  // If chat widget, restore chat data
-  if (it.kind === 'chat' && it.data && typeof el.setChatData === 'function') {
-    el.setChatData(it.data);
   }
 
   continue;
@@ -1961,7 +2040,6 @@ document.addEventListener('keydown', (e) => {
     </main>
 <script src="{% static 'board/widgets/notes.js' %}"></script>
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
-<script src="{% static 'board/widgets/chat.js' %}"></script>
 
 </body>
 
