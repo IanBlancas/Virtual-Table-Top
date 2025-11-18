@@ -1,5 +1,3 @@
-
-
 <!doctype html>
 
 <head>
@@ -101,6 +99,7 @@
       <button>Boards</button>
       <button>Rules</button>
       <button>Favorites</button>
+      <button id="chatBtn">Chat</button>
     </div>
     </aside>
 
@@ -108,9 +107,7 @@
         <div class="toolbar">
     <span class="badge">Pan: Middle-mouse drag</span>
     <span class="badge">Zoom: Mouse wheel</span>
-    <span class="badge">Reset</span>
     <button id="resetBtn">Reset view</button>
-    <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
     <button id = "lasso_Button">Lasso</button>
     <button id="draw_Button">Draw</button>
 
@@ -144,6 +141,17 @@ let lasso_box = null;
 lasso_Button.addEventListener('click', () => {
   usingLasso = !usingLasso;
   lasso_Button.classList.toggle('active', usingLasso);
+  wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
+});
+
+// Replace the Shift key logic with Ctrl+L toggle
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'l') {
+    usingLasso = !usingLasso;
+    lasso_Button.classList.toggle('active', usingLasso);
+    wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
+    e.preventDefault();
+  }
 });
 
 // Draw mode toggle
@@ -178,16 +186,12 @@ function getSelectableWidgets() {
 }
 
 wrap.addEventListener('mousedown', (e) => {
-  // must be selected
   if (!usingLasso) return;
-  // must hold Shift
-  if (!e.shiftKey) return;
   if (e.button !== 0) return;
 
   const rect = wrap.getBoundingClientRect();
   draggingLasso = true;
 
-  // start inside wrap coords
   lasso_Start = {
     x: e.clientX - rect.left,
     y: e.clientY - rect.top
@@ -450,7 +454,7 @@ board.addEventListener('click', () => {
     }
   };
 
-// Global keydown for delete and flip (installed once so it works even if the
+  // Global keydown for delete and flip (installed once so it works even if the
 // standard Cards widget hasn't been created). Uses the same semantics as the
 // original handler: Delete removes selected cards, F flips selected cards.
 if (!window._flatTopCardKeyHandlerInstalled) {
@@ -656,7 +660,6 @@ token.addEventListener('drop', async (e) => {
 });
 
 
-
   // shape toggle (◯ / ◻)
   const shapeBtn = document.createElement('button');
   shapeBtn.className = 'shape';
@@ -783,6 +786,8 @@ token.addEventListener('drop', async (e) => {
   soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
   const addNotesBtn = document.getElementById('addNotesWidget');
   addNotesBtn.addEventListener('click', ()=> Widget.create('notes', 0, 0));
+  const chatBtn = document.getElementById('chatBtn');
+  chatBtn.addEventListener('click', () => Widget.create('chat', 0, 0));
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
@@ -1345,7 +1350,7 @@ Widget.builders.counters = function(props = {}) {
       if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); e.preventDefault(); }
       e.stopPropagation();
     });
-    valueInput.addEventListener('blur', ()=> set(n()));
+    valueInput.addEventListener('blur', () => set(n()));
     valueInput.addEventListener('input', ()=>{
       // live-clean non-digits except leading '-'
       const m = valueInput.value.match(/^-?\d*/);
@@ -1804,6 +1809,7 @@ document.querySelectorAll('#board > .widget').forEach(el => {
 
   // 2) Tokens
 document.querySelectorAll('#board > .token').forEach(el => {
+
   // Prefer the persisted source if present
   let imageUrl = el.dataset.imageSrc || '';
   if (!imageUrl) {
@@ -1835,7 +1841,6 @@ document.querySelectorAll('#board > .token').forEach(el => {
     imageUrl
   });
 });
-
 
 
   // 3) Image widgets (note: your rotation is on the IMG, not the wrapper)
@@ -2035,9 +2040,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 </script>
-
-
-    </main>
+<script src="{% static 'board/widgets/chat.js' %}"></script>
 <script src="{% static 'board/widgets/notes.js' %}"></script>
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
