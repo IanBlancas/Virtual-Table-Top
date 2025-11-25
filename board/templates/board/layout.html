@@ -131,7 +131,7 @@
     const counterBtn = document.getElementById('counterBtn');
     counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
 
-    // lasso shift click and drag
+    // lasso click and drag
 const lasso_Button = document.getElementById('lasso_Button');
 let usingLasso = false;
 let draggingLasso = false;
@@ -144,7 +144,7 @@ lasso_Button.addEventListener('click', () => {
   wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
 });
 
-// Replace the Shift key logic with Ctrl+L toggle
+// Ctrl+L toggle
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === 'l') {
     usingLasso = !usingLasso;
@@ -326,6 +326,95 @@ wrap.addEventListener('wheel', (e) => {
       panning = false;
     });
 
+// ===== TOUCH PAN + PINCH ZOOM =====
+
+// Internal state
+let isTouchPanning = false;
+let isPinching = false;
+let startPan = { x: 0, y: 0 };
+let panOrigin = { x: 0, y: 0 };
+
+let pinchStartDist = 0;
+let pinchStartScale = 1;
+let pinchCenter = { x: 0, y: 0 };
+
+// Measure distance between two touch points
+function dist(t1, t2) {
+  const dx = t1.clientX - t2.clientX;
+  const dy = t1.clientY - t2.clientY;
+  return Math.hypot(dx, dy);
+}
+
+wrap.addEventListener("touchstart", (e) => {
+  if (e.touches.length === 1) {
+    if (isPinching) return;      // don't pan if starting in pinch
+    isTouchPanning = true;
+
+    const t = e.touches[0];
+    startPan.x = t.clientX;
+    startPan.y = t.clientY;
+    panOrigin.x = panX;
+    panOrigin.y = panY;
+  }
+
+  if (e.touches.length === 2) {
+    isTouchPanning = false;
+    isPinching = true;
+
+    pinchStartDist = dist(e.touches[0], e.touches[1]);
+    pinchStartScale = scale;
+
+    pinchCenter.x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    pinchCenter.y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+  }
+}, { passive: false });
+
+wrap.addEventListener("touchmove", (e) => {
+  // ----- Single finger pan -----
+  if (isTouchPanning && e.touches.length === 1) {
+    const t = e.touches[0];
+    panX = panOrigin.x + (t.clientX - startPan.x);
+    panY = panOrigin.y + (t.clientY - startPan.y);
+
+    applyTransform();
+    Drawing.render?.();
+    e.preventDefault();
+    return;
+  }
+
+  // ----- Pinch zoom -----
+  if (isPinching && e.touches.length === 2) {
+    const newDist = dist(e.touches[0], e.touches[1]);
+    const zoomFactor = newDist / pinchStartDist;
+
+    const newScale = Math.max(0.2, Math.min(3, pinchStartScale * zoomFactor));
+
+    const wrect = wrap.getBoundingClientRect();
+    const bx = (pinchCenter.x - wrect.left - panX) / scale;
+    const by = (pinchCenter.y - wrect.top  - panY) / scale;
+
+    // Re-anchor under fingers
+    panX = pinchCenter.x - wrect.left - bx * newScale;
+    panY = pinchCenter.y - wrect.top  - by * newScale;
+
+    scale = newScale;
+    applyTransform();
+    Drawing.render?.();
+
+    e.preventDefault();
+  }
+}, { passive: false });
+
+wrap.addEventListener("touchend", (e) => {
+  if (e.touches.length === 0) {
+    isTouchPanning = false;
+    isPinching = false;
+  }
+  if (e.touches.length === 1) {
+    isPinching = false;  // user lifted one finger -> go back to panning
+  }
+});
+
     // Optional: Spacebar to toggle temporary panning with left mouse
     // (handy trackpad mode—comment out if you don’t want it)
     let spacePan = false;
@@ -342,6 +431,9 @@ wrap.addEventListener('wheel', (e) => {
       e.preventDefault();
     }, true);
   </script>
+
+  
+
   <script>
   // ===== Shared constants/helpers =====
   const CELL = 40; // match your CSS grid size in layoutStyle.css
@@ -359,81 +451,98 @@ function makeDraggable(el, handle = el) {
   let dragging = false;
   let dragStartBoard = { x: 0, y: 0 };
   // array of {el, startLeft, startTop}
-  let dragTargets = [];
+    let dragTargets = [];
+    let touchId = null;
 
-  handle.addEventListener('mousedown', (e) => {
-    // only left mouse
-    if (e.button !== 0) return;
-
-    dragging = true;
-
-    // which things are we going to move?
-    // if this element is selected, move *all* selected
-    const selected = Array.from(document.querySelectorAll('.selected'));
-    if (el.classList.contains('selected') && selected.length > 0) {
-      dragTargets = selected.map(node => {
-        return {
+    function startDrag(clientX, clientY) {
+      dragging = true;
+      const selected = Array.from(document.querySelectorAll('.selected'));
+      if (el.classList.contains('selected') && selected.length > 0) {
+        dragTargets = selected.map(node => ({
           el: node,
           startLeft: parseFloat(node.style.left) || 0,
           startTop: parseFloat(node.style.top) || 0
-        };
+        }));
+      } else {
+        dragTargets = [{
+          el,
+          startLeft: parseFloat(el.style.left) || 0,
+          startTop: parseFloat(el.style.top) || 0
+        }];
+        document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+        el.classList.add('selected');
+      }
+      if (!el.classList.contains('image-widget')) {
+        el.style.zIndex = ++zTop;
+      } else {
+        el.style.zIndex = 0;
+      }
+      dragStartBoard = toBoardCoords(clientX, clientY);
+    }
+
+    function moveDrag(clientX, clientY) {
+      if (!dragging) return;
+      const curBoard = toBoardCoords(clientX, clientY);
+      const dx = curBoard.x - dragStartBoard.x;
+      const dy = curBoard.y - dragStartBoard.y;
+      dragTargets.forEach(t => {
+        t.el.style.left = (t.startLeft + dx) + 'px';
+        t.el.style.top  = (t.startTop + dy) + 'px';
       });
-    } else {
-      // just this one
-      dragTargets = [{
-        el,
-        startLeft: parseFloat(el.style.left) || 0,
-        startTop: parseFloat(el.style.top) || 0
-      }];
-      // also make this one the only selected one (optional)
-      document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
-      el.classList.add('selected');
     }
 
-    // z-index bump for the one we actually grabbed
-    if (!el.classList.contains('image-widget')) {
-      el.style.zIndex = ++zTop;
-    } else {
-      el.style.zIndex = 0;
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false;
+      dragTargets.forEach(t => {
+        t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
+        t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
+      });
+      dragTargets = [];
+      touchId = null;
     }
 
-    // where on the board did we start the drag
-    dragStartBoard = toBoardCoords(e.clientX, e.clientY);
-
-    e.preventDefault();
-    e.stopPropagation();
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-
-    const curBoard = toBoardCoords(e.clientX, e.clientY);
-    const dx = curBoard.x - dragStartBoard.x;
-    const dy = curBoard.y - dragStartBoard.y;
-
-    // move every target by the same delta
-    dragTargets.forEach(t => {
-      t.el.style.left = (t.startLeft + dx) + 'px';
-      t.el.style.top  = (t.startTop + dy) + 'px';
+    // Mouse events
+    handle.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      startDrag(e.clientX, e.clientY);
+      e.preventDefault();
+      e.stopPropagation();
     });
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false;
-
-    // snap them all to grid
-    dragTargets.forEach(t => {
-      t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
-      t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      moveDrag(e.clientX, e.clientY);
     });
-    dragTargets = [];
-  });
-  // clear selection when clicking empty board, but not while lasso is on
-board.addEventListener('click', () => {
-  if (usingLasso) return;
-  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-});
+    window.addEventListener('mouseup', endDrag);
+
+    // Touch events
+    handle.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        touchId = t.identifier;
+        startDrag(t.clientX, t.clientY);
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, { passive: false });
+    window.addEventListener('touchmove', (e) => {
+      if (!dragging || touchId === null) return;
+      for (let i = 0; i < e.touches.length; i++) {
+        if (e.touches[i].identifier === touchId) {
+          moveDrag(e.touches[i].clientX, e.touches[i].clientY);
+          break;
+        }
+      }
+    }, { passive: false });
+    window.addEventListener('touchend', (e) => {
+      if (!dragging || touchId === null) return;
+      endDrag();
+    });
+
+    board.addEventListener('click', () => {
+      if (usingLasso) return;
+      document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+    });
 
 }
 
@@ -688,8 +797,9 @@ token.addEventListener('drop', async (e) => {
 
   // ----- resizing -----
   let resizing = false, start = {x:0, y:0}, baseSize = size;
+  let resizeTouchId = null;
   handle.addEventListener('mousedown', (e) => {
-    e.stopPropagation();                 // don’t start a drag
+    e.stopPropagation();
     resizing = true;
     start = toBoardCoords(e.clientX, e.clientY);
     baseSize = parseFloat(token.style.width) || size;
@@ -707,11 +817,46 @@ token.addEventListener('drop', async (e) => {
   window.addEventListener('mouseup', () => {
     if (!resizing) return;
     resizing = false;
-    // snap size to grid
     const s = parseFloat(token.style.width);
     const snapped = Math.max(CELL, snap(s));
     token.style.width  = snapped + 'px';
     token.style.height = snapped + 'px';
+    resizeTouchId = null;
+  });
+  // Touch events for resizing
+  handle.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) {
+      const t = e.touches[0];
+      resizeTouchId = t.identifier;
+      resizing = true;
+      start = toBoardCoords(t.clientX, t.clientY);
+      baseSize = parseFloat(token.style.width) || size;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { passive: false });
+  window.addEventListener('touchmove', (e) => {
+    if (!resizing || resizeTouchId === null) return;
+    for (let i = 0; i < e.touches.length; i++) {
+      if (e.touches[i].identifier === resizeTouchId) {
+        const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
+        const delta = Math.max(cur.x - start.x, cur.y - start.y);
+        const newSize = Math.max(24, baseSize + delta);
+        token.style.width  = newSize + 'px';
+        token.style.height = newSize + 'px';
+        token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+        break;
+      }
+    }
+  }, { passive: false });
+  window.addEventListener('touchend', (e) => {
+    if (!resizing || resizeTouchId === null) return;
+    resizing = false;
+    const s = parseFloat(token.style.width);
+    const snapped = Math.max(CELL, snap(s));
+    token.style.width  = snapped + 'px';
+    token.style.height = snapped + 'px';
+    resizeTouchId = null;
   });
 
   // ----- rename on double-click (quick patch version) -----
@@ -1618,6 +1763,7 @@ Widget.builders.image = function(props = {}) {
 
   // ----- resizing (keep aspect if Shift is held) -----
   let resizing = false, start={x:0,y:0}, baseW=0, baseH=0, aspect=1;
+  let resizeTouchId = null;
   img.addEventListener('load', ()=>{ if (img.naturalWidth && img.naturalHeight) aspect = img.naturalWidth / img.naturalHeight; });
   handle.addEventListener('mousedown', (e)=>{
     e.stopPropagation();
@@ -1634,11 +1780,9 @@ Widget.builders.image = function(props = {}) {
     let dx = cur.x - start.x;
     let dy = cur.y - start.y;
 
-    // size proposal
     let newW = Math.max(40, baseW + dx);
     let newH = Math.max(40, baseH + dy);
 
-    // keep aspect while Shift is held
     if (e.shiftKey) {
       if (newW / newH > aspect) newW = newH * aspect; else newH = newW / aspect;
     }
@@ -1648,11 +1792,49 @@ Widget.builders.image = function(props = {}) {
   window.addEventListener('mouseup', ()=>{
     if (!resizing) return;
     resizing = false;
-    // snap size to grid
     const w = parseFloat(getComputedStyle(el).width);
     const h = parseFloat(getComputedStyle(el).height);
     el.style.width  = Math.max(CELL, snap(w)) + 'px';
     el.style.height = Math.max(CELL, snap(h)) + 'px';
+    resizeTouchId = null;
+  });
+  // Touch events for resizing
+  handle.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) {
+      const t = e.touches[0];
+      resizeTouchId = t.identifier;
+      resizing = true;
+      const p = toBoardCoords(t.clientX, t.clientY);
+      start = p;
+      baseW = parseFloat(getComputedStyle(el).width);
+      baseH = parseFloat(getComputedStyle(el).height);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { passive: false });
+  window.addEventListener('touchmove', (e) => {
+    if (!resizing || resizeTouchId === null) return;
+    for (let i = 0; i < e.touches.length; i++) {
+      if (e.touches[i].identifier === resizeTouchId) {
+        const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
+        let dx = cur.x - start.x;
+        let dy = cur.y - start.y;
+        let newW = Math.max(40, baseW + dx);
+        let newH = Math.max(40, baseH + dy);
+        el.style.width  = newW + 'px';
+        el.style.height = newH + 'px';
+        break;
+      }
+    }
+  }, { passive: false });
+  window.addEventListener('touchend', ()=>{
+    if (!resizing || resizeTouchId === null) return;
+    resizing = false;
+    const w = parseFloat(getComputedStyle(el).width);
+    const h = parseFloat(getComputedStyle(el).height);
+    el.style.width  = Math.max(CELL, snap(w)) + 'px';
+    el.style.height = Math.max(CELL, snap(h)) + 'px';
+    resizeTouchId = null;
   });
   // ROTATE 90° button (next to the close button)
 const rotateBtn = document.createElement('button');
