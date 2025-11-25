@@ -346,6 +346,7 @@ function dist(t1, t2) {
 }
 
 wrap.addEventListener("touchstart", (e) => {
+  if (drawingMode) return;
   if (e.touches.length === 1) {
     if (isPinching) return;      // don't pan if starting in pinch
     isTouchPanning = true;
@@ -371,6 +372,7 @@ wrap.addEventListener("touchstart", (e) => {
 
 wrap.addEventListener("touchmove", (e) => {
   // ----- Single finger pan -----
+  if (drawingMode) return;
   if (isTouchPanning && e.touches.length === 1) {
     const t = e.touches[0];
     panX = panOrigin.x + (t.clientX - startPan.x);
@@ -2227,5 +2229,6 @@ document.addEventListener('keydown', (e) => {
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
 </body>
+
 
 </html>
