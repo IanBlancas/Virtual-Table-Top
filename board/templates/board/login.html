@@ -1,0 +1,142 @@
+<<<<<<< HEAD:board/templates/registration/login.html
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Flattop – Login or Join</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{% static 'board/loginPage/login.css' %}">
+</head>
+<body>
+
+  <div class="card">
+    <h1>Sign into Flattop to host</h1>
+
+    {% if form.errors %}
+      <p class="error">Invalid username or password.</p>
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      <label>
+        <span>Username</span>
+        <input type="text" name="username" placeholder="Enter your username here" required>
+      </label>
+
+      <label>
+        <span>Password</span>
+        <input type="password" name="password" placeholder="Enter your password here" required>
+      </label>
+
+      <button type="submit">Sign in</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h1>Enter join code to join a lobby</h1>
+    <form onsubmit="event.preventDefault(); window.location.href='/board/';">
+      <label>
+        <span>Lobby Code</span>
+        <input type="number" placeholder="Enter the lobby code to join" required>
+      </label>
+      <button type="submit">Join</button>
+    </form>
+  </div>
+
+</body>
+</html>
+=======
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Flattop – Login or Join</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{% static 'board/loginPage/login.css' %}">
+</head>
+<body>
+
+<!-- Login -->
+
+  <div class="card">
+    <h1>Sign into Flattop to host</h1>
+
+    {% if form.errors %}
+      <p class="error">Invalid username or password.</p>
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+      <label>
+        <span>Username</span>
+        <input type="text" name="username" placeholder="Enter your username here" required>
+      </label>
+
+      <label>
+        <span>Password</span>
+        <input type="password" name="password" placeholder="Enter your password here" required>
+      </label>
+
+      <button type="submit">Sign in</button>
+    </form>
+  </div>
+
+  <!-- Register -->
+<div class="card">
+  <h1>Create an account</h1>
+
+  {% if reg_form.errors %}
+    <div class="error">
+      {{ reg_form.non_field_errors }}
+      {% for field in reg_form %}
+        {%for err in field.errors %}
+          <div>{{ field.label }}: {{ err }}</div>
+        {%endfor %}
+      {%endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'register' %}">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{next}}">
+    {% endif %}
+
+      <label>
+        <span>Username</span>
+        <input type="text" name="username" required>
+      </label>
+      
+      <label>
+        <span>Password</span>
+        <input type="password" name="password1" required>
+      </label>
+
+      <label>
+        <span>Confirm Password</span>
+        <input type="password" name="password2" required>
+      </label>
+
+      <button type="submit">Register</button>
+  </form>
+
+</div>
+
+  <!-- Lobby Code -->
+  <div class="card">
+    <h1>Enter join code to join a lobby</h1>
+    <form onsubmit="event.preventDefault(); window.location.href='/board/';">
+      <label>
+        <span>Lobby Code</span>
+        <input type="number" placeholder="Enter the lobby code to join" required>
+      </label>
+      <button type="submit">Join</button>
+    </form>
+  </div>
+
+</body>
+</html>
+>>>>>>> matt:board/templates/board/login.html
