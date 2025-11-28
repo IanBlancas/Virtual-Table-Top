@@ -22,6 +22,7 @@
                   <div class="dropdown-content">
                     <a href="#" id="menu-save">Save board (JSON)</a>
                     <a href="#" id="menu-load">Load board…</a>
+                    <a href="#" id="menu-autosave-file">Choose autosave file…</a>
                   </div>
                 </div>
 
@@ -129,7 +130,10 @@
     const tokenBtn = document.getElementById('tokenBtn')
     const cardsBtn = document.getElementById('cardsBtn');
     const counterBtn = document.getElementById('counterBtn');
-    counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
+    counterBtn.addEventListener('click', () => {
+      Widget.create('counters', 0, 0);
+      markBoardDirty();
+    });
 
     // lasso click and drag
 const lasso_Button = document.getElementById('lasso_Button');
@@ -504,6 +508,7 @@ function makeDraggable(el, handle = el) {
       });
       dragTargets = [];
       touchId = null;
+      markBoardDirty();
     }
 
     // Mouse events
@@ -714,8 +719,9 @@ function setTokenImageFromUrl(url) {
   close.innerHTML = '&times;';
   token.appendChild(close);
   close.addEventListener('click', (e) => {
-    e.stopPropagation();   // don’t start drag/select
+    e.stopPropagation();
     token.remove();
+    markBoardDirty();
   });
 
   // Make the token accept image drops *and* stop the event from reaching the board
@@ -763,12 +769,14 @@ token.addEventListener('drop', async (e) => {
     const file = dt.files[0];
     if (file && file.type && file.type.startsWith('image/')) {
       await setTokenImageFromFile(file);
+      markBoardDirty();
       return;
     }
   }
   const url = extractUrlFromDataTransfer(dt);
   if (url) {
     setTokenImageFromUrl(url);
+    markBoardDirty();
   }
 });
 
@@ -793,6 +801,7 @@ token.addEventListener('drop', async (e) => {
       token.classList.replace('circle','square');
     }
     refreshShapeIcon();
+    markBoardDirty();
   });
 
 
@@ -826,6 +835,7 @@ token.addEventListener('drop', async (e) => {
     token.style.width  = snapped + 'px';
     token.style.height = snapped + 'px';
     resizeTouchId = null;
+    markBoardDirty();
   });
   // Touch events for resizing
   handle.addEventListener('touchstart', (e) => {
@@ -893,6 +903,7 @@ token.addEventListener('drop', async (e) => {
       token.appendChild(handle);                  // re-attach again
       token.appendChild(close);
       token.appendChild(shapeBtn);
+      markBoardDirty();
     });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') input.blur();
@@ -922,21 +933,47 @@ token.addEventListener('drop', async (e) => {
 
 
   // ===== Hook the sidebar buttons =====
-  diceBtn.addEventListener('click', ()=> Widget.create('dice', 0, 0));
-  tokenBtn.addEventListener('click', ()=> Widget.create('token', 0, 0));
-  const scoreBtn = document.getElementById('scoreBtn');
-  scoreBtn.addEventListener('click', ()=> Widget.create('scorecard', 0, 0));
+diceBtn.addEventListener('click', ()=> {
+  Widget.create('dice', 0, 0);
+  markBoardDirty();
+});
+tokenBtn.addEventListener('click', ()=> {
+  Widget.create('token', 0, 0);
+  markBoardDirty();
+});
+const scoreBtn = document.getElementById('scoreBtn');
+scoreBtn.addEventListener('click', ()=> {
+  Widget.create('scorecard', 0, 0);
+  markBoardDirty();
+});
   // new dropdown menu items
   const cardsDeckBtn = document.getElementById('cardsDeckBtn');
   const cardsCustomBtn = document.getElementById('cardsCustomBtn');
-  cardsDeckBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('cards', 0, 0); });
-  cardsCustomBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('customCards', 0, 0); });
+  cardsDeckBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  Widget.create('cards', 0, 0);
+  markBoardDirty();
+});
+cardsCustomBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  Widget.create('customCards', 0, 0);
+  markBoardDirty();
+});
   const soundBtn = document.getElementById('soundBtn');
-  soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
+  soundBtn.addEventListener('click', ()=> {
+  Widget.create('soundboard', 0, 0);
+  markBoardDirty();
+});
   const addNotesBtn = document.getElementById('addNotesWidget');
-  addNotesBtn.addEventListener('click', ()=> Widget.create('notes', 0, 0));
+  addNotesBtn.addEventListener('click', ()=> {
+  Widget.create('notes', 0, 0);
+  markBoardDirty();
+});
   const chatBtn = document.getElementById('chatBtn');
-  chatBtn.addEventListener('click', () => Widget.create('chat', 0, 0));
+  chatBtn.addEventListener('click', () => {
+  Widget.create('chat', 0, 0);
+  markBoardDirty();
+});
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
@@ -1074,6 +1111,7 @@ Widget.builders.cards = function(props = {}) {
     createDraggableCard(card, x, y);
     discard.push(card);
     renderTop(); // keep showBack state
+    markBoardDirty();
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
@@ -1406,6 +1444,7 @@ Widget.builders.customCards = function(props = {}) {
 
     board.appendChild(cardDiv);
     renderCount();
+    markBoardDirty();
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); });
@@ -1510,6 +1549,7 @@ Widget.builders.counters = function(props = {}) {
     row.querySelector('.trash').addEventListener('click', (e)=> {
       e.stopPropagation();
       row.remove();
+      markBoardDirty();
     });
 
     rows.appendChild(row);
@@ -1522,6 +1562,7 @@ Widget.builders.counters = function(props = {}) {
   addBtn.addEventListener('click', (e)=> {
     e.stopPropagation();
     createRow({});
+    markBoardDirty();
   });
 
   return el;
@@ -1640,10 +1681,19 @@ Widget.builders.scorecard = function(props = {}) {
     const inp = td.querySelector('.cell-input');
     const cur = parseInt(inp.value || 0, 10);
     inp.value = cur + delta;
+    markBoardDirty();
   }
 
-  addRowBtn.addEventListener('click', (e)=> { e.stopPropagation(); addRow(); });
-  addColBtn.addEventListener('click', (e)=> { e.stopPropagation(); addCol(); });
+  addRowBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    addRow();
+    markBoardDirty();
+  });
+  addColBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    addCol();
+    markBoardDirty();
+  });
 
   // click outside clears selection
   board.addEventListener('click', ()=> { if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected'); selectedCell = null; });
@@ -1760,7 +1810,11 @@ Widget.builders.image = function(props = {}) {
   close.innerHTML = '&times;';
   close.title = 'Remove';
   el.appendChild(close);
-  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+  close.addEventListener('click', (e) => {
+    e.stopPropagation();
+    el.remove();
+    markBoardDirty();
+  });
 
   // place on board (Widget.create handles left/top normally)
   makeDraggable(el, el); // drag anywhere on the image widget
@@ -1801,6 +1855,7 @@ Widget.builders.image = function(props = {}) {
     el.style.width  = Math.max(CELL, snap(w)) + 'px';
     el.style.height = Math.max(CELL, snap(h)) + 'px';
     resizeTouchId = null;
+    markBoardDirty();
   });
   // Touch events for resizing
   handle.addEventListener('touchstart', (e) => {
@@ -1855,7 +1910,7 @@ rotateBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   rotation = (rotation + 90) % 360;
   img.style.transform = `rotate(${rotation}deg)`;
-
+  markBoardDirty();
   
 });
 
@@ -1885,6 +1940,7 @@ wrap.addEventListener('drop', async (e) => {
       el.style.left = snap((parseFloat(el.style.left)||0) + 10) + 'px';
       el.style.top  = snap((parseFloat(el.style.top)||0) + 10) + 'px';
     }
+    markBoardDirty();
     return;
   }
 
@@ -1903,6 +1959,7 @@ wrap.addEventListener('drop', async (e) => {
   if (url && /^https?:/i.test(url)) {
     // Create an image widget that hot-links the remote asset
     Widget.create('image', x, y, { src: url, width: 320, height: 220 });
+    markBoardDirty();
   }
 });
 
@@ -1919,6 +1976,70 @@ function fileToDataURL(file) {
 
 <script>
 // ===== SAVE / LOAD =====
+
+// --- AUTOSAVE TO A USER-CHOSEN FILE (host-only) ---
+
+let autosaveFileHandle = null;   // chosen via "Choose autosave file…"
+let boardDirty = false;          // becomes true when the board changes
+
+function markBoardDirty() {
+  boardDirty = true;
+}
+
+// Write the current board state into the autosave file
+async function writeAutosaveToFile() {
+  if (!autosaveFileHandle) return;
+
+  const stateJson = JSON.stringify(collectBoardState(), null, 2);
+  const writable = await autosaveFileHandle.createWritable();
+  await writable.write(stateJson);
+  await writable.close();
+}
+
+// Prompt the user once to pick a JSON file to autosave into
+async function chooseAutosaveFile() {
+  if (!('showSaveFilePicker' in window)) {
+    alert('Autosave-to-file is only supported in Chromium-based browsers (Chrome, Edge).');
+    return;
+  }
+
+  try {
+    autosaveFileHandle = await window.showSaveFilePicker({
+      suggestedName: 'flattop_autosave.json',
+      types: [
+        {
+          description: 'FlatTop Board Save',
+          accept: { 'application/json': ['.json'] }
+        }
+      ]
+    });
+
+    // Immediately write an initial snapshot
+    await writeAutosaveToFile();
+    boardDirty = false;
+    alert('Autosave file set. The board will now be autosaved periodically.');
+  } catch (err) {
+    // user probably hit cancel
+    console.error('Autosave file selection cancelled or failed:', err);
+  }
+}
+
+// Periodic autosave timer: every 5 seconds if the board is dirty
+const AUTOSAVE_INTERVAL_MS = 55000;
+
+setInterval(() => {
+  if (!autosaveFileHandle) return;
+  if (!boardDirty) return;
+
+  writeAutosaveToFile()
+    .catch(err => console.error('Autosave failed:', err));
+  boardDirty = false;
+}, AUTOSAVE_INTERVAL_MS);
+
+// ===== existing SAVE / LOAD utilities below =====
+
+// Keep JSON stable in "board pixels"
+function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
 
 // Keep JSON stable in "board pixels"
 function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
@@ -2191,6 +2312,7 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
 const fileSaveBtn  = document.getElementById('menu-save');
 const fileLoadBtn  = document.getElementById('menu-load');
 const fileLoadIn   = document.getElementById('menu-load-input');
+const fileAutosaveBtn = document.getElementById('menu-autosave-file');
 
 fileSaveBtn?.addEventListener('click', (e) => {
   e.preventDefault();
@@ -2212,6 +2334,11 @@ fileLoadIn?.addEventListener('change', async (e) => {
   } finally {
     fileLoadIn.value = '';
   }
+});
+
+fileAutosaveBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  chooseAutosaveFile();
 });
 
 // Optional: Ctrl/Cmd+S and Ctrl/Cmd+O
