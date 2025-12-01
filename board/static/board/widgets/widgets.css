@@ -646,6 +646,13 @@
     border-color: #d33;
 }
 
+#laser_Button.active {
+  background: #3b82f6;
+  color: white;
+}
+
+
+
 /* ===== Chat Widget Styles ===== */
 .chat-widget {
   /* Use standard widget styling */
