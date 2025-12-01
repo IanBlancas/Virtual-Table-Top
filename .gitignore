@@ -1,36 +1,72 @@
-# Django
-*.pyc
-*.pyo
-*.pyd
+# ============================
+# Python / Django
+# ============================
+
 __pycache__/
+*.py[cod]
 *.so
-.Python
+*.egg-info/
+
+# SQLite (never commit these)
+db.sqlite3
+*.sqlite3
+
+# Logs & coverage
+*.log
+.coverage
+.coverage.*
+coverage.xml
+nosetests.xml
+*.cover
+.cache
+.pytest_cache
+.mypy_cache
+.hypothesis
+
+# Local settings
+local_settings.py
+
+# ============================
+# Virtual Environments
+# ============================
+
 env/
 venv/
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.git
-.mypy_cache
-.pytest_cache
-.hypothesis
+flattop-venv/
+.Python
 
-# Django specific
-db.sqlite3
-*.sqlite3
-local_settings.py
-media/
+# ============================
+# Django Assets
+# ============================
+
 staticfiles/
+media/
 
-# OS
+# ============================
+# Environment Files
+# ============================
+
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ============================
+# Editors / IDEs
+# ============================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================
+# OS Junk
+# ============================
+
 .DS_Store
 .DS_Store?
 ._*
@@ -38,38 +74,3 @@ staticfiles/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-﻿# Python/Django
-__pycache__/
-*.py[cod]
-*.egg-info/
-db.sqlite3
-*.sqlite3
-*.log
-
-# Virtual envs
-flattop-venv/
-venv/
-.env/
-
-# Editors/OS
-.vscode/
-.idea/
-.DS_Store
-
-# Collected static/media
-staticfiles/
-media/
