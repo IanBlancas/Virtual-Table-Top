@@ -40,10 +40,41 @@ function init(canvasElement) {
     // pointer events
     const wrap = document.getElementById("wrap");
 
-    // listen on wrap instead of canvas
+    // Mouse events
     wrap.addEventListener("mousedown", startStroke);
     wrap.addEventListener("mousemove", extendStroke);
     window.addEventListener("mouseup", endStroke);
+
+    // Touch events
+    wrap.addEventListener("touchstart", function(e) {
+        if (!drawingMode) return;
+        if (e.touches.length > 0) {
+            const t = e.touches[0];
+            // Simulate mouse event
+            startStroke({
+                clientX: t.clientX,
+                clientY: t.clientY,
+                preventDefault: () => e.preventDefault(),
+                stopPropagation: () => e.stopPropagation()
+            });
+        }
+    }, { passive: false });
+    wrap.addEventListener("touchmove", function(e) {
+        if (!drawingMode) return;
+        if (e.touches.length > 0) {
+            const t = e.touches[0];
+            extendStroke({
+                clientX: t.clientX,
+                clientY: t.clientY,
+                preventDefault: () => e.preventDefault(),
+                stopPropagation: () => e.stopPropagation()
+            });
+        }
+    }, { passive: false });
+    window.addEventListener("touchend", function(e) {
+        if (!drawingMode) return;
+        endStroke();
+    });
 
     requestAnimationFrame(loop);
 }

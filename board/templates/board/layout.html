@@ -1,5 +1,3 @@
-
-
 <!doctype html>
 
 <head>
@@ -24,6 +22,7 @@
                   <div class="dropdown-content">
                     <a href="#" id="menu-save">Save board (JSON)</a>
                     <a href="#" id="menu-load">Load board…</a>
+                    <a href="#" id="menu-autosave-file">Choose autosave file…</a>
                   </div>
                 </div>
 
@@ -101,6 +100,7 @@
       <button>Boards</button>
       <button>Rules</button>
       <button>Favorites</button>
+      <button id="chatBtn">Chat</button>
     </div>
     </aside>
 
@@ -108,9 +108,7 @@
         <div class="toolbar">
     <span class="badge">Pan: Middle-mouse drag</span>
     <span class="badge">Zoom: Mouse wheel</span>
-    <span class="badge">Reset</span>
     <button id="resetBtn">Reset view</button>
-    <span class="hint">Cell size: 40px (change in CSS var <code>--cell</code>)</span>
     <button id = "lasso_Button">Lasso</button>
     <button id="draw_Button">Draw</button>
 
@@ -132,9 +130,12 @@
     const tokenBtn = document.getElementById('tokenBtn')
     const cardsBtn = document.getElementById('cardsBtn');
     const counterBtn = document.getElementById('counterBtn');
-    counterBtn.addEventListener('click', () => Widget.create('counters', 0, 0));
+    counterBtn.addEventListener('click', () => {
+      Widget.create('counters', 0, 0);
+      markBoardDirty();
+    });
 
-    // lasso shift click and drag
+    // lasso click and drag
 const lasso_Button = document.getElementById('lasso_Button');
 let usingLasso = false;
 let draggingLasso = false;
@@ -144,6 +145,17 @@ let lasso_box = null;
 lasso_Button.addEventListener('click', () => {
   usingLasso = !usingLasso;
   lasso_Button.classList.toggle('active', usingLasso);
+  wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
+});
+
+// Ctrl+L toggle
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'l') {
+    usingLasso = !usingLasso;
+    lasso_Button.classList.toggle('active', usingLasso);
+    wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
+    e.preventDefault();
+  }
 });
 
 // Draw mode toggle
@@ -178,16 +190,12 @@ function getSelectableWidgets() {
 }
 
 wrap.addEventListener('mousedown', (e) => {
-  // must be selected
   if (!usingLasso) return;
-  // must hold Shift
-  if (!e.shiftKey) return;
   if (e.button !== 0) return;
 
   const rect = wrap.getBoundingClientRect();
   draggingLasso = true;
 
-  // start inside wrap coords
   lasso_Start = {
     x: e.clientX - rect.left,
     y: e.clientY - rect.top
@@ -322,6 +330,99 @@ wrap.addEventListener('wheel', (e) => {
       panning = false;
     });
 
+// ===== TOUCH PAN + PINCH ZOOM =====
+
+// Internal state
+let isTouchPanning = false;
+let isPinching = false;
+let startPan = { x: 0, y: 0 };
+let panOrigin = { x: 0, y: 0 };
+
+let pinchStartDist = 0;
+let pinchStartScale = 1;
+let pinchCenter = { x: 0, y: 0 };
+
+// Measure distance between two touch points
+function dist(t1, t2) {
+  const dx = t1.clientX - t2.clientX;
+  const dy = t1.clientY - t2.clientY;
+  return Math.hypot(dx, dy);
+}
+
+wrap.addEventListener("touchstart", (e) => {
+  if (drawingMode) return;
+    
+  if (e.touches.length === 1) {
+    if (isPinching) return;      // don't pan if starting in pinch
+    isTouchPanning = true;
+
+    const t = e.touches[0];
+    startPan.x = t.clientX;
+    startPan.y = t.clientY;
+    panOrigin.x = panX;
+    panOrigin.y = panY;
+  }
+
+  if (e.touches.length === 2) {
+    isTouchPanning = false;
+    isPinching = true;
+
+    pinchStartDist = dist(e.touches[0], e.touches[1]);
+    pinchStartScale = scale;
+
+    pinchCenter.x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    pinchCenter.y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+  }
+}, { passive: false });
+
+wrap.addEventListener("touchmove", (e) => {
+  if (drawingMode) return;
+    
+  // ----- Single finger pan -----
+  if (isTouchPanning && e.touches.length === 1) {
+    const t = e.touches[0];
+    panX = panOrigin.x + (t.clientX - startPan.x);
+    panY = panOrigin.y + (t.clientY - startPan.y);
+
+    applyTransform();
+    Drawing.render?.();
+    e.preventDefault();
+    return;
+  }
+
+  // ----- Pinch zoom -----
+  if (isPinching && e.touches.length === 2) {
+    const newDist = dist(e.touches[0], e.touches[1]);
+    const zoomFactor = newDist / pinchStartDist;
+
+    const newScale = Math.max(0.2, Math.min(3, pinchStartScale * zoomFactor));
+
+    const wrect = wrap.getBoundingClientRect();
+    const bx = (pinchCenter.x - wrect.left - panX) / scale;
+    const by = (pinchCenter.y - wrect.top  - panY) / scale;
+
+    // Re-anchor under fingers
+    panX = pinchCenter.x - wrect.left - bx * newScale;
+    panY = pinchCenter.y - wrect.top  - by * newScale;
+
+    scale = newScale;
+    applyTransform();
+    Drawing.render?.();
+
+    e.preventDefault();
+  }
+}, { passive: false });
+
+wrap.addEventListener("touchend", (e) => {
+  if (e.touches.length === 0) {
+    isTouchPanning = false;
+    isPinching = false;
+  }
+  if (e.touches.length === 1) {
+    isPinching = false;  // user lifted one finger -> go back to panning
+  }
+});
+
     // Optional: Spacebar to toggle temporary panning with left mouse
     // (handy trackpad mode—comment out if you don’t want it)
     let spacePan = false;
@@ -338,6 +439,9 @@ wrap.addEventListener('wheel', (e) => {
       e.preventDefault();
     }, true);
   </script>
+
+  
+
   <script>
   // ===== Shared constants/helpers =====
   const CELL = 40; // match your CSS grid size in layoutStyle.css
@@ -355,81 +459,99 @@ function makeDraggable(el, handle = el) {
   let dragging = false;
   let dragStartBoard = { x: 0, y: 0 };
   // array of {el, startLeft, startTop}
-  let dragTargets = [];
+    let dragTargets = [];
+    let touchId = null;
 
-  handle.addEventListener('mousedown', (e) => {
-    // only left mouse
-    if (e.button !== 0) return;
-
-    dragging = true;
-
-    // which things are we going to move?
-    // if this element is selected, move *all* selected
-    const selected = Array.from(document.querySelectorAll('.selected'));
-    if (el.classList.contains('selected') && selected.length > 0) {
-      dragTargets = selected.map(node => {
-        return {
+    function startDrag(clientX, clientY) {
+      dragging = true;
+      const selected = Array.from(document.querySelectorAll('.selected'));
+      if (el.classList.contains('selected') && selected.length > 0) {
+        dragTargets = selected.map(node => ({
           el: node,
           startLeft: parseFloat(node.style.left) || 0,
           startTop: parseFloat(node.style.top) || 0
-        };
+        }));
+      } else {
+        dragTargets = [{
+          el,
+          startLeft: parseFloat(el.style.left) || 0,
+          startTop: parseFloat(el.style.top) || 0
+        }];
+        document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+        el.classList.add('selected');
+      }
+      if (!el.classList.contains('image-widget')) {
+        el.style.zIndex = ++zTop;
+      } else {
+        el.style.zIndex = 0;
+      }
+      dragStartBoard = toBoardCoords(clientX, clientY);
+    }
+
+    function moveDrag(clientX, clientY) {
+      if (!dragging) return;
+      const curBoard = toBoardCoords(clientX, clientY);
+      const dx = curBoard.x - dragStartBoard.x;
+      const dy = curBoard.y - dragStartBoard.y;
+      dragTargets.forEach(t => {
+        t.el.style.left = (t.startLeft + dx) + 'px';
+        t.el.style.top  = (t.startTop + dy) + 'px';
       });
-    } else {
-      // just this one
-      dragTargets = [{
-        el,
-        startLeft: parseFloat(el.style.left) || 0,
-        startTop: parseFloat(el.style.top) || 0
-      }];
-      // also make this one the only selected one (optional)
-      document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
-      el.classList.add('selected');
     }
 
-    // z-index bump for the one we actually grabbed
-    if (!el.classList.contains('image-widget')) {
-      el.style.zIndex = ++zTop;
-    } else {
-      el.style.zIndex = 0;
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false;
+      dragTargets.forEach(t => {
+        t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
+        t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
+      });
+      dragTargets = [];
+      touchId = null;
+      markBoardDirty();
     }
 
-    // where on the board did we start the drag
-    dragStartBoard = toBoardCoords(e.clientX, e.clientY);
-
-    e.preventDefault();
-    e.stopPropagation();
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-
-    const curBoard = toBoardCoords(e.clientX, e.clientY);
-    const dx = curBoard.x - dragStartBoard.x;
-    const dy = curBoard.y - dragStartBoard.y;
-
-    // move every target by the same delta
-    dragTargets.forEach(t => {
-      t.el.style.left = (t.startLeft + dx) + 'px';
-      t.el.style.top  = (t.startTop + dy) + 'px';
+    // Mouse events
+    handle.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      startDrag(e.clientX, e.clientY);
+      e.preventDefault();
+      e.stopPropagation();
     });
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false;
-
-    // snap them all to grid
-    dragTargets.forEach(t => {
-      t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
-      t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      moveDrag(e.clientX, e.clientY);
     });
-    dragTargets = [];
-  });
-  // clear selection when clicking empty board, but not while lasso is on
-board.addEventListener('click', () => {
-  if (usingLasso) return;
-  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-});
+    window.addEventListener('mouseup', endDrag);
+
+    // Touch events
+    handle.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        touchId = t.identifier;
+        startDrag(t.clientX, t.clientY);
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, { passive: false });
+    window.addEventListener('touchmove', (e) => {
+      if (!dragging || touchId === null) return;
+      for (let i = 0; i < e.touches.length; i++) {
+        if (e.touches[i].identifier === touchId) {
+          moveDrag(e.touches[i].clientX, e.touches[i].clientY);
+          break;
+        }
+      }
+    }, { passive: false });
+    window.addEventListener('touchend', (e) => {
+      if (!dragging || touchId === null) return;
+      endDrag();
+    });
+
+    board.addEventListener('click', () => {
+      if (usingLasso) return;
+      document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+    });
 
 }
 
@@ -450,7 +572,7 @@ board.addEventListener('click', () => {
     }
   };
 
-// Global keydown for delete and flip (installed once so it works even if the
+  // Global keydown for delete and flip (installed once so it works even if the
 // standard Cards widget hasn't been created). Uses the same semantics as the
 // original handler: Delete removes selected cards, F flips selected cards.
 if (!window._flatTopCardKeyHandlerInstalled) {
@@ -597,8 +719,9 @@ function setTokenImageFromUrl(url) {
   close.innerHTML = '&times;';
   token.appendChild(close);
   close.addEventListener('click', (e) => {
-    e.stopPropagation();   // don’t start drag/select
+    e.stopPropagation();
     token.remove();
+    markBoardDirty();
   });
 
   // Make the token accept image drops *and* stop the event from reaching the board
@@ -646,15 +769,16 @@ token.addEventListener('drop', async (e) => {
     const file = dt.files[0];
     if (file && file.type && file.type.startsWith('image/')) {
       await setTokenImageFromFile(file);
+      markBoardDirty();
       return;
     }
   }
   const url = extractUrlFromDataTransfer(dt);
   if (url) {
     setTokenImageFromUrl(url);
+    markBoardDirty();
   }
 });
-
 
 
   // shape toggle (◯ / ◻)
@@ -677,6 +801,7 @@ token.addEventListener('drop', async (e) => {
       token.classList.replace('circle','square');
     }
     refreshShapeIcon();
+    markBoardDirty();
   });
 
 
@@ -685,8 +810,9 @@ token.addEventListener('drop', async (e) => {
 
   // ----- resizing -----
   let resizing = false, start = {x:0, y:0}, baseSize = size;
+  let resizeTouchId = null;
   handle.addEventListener('mousedown', (e) => {
-    e.stopPropagation();                 // don’t start a drag
+    e.stopPropagation();
     resizing = true;
     start = toBoardCoords(e.clientX, e.clientY);
     baseSize = parseFloat(token.style.width) || size;
@@ -704,11 +830,47 @@ token.addEventListener('drop', async (e) => {
   window.addEventListener('mouseup', () => {
     if (!resizing) return;
     resizing = false;
-    // snap size to grid
     const s = parseFloat(token.style.width);
     const snapped = Math.max(CELL, snap(s));
     token.style.width  = snapped + 'px';
     token.style.height = snapped + 'px';
+    resizeTouchId = null;
+    markBoardDirty();
+  });
+  // Touch events for resizing
+  handle.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) {
+      const t = e.touches[0];
+      resizeTouchId = t.identifier;
+      resizing = true;
+      start = toBoardCoords(t.clientX, t.clientY);
+      baseSize = parseFloat(token.style.width) || size;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { passive: false });
+  window.addEventListener('touchmove', (e) => {
+    if (!resizing || resizeTouchId === null) return;
+    for (let i = 0; i < e.touches.length; i++) {
+      if (e.touches[i].identifier === resizeTouchId) {
+        const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
+        const delta = Math.max(cur.x - start.x, cur.y - start.y);
+        const newSize = Math.max(24, baseSize + delta);
+        token.style.width  = newSize + 'px';
+        token.style.height = newSize + 'px';
+        token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+        break;
+      }
+    }
+  }, { passive: false });
+  window.addEventListener('touchend', (e) => {
+    if (!resizing || resizeTouchId === null) return;
+    resizing = false;
+    const s = parseFloat(token.style.width);
+    const snapped = Math.max(CELL, snap(s));
+    token.style.width  = snapped + 'px';
+    token.style.height = snapped + 'px';
+    resizeTouchId = null;
   });
 
   // ----- rename on double-click (quick patch version) -----
@@ -741,6 +903,7 @@ token.addEventListener('drop', async (e) => {
       token.appendChild(handle);                  // re-attach again
       token.appendChild(close);
       token.appendChild(shapeBtn);
+      markBoardDirty();
     });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') input.blur();
@@ -770,19 +933,47 @@ token.addEventListener('drop', async (e) => {
 
 
   // ===== Hook the sidebar buttons =====
-  diceBtn.addEventListener('click', ()=> Widget.create('dice', 0, 0));
-  tokenBtn.addEventListener('click', ()=> Widget.create('token', 0, 0));
-  const scoreBtn = document.getElementById('scoreBtn');
-  scoreBtn.addEventListener('click', ()=> Widget.create('scorecard', 0, 0));
+diceBtn.addEventListener('click', ()=> {
+  Widget.create('dice', 0, 0);
+  markBoardDirty();
+});
+tokenBtn.addEventListener('click', ()=> {
+  Widget.create('token', 0, 0);
+  markBoardDirty();
+});
+const scoreBtn = document.getElementById('scoreBtn');
+scoreBtn.addEventListener('click', ()=> {
+  Widget.create('scorecard', 0, 0);
+  markBoardDirty();
+});
   // new dropdown menu items
   const cardsDeckBtn = document.getElementById('cardsDeckBtn');
   const cardsCustomBtn = document.getElementById('cardsCustomBtn');
-  cardsDeckBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('cards', 0, 0); });
-  cardsCustomBtn.addEventListener('click', (e) => { e.preventDefault(); Widget.create('customCards', 0, 0); });
+  cardsDeckBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  Widget.create('cards', 0, 0);
+  markBoardDirty();
+});
+cardsCustomBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  Widget.create('customCards', 0, 0);
+  markBoardDirty();
+});
   const soundBtn = document.getElementById('soundBtn');
-  soundBtn.addEventListener('click', ()=> Widget.create('soundboard', 0, 0));
+  soundBtn.addEventListener('click', ()=> {
+  Widget.create('soundboard', 0, 0);
+  markBoardDirty();
+});
   const addNotesBtn = document.getElementById('addNotesWidget');
-  addNotesBtn.addEventListener('click', ()=> Widget.create('notes', 0, 0));
+  addNotesBtn.addEventListener('click', ()=> {
+  Widget.create('notes', 0, 0);
+  markBoardDirty();
+});
+  const chatBtn = document.getElementById('chatBtn');
+  chatBtn.addEventListener('click', () => {
+  Widget.create('chat', 0, 0);
+  markBoardDirty();
+});
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
@@ -920,6 +1111,7 @@ Widget.builders.cards = function(props = {}) {
     createDraggableCard(card, x, y);
     discard.push(card);
     renderTop(); // keep showBack state
+    markBoardDirty();
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
@@ -1252,6 +1444,7 @@ Widget.builders.customCards = function(props = {}) {
 
     board.appendChild(cardDiv);
     renderCount();
+    markBoardDirty();
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); });
@@ -1345,7 +1538,7 @@ Widget.builders.counters = function(props = {}) {
       if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); e.preventDefault(); }
       e.stopPropagation();
     });
-    valueInput.addEventListener('blur', ()=> set(n()));
+    valueInput.addEventListener('blur', () => set(n()));
     valueInput.addEventListener('input', ()=>{
       // live-clean non-digits except leading '-'
       const m = valueInput.value.match(/^-?\d*/);
@@ -1356,6 +1549,7 @@ Widget.builders.counters = function(props = {}) {
     row.querySelector('.trash').addEventListener('click', (e)=> {
       e.stopPropagation();
       row.remove();
+      markBoardDirty();
     });
 
     rows.appendChild(row);
@@ -1368,6 +1562,7 @@ Widget.builders.counters = function(props = {}) {
   addBtn.addEventListener('click', (e)=> {
     e.stopPropagation();
     createRow({});
+    markBoardDirty();
   });
 
   return el;
@@ -1486,10 +1681,19 @@ Widget.builders.scorecard = function(props = {}) {
     const inp = td.querySelector('.cell-input');
     const cur = parseInt(inp.value || 0, 10);
     inp.value = cur + delta;
+    markBoardDirty();
   }
 
-  addRowBtn.addEventListener('click', (e)=> { e.stopPropagation(); addRow(); });
-  addColBtn.addEventListener('click', (e)=> { e.stopPropagation(); addCol(); });
+  addRowBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    addRow();
+    markBoardDirty();
+  });
+  addColBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    addCol();
+    markBoardDirty();
+  });
 
   // click outside clears selection
   board.addEventListener('click', ()=> { if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected'); selectedCell = null; });
@@ -1606,13 +1810,18 @@ Widget.builders.image = function(props = {}) {
   close.innerHTML = '&times;';
   close.title = 'Remove';
   el.appendChild(close);
-  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+  close.addEventListener('click', (e) => {
+    e.stopPropagation();
+    el.remove();
+    markBoardDirty();
+  });
 
   // place on board (Widget.create handles left/top normally)
   makeDraggable(el, el); // drag anywhere on the image widget
 
   // ----- resizing (keep aspect if Shift is held) -----
   let resizing = false, start={x:0,y:0}, baseW=0, baseH=0, aspect=1;
+  let resizeTouchId = null;
   img.addEventListener('load', ()=>{ if (img.naturalWidth && img.naturalHeight) aspect = img.naturalWidth / img.naturalHeight; });
   handle.addEventListener('mousedown', (e)=>{
     e.stopPropagation();
@@ -1629,11 +1838,9 @@ Widget.builders.image = function(props = {}) {
     let dx = cur.x - start.x;
     let dy = cur.y - start.y;
 
-    // size proposal
     let newW = Math.max(40, baseW + dx);
     let newH = Math.max(40, baseH + dy);
 
-    // keep aspect while Shift is held
     if (e.shiftKey) {
       if (newW / newH > aspect) newW = newH * aspect; else newH = newW / aspect;
     }
@@ -1643,11 +1850,50 @@ Widget.builders.image = function(props = {}) {
   window.addEventListener('mouseup', ()=>{
     if (!resizing) return;
     resizing = false;
-    // snap size to grid
     const w = parseFloat(getComputedStyle(el).width);
     const h = parseFloat(getComputedStyle(el).height);
     el.style.width  = Math.max(CELL, snap(w)) + 'px';
     el.style.height = Math.max(CELL, snap(h)) + 'px';
+    resizeTouchId = null;
+    markBoardDirty();
+  });
+  // Touch events for resizing
+  handle.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) {
+      const t = e.touches[0];
+      resizeTouchId = t.identifier;
+      resizing = true;
+      const p = toBoardCoords(t.clientX, t.clientY);
+      start = p;
+      baseW = parseFloat(getComputedStyle(el).width);
+      baseH = parseFloat(getComputedStyle(el).height);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { passive: false });
+  window.addEventListener('touchmove', (e) => {
+    if (!resizing || resizeTouchId === null) return;
+    for (let i = 0; i < e.touches.length; i++) {
+      if (e.touches[i].identifier === resizeTouchId) {
+        const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
+        let dx = cur.x - start.x;
+        let dy = cur.y - start.y;
+        let newW = Math.max(40, baseW + dx);
+        let newH = Math.max(40, baseH + dy);
+        el.style.width  = newW + 'px';
+        el.style.height = newH + 'px';
+        break;
+      }
+    }
+  }, { passive: false });
+  window.addEventListener('touchend', ()=>{
+    if (!resizing || resizeTouchId === null) return;
+    resizing = false;
+    const w = parseFloat(getComputedStyle(el).width);
+    const h = parseFloat(getComputedStyle(el).height);
+    el.style.width  = Math.max(CELL, snap(w)) + 'px';
+    el.style.height = Math.max(CELL, snap(h)) + 'px';
+    resizeTouchId = null;
   });
   // ROTATE 90° button (next to the close button)
 const rotateBtn = document.createElement('button');
@@ -1664,7 +1910,7 @@ rotateBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   rotation = (rotation + 90) % 360;
   img.style.transform = `rotate(${rotation}deg)`;
-
+  markBoardDirty();
   
 });
 
@@ -1694,6 +1940,7 @@ wrap.addEventListener('drop', async (e) => {
       el.style.left = snap((parseFloat(el.style.left)||0) + 10) + 'px';
       el.style.top  = snap((parseFloat(el.style.top)||0) + 10) + 'px';
     }
+    markBoardDirty();
     return;
   }
 
@@ -1712,6 +1959,7 @@ wrap.addEventListener('drop', async (e) => {
   if (url && /^https?:/i.test(url)) {
     // Create an image widget that hot-links the remote asset
     Widget.create('image', x, y, { src: url, width: 320, height: 220 });
+    markBoardDirty();
   }
 });
 
@@ -1728,6 +1976,70 @@ function fileToDataURL(file) {
 
 <script>
 // ===== SAVE / LOAD =====
+
+// --- AUTOSAVE TO A USER-CHOSEN FILE (host-only) ---
+
+let autosaveFileHandle = null;   // chosen via "Choose autosave file…"
+let boardDirty = false;          // becomes true when the board changes
+
+function markBoardDirty() {
+  boardDirty = true;
+}
+
+// Write the current board state into the autosave file
+async function writeAutosaveToFile() {
+  if (!autosaveFileHandle) return;
+
+  const stateJson = JSON.stringify(collectBoardState(), null, 2);
+  const writable = await autosaveFileHandle.createWritable();
+  await writable.write(stateJson);
+  await writable.close();
+}
+
+// Prompt the user once to pick a JSON file to autosave into
+async function chooseAutosaveFile() {
+  if (!('showSaveFilePicker' in window)) {
+    alert('Autosave-to-file is only supported in Chromium-based browsers (Chrome, Edge).');
+    return;
+  }
+
+  try {
+    autosaveFileHandle = await window.showSaveFilePicker({
+      suggestedName: 'flattop_autosave.json',
+      types: [
+        {
+          description: 'FlatTop Board Save',
+          accept: { 'application/json': ['.json'] }
+        }
+      ]
+    });
+
+    // Immediately write an initial snapshot
+    await writeAutosaveToFile();
+    boardDirty = false;
+    alert('Autosave file set. The board will now be autosaved periodically.');
+  } catch (err) {
+    // user probably hit cancel
+    console.error('Autosave file selection cancelled or failed:', err);
+  }
+}
+
+// Periodic autosave timer: every 5 seconds if the board is dirty
+const AUTOSAVE_INTERVAL_MS = 55000;
+
+setInterval(() => {
+  if (!autosaveFileHandle) return;
+  if (!boardDirty) return;
+
+  writeAutosaveToFile()
+    .catch(err => console.error('Autosave failed:', err));
+  boardDirty = false;
+}, AUTOSAVE_INTERVAL_MS);
+
+// ===== existing SAVE / LOAD utilities below =====
+
+// Keep JSON stable in "board pixels"
+function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
 
 // Keep JSON stable in "board pixels"
 function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
@@ -1804,6 +2116,7 @@ document.querySelectorAll('#board > .widget').forEach(el => {
 
   // 2) Tokens
 document.querySelectorAll('#board > .token').forEach(el => {
+
   // Prefer the persisted source if present
   let imageUrl = el.dataset.imageSrc || '';
   if (!imageUrl) {
@@ -1835,7 +2148,6 @@ document.querySelectorAll('#board > .token').forEach(el => {
     imageUrl
   });
 });
-
 
 
   // 3) Image widgets (note: your rotation is on the IMG, not the wrapper)
@@ -2000,6 +2312,7 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
 const fileSaveBtn  = document.getElementById('menu-save');
 const fileLoadBtn  = document.getElementById('menu-load');
 const fileLoadIn   = document.getElementById('menu-load-input');
+const fileAutosaveBtn = document.getElementById('menu-autosave-file');
 
 fileSaveBtn?.addEventListener('click', (e) => {
   e.preventDefault();
@@ -2023,6 +2336,11 @@ fileLoadIn?.addEventListener('change', async (e) => {
   }
 });
 
+fileAutosaveBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  chooseAutosaveFile();
+});
+
 // Optional: Ctrl/Cmd+S and Ctrl/Cmd+O
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -2035,12 +2353,11 @@ document.addEventListener('keydown', (e) => {
   }
 });
 </script>
-
-
-    </main>
+<script src="{% static 'board/widgets/chat.js' %}"></script>
 <script src="{% static 'board/widgets/notes.js' %}"></script>
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
 </body>
+
 
 </html>
