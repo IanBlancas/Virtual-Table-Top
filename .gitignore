@@ -7,10 +7,6 @@ __pycache__/
 *.so
 *.egg-info/
 
-# SQLite (never commit these)
-db.sqlite3
-*.sqlite3
-
 # Logs & coverage
 *.log
 .coverage
