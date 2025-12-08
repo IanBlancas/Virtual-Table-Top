@@ -18,6 +18,8 @@ let drawingMode = false;
 let currentStroke = null;
 let eraserArmed = false;   // eraser tool selected
 let erasingNow  = false;   // mouse is held down in eraser mode
+let laserArmed = false;    // <<< NEW: laser mode is active
+let laserLifetime = 800;   // <<< NEW: milliseconds before laser disappears
 let undoStack = [];
 let redoStack = [];
 let needsRender = true;
@@ -120,11 +122,19 @@ function startStroke(e) {
     currentStroke = {
         color: window.drawColor || "#000000",
         size: window.drawSize || 4,
-        points: [{ x, y }]
+        points: [{ x, y }],
+        isLaser: laserArmed,
+        expireAt: null
     };
 
     Drawing.strokes.push(currentStroke);
+
+    if (!laserArmed) {
     undoStack.push(Drawing.strokes.slice());
+    }
+
+    needsRender = true;
+   
 }
 
 function extendStroke(e) {
@@ -148,6 +158,10 @@ function extendStroke(e) {
 }
 
 function endStroke() {
+        // When mouse/touch is released, start the laser timer
+    if (currentStroke && currentStroke.isLaser) {
+        currentStroke.expireAt = performance.now() + laserLifetime;
+    }
     currentStroke = null;
     erasingNow = false;   // stop erasing when mouse lifted
 }
@@ -201,10 +215,28 @@ function render() {
 }
 
 function loop() {
+    const now = performance.now();
+
+    // REMOVE expired laser strokes
+    if (Drawing.strokes.length) {
+        let changed = false;
+
+        Drawing.strokes = Drawing.strokes.filter(stroke => {
+            if (stroke.isLaser && stroke.expireAt && now > stroke.expireAt) {
+                changed = true;
+                return false; // delete laser stroke
+            }
+            return true;     // keep normal strokes
+        });
+
+        if (changed) needsRender = true;
+    }
+
     if (needsRender) {
         render();
         needsRender = false;
     }
+
     requestAnimationFrame(loop);
 }
 

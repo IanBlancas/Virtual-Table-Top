@@ -1728,6 +1728,9 @@ Widget.builders.drawOptions = function(props={}) {
         <button id="eraser_Button">Eraser</button>
       </div>
       <div class="row">
+        <button id="laser_Button">Laser</button>
+      </div>
+      <div class="row">
         <button id="clearDraw">Clear</button>
       </div>
     </div>
@@ -1738,6 +1741,7 @@ Widget.builders.drawOptions = function(props={}) {
   const colorInput = el.querySelector('#drawColor');
   const sizeInput  = el.querySelector('#drawSize');
   const eraserBtn  = el.querySelector('#eraser_Button');
+  const laserBtn   = el.querySelector('#laser_Button');   // <<< NEW
   const clearBtn   = el.querySelector('#clearDraw');
   const closeBtn   = el.querySelector('.close');
 
@@ -1765,6 +1769,18 @@ Widget.builders.drawOptions = function(props={}) {
   eraserBtn.addEventListener("click", () => {
     eraserArmed = !eraserArmed;
     eraserBtn.classList.toggle("active", eraserArmed);
+  });
+
+  // === LASER BUTTON ===
+  laserBtn.addEventListener("click", () => {
+    laserArmed = !laserArmed;
+    laserBtn.classList.toggle("active", laserArmed);
+
+    // laser mode cancels eraser mode
+    if (laserArmed) {
+        eraserArmed = false;
+        eraserBtn.classList.remove("active");
+    }
   });
 
   // CLEAR CANVAS
