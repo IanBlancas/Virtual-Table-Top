@@ -8,6 +8,12 @@ FlatTop is a web-based 2D Virtual Tabletop (VTT) designed for board games, card 
 
 This manual outlines features, architecture, usage instructions, and developer guidelines.
 
+To get started and run the program, simply download the files from this github into a single directory, open that directory in a command line window, and then type the command 
+
+python manage.py runserver
+
+You may, of course, need to install some dependencies first, like python itself, Django, or the Pillow library we used for the custom card widgets.
+
 2. System Overview
 
 FlatTop consists of:
@@ -34,15 +40,27 @@ Supports flipping
 
 Serialized properties: type, x, y, image, name
 
+Image Widget
+
+Can be placed onto the board either from a local file on a user's computer or from another tab on the same browser, simply by dragging the file/image onto the board.
+
+Supports rotation for the image, but only in 90 degree increments
+
 Token Widget
 
 Used for character pieces, markers, or game components
 
+An image can be dragged onto a token through the same methods as in the image widget below to change the token's background
+
+a token can be made changed from a circle to a square or vice versa by tapping on the icon next to the x while the token is selected
+
 Counter Widget
 
-Contains a number value
+Multiple counters, each with their own editable name and value, can be added to one widget
 
-Increment/decrement buttons
+The value of each counter can be changed either through manual data entry, or through clicking on the value and using the up or down arrow keys to add or subtract, respectively
+
+If shift is held down while changing the value via arrow keys, the value is increased or decreased in increments of 5 instead of 1
 
 Note Widget
 
@@ -52,7 +70,9 @@ Position and content stored in JSON
 
 Dice Roller Widget
 
-UI button or icon that triggers random dice rolls
+A widget that simulates rolling dice, when you input text of the format (+integer) d (+integer), with the first integer being the amount of dice you want to roll, and the second being the number of sides on each die.
+
+Optionally, you can also add or subtract a further integer from the final total of a "roll" if need be.
 
 Roll results may be logged (if chat system exists)
 
@@ -114,13 +134,11 @@ Single-touch pan disabled when pinch begins
 
 7.1 Autosave
 
-Occurs every 15 seconds
-
-Saves complete board state to database
+Occurs every 5 seconds when something worth saving has occured
 
 7.2 Manual Save
 
-User-triggered save option
+User-triggered save option, either via CTRL + S or the save button along the top toolbar
 
 7.3 JSON Save-State Format
 
@@ -146,9 +164,9 @@ Example structure:
 
 7.4 Loading
 
-Reconstructs widget objects from saved JSON
+Reconstructs widget objects from saved JSON, can be triggered either by hitting CTRL + O and selecting the .JSON file you would like to load, or by using the button along the top toolbar to do the same
 
-Restores positions, images, rotations, and metadata
+Restores positions, images, rotations, and some metadata
 
 8. Architecture
 
