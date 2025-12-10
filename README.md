@@ -8,11 +8,7 @@ FlatTop is a web-based 2D Virtual Tabletop (VTT) designed for board games, card 
 
 This manual outlines features, architecture, usage instructions, and developer guidelines.
 
-To get started and run the program, simply download the files from this github into a single directory, open that directory in a command line window, and then type the command 
-
-python manage.py runserver
-
-You may, of course, need to install some dependencies first, like python itself, Django, or the Pillow library we used for the custom card widgets.
+To get started and run the program, simply download the files from this github into a single directory, open that directory in a command line window, then use the command "python manage.py runserver". You may, of course, need to install some dependencies first, like python itself, Django, and the Pillow library we used for the custom card widgets.
 
 2. System Overview
 
@@ -34,47 +30,57 @@ Widgets are draggable board elements. Each widget stores its own properties and 
 
 Card Widget
 
-Displays an image
+-Draw cards
 
-Supports flipping
+-Flip cards individually or as a group using F key
 
-Serialized properties: type, x, y, image, name
+-Shuffle or reset the deck
+
+-Multi-select for bulk flip/delete
+
+Custom Card Widget
+
+-Each card may be text or image
+
+-Supports PNG and JPEG files uploads
+
+-Uploaded images are stored on the server so the deck can be reused across sessions.
+
+-Includes Draw, Shuffle, Reset, and Flip, identical to the standard card widget.
 
 Image Widget
 
-Can be placed onto the board either from a local file on a user's computer or from another tab on the same browser, simply by dragging the file/image onto the board.
+-Can be dragged onto the board either from a local file on a user's computer or from another browser tab
 
-Supports rotation for the image, but only in 90 degree increments
+-Supports rotation for the image in 90 degree increments
 
 Token Widget
 
-Used for character pieces, markers, or game components
+-Used for character pieces, markers, or game components
 
-An image can be dragged onto a token through the same methods as in the image widget below to change the token's background
+-An image can be dragged onto a token through the same methods as in the image widget below to change the token's background
 
-a token can be made changed from a circle to a square or vice versa by tapping on the icon next to the x while the token is selected
+-Changes to a circle or square byu using the button next to the x while the token is selected
 
 Counter Widget
 
-Multiple counters, each with their own editable name and value, can be added to one widget
+-Multiple counters, each with their own editable name and value, can be added to one widget
 
-The value of each counter can be changed either through manual data entry, or through clicking on the value and using the up or down arrow keys to add or subtract, respectively
+-The value of each counter can be changed either through manual data entry, or through clicking on the value and using the up or down arrow keys to add or subtract, respectively
 
-If shift is held down while changing the value via arrow keys, the value is increased or decreased in increments of 5 instead of 1
+-Using shift and arrow keys changes the value in increments of 5 instead of 1
 
 Note Widget
 
-Text field for reminders, rules, or player notes
+-Text field for reminders, rules, or player notes
 
-Position and content stored in JSON
+-Position and content stored in JSON
 
 Dice Roller Widget
 
-A widget that simulates rolling dice, when you input text of the format (+integer) d (+integer), with the first integer being the amount of dice you want to roll, and the second being the number of sides on each die.
+-A widget that simulates rolling dice, when you input text of the format (+integer) d (+integer), with the first integer being the amount of dice and the second being the number of sides on each die ex. 2d6 + 3
 
-Optionally, you can also add or subtract a further integer from the final total of a "roll" if need be.
-
-Roll results may be logged (if chat system exists)
+-Additionally, you can also add or subtract a further integer from the final total of a "roll" if need be
 
 4. Board Layout
 
@@ -86,17 +92,17 @@ The shared play surface where all players can interact.
 
 A player-specific hidden area intended for:
 
-Hand cards
+-Hand cards
 
-Secret notes
+-Secret notes
 
-Hidden tokens
+-Hidden tokens
 
 5. Interaction Features
 
 5.1 Drag and Drop
 
-All widgets can be moved freely on the board.
+All widgets can be moved freely on the board
 
 5.2 Lasso Selection
 
@@ -110,31 +116,25 @@ Move or delete multiple items at once
 
 5.3 Snap-to-Grid
 
-Optional grid overlay
+Grid overlay
 
-Widgets align to nearest grid coordinates
+Widgets align to nearest grid coordinates at top left corner of widget
 
 6. Touch Controls
 
-FlatTop includes mobile/tablet functionality.
+FlatTop includes touch functionality:
 
-6.1 Pan
+-One-finger drag moves the board
 
-One-finger drag moves the board
+-Two-finger pinch to zoom in or out
 
-6.2 Pinch Zoom
-
-Two-finger pinch to zoom in or out
-
-6.3 Touch Conflict Handling
-
-Single-touch pan disabled when pinch begins
+-Some interaction with widgets
 
 7. Saving & Loading
 
 7.1 Autosave
 
-Occurs every 5 seconds when something worth saving has occured
+Occurs every 5 seconds if a change to the board or widgets has occured
 
 7.2 Manual Save
 
@@ -164,7 +164,7 @@ Example structure:
 
 7.4 Loading
 
-Reconstructs widget objects from saved JSON, can be triggered either by hitting CTRL + O and selecting the .JSON file you would like to load, or by using the button along the top toolbar to do the same
+Reconstructs widget objects from saved JSON, can be triggered either by hitting CTRL + O and selecting the .JSON file you would like to open, or by using the drop-down menu under File in the top toolbar
 
 Restores positions, images, rotations, and some metadata
 
@@ -196,7 +196,7 @@ WebSocket channels for real-time updates
 
 Multi-user cursors
 
-Conflict resolution strategies
+Conflict resolution (GM and Player roles)
 
 9. Developer Guide
 
@@ -272,5 +272,4 @@ VTT: Virtual Tabletop
 
 14. Version
 
-This manual corresponds to FlatTop version: Developer Draft
-
+This manual corresponds to FlatTop version: Fall 2025 Build
