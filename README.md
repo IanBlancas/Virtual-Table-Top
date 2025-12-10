@@ -72,9 +72,15 @@ Counter Widget
 
 Note Widget
 
--Text field for reminders, rules, or player notes
+-When pressing the “note” widget button the widget will appear on the board.
 
--Position and content stored in JSON
+-Once the widget has appeared, you will be prompted to begin typing, standard text document functionality is possible within the widget such as ctrl + c and ctrl + v.
+
+-The widget can be adjusted by clicking on the corner and dragging it to the desired dimensions. The widget will adjust automatically to the proper proportions. It may also create scroll bars if needed to navigate the content of the widget. 
+
+-The info within the note will be saved in the JSON file when the board is saved. It will load whatever was in the notes widget when loaded later.
+
+-The widget can be closed by pressing the “x” button.
 
 Dice Roller Widget
 
@@ -82,7 +88,47 @@ Dice Roller Widget
 
 -Additionally, you can also add or subtract a further integer from the final total of a "roll" if need be
 
-4. Board Layout
+Drawing Widget
+
+-The “Draw” widget will spawn once the user selects the button.
+
+-A canvas will spawn above everything on the board, which is what the user uses to draw on.
+
+-The draw widget will have a color picker, erase, laser, size, and clear buttons that are used for its unique functionality 
+
+-The color picker supports full RGB color selection, allowing the user to also pick colors of lower and higher opacity and saturation.
+
+-All the user has to do is place the slider on a location on the color bar and select a color 
+
+-Direct RGB values can be used with the prompted R G B boxes below the color slider
+
+-A dropper button is available next to the color slider that allows you to hover over the board and zoom into pixel view to select an existing color. 
+
+-The size slider changes the size of the brush accordingly from left to right (smaller to larger)
+
+-When selected the eraser button will highlight red, and you can begin to delete strokes made by the user. The eraser can only delete complete strokes, with no partial erasing possible.
+
+-The laser button, when selected, lights up in a blue color and functions the same as the drawing, but deletes itself after a few seconds.
+
+-The clear button will fully delete everything from the canvas. 
+
+-You close the widget using the x icon in the corner. 
+
+Soundboard
+
+-When the “Sound Board” widget is selected, it will appear on the board with 4 default sounds, each having its own volume slider, loop, and play button, as well as a stop all button
+
+-Any sound will play for its duration when the play button is selected. 
+
+-When a loop is selected, and the sound is played again, the selected sound will loop until stopped by the stop all button or if the user clicks the loop button again. 
+
+-Multiple sounds can be played at once and looped all together.
+
+-The stop all button will silence all sounds 
+
+-The x icon in the corner will also function the same as the stop all button, but will also delete the widget.
+
+4 Board Layout
 
 4.1 Public Board
 
