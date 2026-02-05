@@ -80,6 +80,12 @@ body {
   border-radius: 6px;
 }
 
+/* Grid toggle active state */
+.dropdown-content a.grid-toggle-active {
+  background-color: #e0e0e0;
+  font-weight: 600;
+}
+
 
 .sidebar{
   position: fixed;

@@ -52,10 +52,10 @@
                 <div class="file dropdown">
                     <button class="menubtn">View</button>
                     <div class="dropdown-content">
-                        <a href="#">first</a>
-                        <a href="#">second</a>
-                        <a href="#">third</a>
-                        <a href="#">fourth</a>
+                        <a href="#" id="toggleGridBtn">Toggle Grid</a>
+                        <a href="#">Zoom to fit</a>
+                        <a href="#">Show all widgets</a>
+                        <a href="#">Fullscreen</a>
                     </div>
                 </div>
 
@@ -270,6 +270,29 @@ window.addEventListener('mouseup', (e) => {
     }
     resetBtn.addEventListener('click', resetView);
     applyTransform();
+
+    // ===== GRID TOGGLE =====
+    let gridVisible = true; // Track grid visibility state
+    const toggleGridBtn = document.getElementById('toggleGridBtn');
+
+    function toggleGrid() {
+      gridVisible = !gridVisible;
+      if (gridVisible) {
+        board.style.backgroundImage = `
+          linear-gradient(#000 2px, transparent 2px),
+          linear-gradient(90deg, #000 2px, transparent 2px)
+        `;
+        toggleGridBtn.classList.remove('grid-toggle-active');
+      } else {
+        board.style.backgroundImage = 'none';
+        toggleGridBtn.classList.add('grid-toggle-active');
+      }
+    }
+
+    toggleGridBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleGrid();
+    });
 
     // Mouse wheel zoom around cursor
     // Replace your current wheel handler with this:
