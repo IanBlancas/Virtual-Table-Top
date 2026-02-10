@@ -53,19 +53,20 @@
                     <button class="menubtn">View</button>
                     <div class="dropdown-content">
                         <a href="#" id="toggleGridBtn">Toggle Grid</a>
-                        <a href="#">Zoom to fit</a>
-                        <a href="#">Show all widgets</a>
-                        <a href="#">Fullscreen</a>
+                        <a href="#" id="resetViewBtn">Reset View</a>
+                        <a href="#" id="zoomFitBtn">Zoom to fit</a>
+                        <a href="#" id="showAllWidgetsBtn">Show all widgets</a>
+                        <a href="#" id="fullscreenBtn">Fullscreen</a>
                     </div>
                 </div>
 
                 <div class="file dropdown">
                     <button class="menubtn">Help</button>
                     <div class="dropdown-content">
-                        <a href="#">first</a>
-                        <a href="#">second</a>
-                        <a href="#">third</a>
-                        <a href="#">fourth</a>
+                        <a href="#" id="shortcutsBtn">Shortcuts</a>
+                        <a href="#">Documentation</a>
+                        <a href="#">Report an issue</a>
+                        <a href="#">About</a>
                     </div>
                 </div>
             </div>
@@ -97,8 +98,6 @@
   <button id = "scoreBtn">Scorecard</button>
       <button id = "soundBtn">Soundboard</button>
       <button id="addNotesWidget">Notes</button>
-      <button>Boards</button>
-      <button>Rules</button>
       <button>Favorites</button>
       <button id="chatBtn">Chat</button>
     </div>
@@ -106,11 +105,9 @@
 
     <main class="mainBoard">
         <div class="toolbar">
-    <span class="badge">Pan: Middle-mouse drag</span>
-    <span class="badge">Zoom: Mouse wheel</span>
-    <button id="resetBtn">Reset view</button>
     <button id = "lasso_Button">Lasso</button>
     <button id="draw_Button">Draw</button>
+    <button id="ruler_Button">Ruler</button>
 
   </div>
 
@@ -292,6 +289,84 @@ window.addEventListener('mouseup', (e) => {
     toggleGridBtn.addEventListener('click', (e) => {
       e.preventDefault();
       toggleGrid();
+    });
+
+    // ===== VIEW MENU BUTTONS =====
+    const resetViewBtn = document.getElementById('resetViewBtn');
+    const zoomFitBtn = document.getElementById('zoomFitBtn');
+    const showAllWidgetsBtn = document.getElementById('showAllWidgetsBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+    // Reset View
+    resetViewBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetView();
+    });
+
+    // Zoom to Fit - fits all widgets/objects on screen
+    zoomFitBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const widgets = document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card');
+      if (widgets.length === 0) {
+        resetView();
+        return;
+      }
+      
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      widgets.forEach(widget => {
+        const x = parseFloat(widget.style.left) || 0;
+        const y = parseFloat(widget.style.top) || 0;
+        const width = widget.offsetWidth;
+        const height = widget.offsetHeight;
+        
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + width);
+        maxY = Math.max(maxY, y + height);
+      });
+      
+      const padding = 50;
+      const contentWidth = maxX - minX + padding * 2;
+      const contentHeight = maxY - minY + padding * 2;
+      
+      const wrect = wrap.getBoundingClientRect();
+      const viewportWidth = wrect.width;
+      const viewportHeight = wrect.height;
+      
+      const scaleX = viewportWidth / contentWidth;
+      const scaleY = viewportHeight / contentHeight;
+      scale = Math.min(scaleX, scaleY, 1);
+      
+      const centerX = minX + (maxX - minX) / 2;
+      const centerY = minY + (maxY - minY) / 2;
+      
+      panX = viewportWidth / 2 - centerX * scale;
+      panY = viewportHeight / 2 - centerY * scale;
+      
+      applyTransform();
+      Drawing.render?.();
+    });
+
+    // Show All Widgets - brings all widgets to front (full opacity, visible)
+    showAllWidgetsBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card').forEach(widget => {
+        widget.style.display = 'block';
+        widget.style.opacity = '1';
+      });
+    });
+
+    // Fullscreen
+    fullscreenBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log('Fullscreen request failed:', err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
     });
 
     // Mouse wheel zoom around cursor
@@ -2395,6 +2470,128 @@ document.addEventListener('keydown', (e) => {
 <script src="{% static 'board/widgets/chat.js' %}"></script>
 <script src="{% static 'board/widgets/notes.js' %}"></script>
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
+
+<!-- Shortcuts Modal -->
+<div id="shortcutsModal" class="shortcuts-modal" style="display: none;">
+  <div class="shortcuts-modal-content">
+    <div class="shortcuts-modal-header">
+      <h2>Keyboard Shortcuts</h2>
+      <button class="shortcuts-modal-close" title="Close">&times;</button>
+    </div>
+    <div class="shortcuts-modal-body">
+      <table class="shortcuts-table">
+        <tbody>
+          <tr>
+            <td class="shortcut-key">Ctrl+L</td>
+            <td class="shortcut-desc">Toggle Lasso tool</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Space</td>
+            <td class="shortcut-desc">Pan with left-click (temporary)</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Middle-Mouse Drag</td>
+            <td class="shortcut-desc">Pan the board</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Mouse Wheel</td>
+            <td class="shortcut-desc">Zoom in/out</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Delete</td>
+            <td class="shortcut-desc">Remove selected cards/tokens</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">F</td>
+            <td class="shortcut-desc">Flip selected cards</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Ctrl+S / Cmd+S</td>
+            <td class="shortcut-desc">Save board (JSON)</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Ctrl+O / Cmd+O</td>
+            <td class="shortcut-desc">Load board</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Enter</td>
+            <td class="shortcut-desc">Roll dice / Confirm input</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Arrow Up/Down</td>
+            <td class="shortcut-desc">Adjust counter value</td>
+          </tr>
+          <tr>
+            <td class="shortcut-key">Shift+Arrow Up/Down</td>
+            <td class="shortcut-desc">Adjust counter by 5</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== SHORTCUTS MODAL =====
+  console.log('Initializing shortcuts modal...');
+  
+  const shortcutsModal = document.getElementById('shortcutsModal');
+  const shortcutsBtn = document.getElementById('shortcutsBtn');
+  const shortcutsModalClose = document.querySelector('.shortcuts-modal-close');
+
+  console.log('shortcutsModal:', shortcutsModal);
+  console.log('shortcutsBtn:', shortcutsBtn);
+  console.log('shortcutsModalClose:', shortcutsModalClose);
+
+  function openShortcutsModal() {
+    if (!shortcutsModal) {
+      console.error('shortcutsModal not found');
+      return;
+    }
+    shortcutsModal.style.display = 'flex';
+    shortcutsModal.focus();
+  }
+
+  function closeShortcutsModal() {
+    if (!shortcutsModal) {
+      console.error('shortcutsModal not found');
+      return;
+    }
+    shortcutsModal.style.display = 'none';
+  }
+
+  if (shortcutsBtn) {
+    shortcutsBtn.addEventListener('click', (e) => {
+      console.log('Shortcuts button clicked');
+      e.preventDefault();
+      openShortcutsModal();
+    });
+  } else {
+    console.error('shortcutsBtn element not found');
+  }
+
+  if (shortcutsModalClose) {
+    shortcutsModalClose.addEventListener('click', closeShortcutsModal);
+  } else {
+    console.error('shortcutsModalClose element not found');
+  }
+
+  // Close modal when clicking outside of it
+  if (shortcutsModal) {
+    shortcutsModal.addEventListener('click', (e) => {
+      if (e.target === shortcutsModal) {
+        closeShortcutsModal();
+      }
+    });
+  }
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (shortcutsModal && e.key === 'Escape' && shortcutsModal.style.display === 'flex') {
+      closeShortcutsModal();
+    }
+  });
+</script>
 
 </body>
 
