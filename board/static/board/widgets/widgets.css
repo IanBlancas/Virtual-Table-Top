@@ -134,6 +134,32 @@
   text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
+/* ---------- LOCKED WIDGET STATES ---------- */
+.widget.locked {
+  border-color: #f39c12;
+}
+.widget.locked .header {
+  cursor: default; /* no drag cursor when locked */
+}
+.widget .header button.lock {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.widget .header button.lock:focus {
+  outline: none;
+}
+.widget .header .button-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+
 /* Shape variants (default circle already via border-radius) */
 .token.circle { border-radius: 50%; }
 .token.square { border-radius: 8px; } /* subtle rounded square */

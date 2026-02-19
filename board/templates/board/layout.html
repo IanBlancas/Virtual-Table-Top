@@ -461,7 +461,9 @@ function makeDraggable(el, handle = el) {
     let dragTargets = [];
     let touchId = null;
 
+    // modified to ignore locked widgets
     function startDrag(clientX, clientY) {
+      if (el.classList.contains('locked')) return; // cannot drag locked widget
       dragging = true;
       const selected = Array.from(document.querySelectorAll('.selected'));
       if (el.classList.contains('selected') && selected.length > 0) {
@@ -489,6 +491,13 @@ function makeDraggable(el, handle = el) {
 
     function moveDrag(clientX, clientY) {
       if (!dragging) return;
+      // double-check locked state
+      if (dragTargets.some(t => t.el.classList.contains('locked'))) {
+        dragging = false;
+        dragTargets = [];
+        touchId = null;
+        return;
+      }
       const curBoard = toBoardCoords(clientX, clientY);
       const dx = curBoard.x - dragStartBoard.x;
       const dy = curBoard.y - dragStartBoard.y;
@@ -554,6 +563,20 @@ function makeDraggable(el, handle = el) {
 
 }
 
+// helper to lock/unlock a widget
+function toggleWidgetLock(el) {
+  const locked = el.classList.toggle('locked');
+  const btn = el.querySelector('button.lock');
+  if (btn) btn.innerText = locked ? '🔒' : '🔓';
+  // prevent resizing while locked
+  if (locked) {
+    el.dataset.origResize = el.style.resize || '';
+    el.style.resize = 'none';
+  } else {
+    el.style.resize = el.dataset.origResize || '';
+  }
+}
+
 
   // Tiny widget “registry”
   const Widget = {
@@ -564,8 +587,48 @@ function makeDraggable(el, handle = el) {
       el.style.position = 'absolute';
       el.style.left = snap(x) + 'px';
       el.style.top  = snap(y) + 'px';
+      
+      // add lock button to header if widget supports it
+      const header = el.querySelector?.('.header');
+      if (header) {
+        // create button container to keep lock and close together
+        let btnContainer = header.querySelector('.button-group');
+        if (!btnContainer) {
+          btnContainer = document.createElement('div');
+          btnContainer.className = 'button-group';
+          header.appendChild(btnContainer);
+        }
+        
+        const lockBtn = document.createElement('button');
+        lockBtn.className = 'lock';
+        lockBtn.title = 'Lock/Unlock widget';
+        lockBtn.innerText = '🔓'; // unlocked by default
+        btnContainer.appendChild(lockBtn);
+        
+        const handleLockClick = (e) => {
+          e.stopPropagation();
+          toggleWidgetLock(el);
+        };
+        lockBtn.addEventListener('click', handleLockClick);
+        lockBtn.addEventListener('touchend', handleLockClick, { passive: false });
+        
+        // move close button to container if it exists
+        const closeBtn = header.querySelector('.close');
+        if (closeBtn && closeBtn.parentElement !== btnContainer) {
+          btnContainer.appendChild(closeBtn);
+        }
+      }
+
       // common close button behavior if present
-      el.querySelector?.('.close')?.addEventListener('click', ()=> el.remove());
+      const closeBtn = el.querySelector?.('.close');
+      if (closeBtn) {
+        const handleCloseClick = (e) => {
+          e.stopPropagation();
+          el.remove();
+        };
+        closeBtn.addEventListener('click', handleCloseClick);
+        closeBtn.addEventListener('touchend', handleCloseClick, { passive: false });
+      }
       board.appendChild(el);
       return el;
     }
