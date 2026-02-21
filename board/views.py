@@ -9,6 +9,9 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.conf import settings
 from functools import wraps
 import hashlib, os
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt  # (not recommended) – don't use unless you must
+from .models import BoardState
 
 from .models import CardImage
 
@@ -104,3 +107,39 @@ def upload_card_image(request):
 
     ci = CardImage.objects.create(uploaded_by=request.user, image=f)
     return JsonResponse({'url': ci.image.url, 'id': ci.id, 'duplicate': False})
+
+@require_http_methods(["GET", "POST"])
+@ajax_login_required
+def board_state(request):
+    if request.method == "GET":
+        bs, _ = BoardState.objects.get_or_create(
+            key="main",
+            defaults={"state": {"version": 1, "cell": 40, "items": []}}
+        )
+        return JsonResponse({
+            "key": bs.key,
+            "state": bs.state,
+            "updated_at": bs.updated_at.isoformat(),
+            "updated_by": bs.updated_by.username if bs.updated_by else None,
+        })
+
+    # POST
+    import json
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"error": "Invalid JSON body"}, status=400)
+
+    if not isinstance(payload, dict) or "items" not in payload:
+        return JsonResponse({"error": "Payload must be a board state object with an 'items' field"}, status=400)
+
+    bs, _ = BoardState.objects.get_or_create(key="main")
+    bs.state = payload
+    bs.updated_by = request.user
+    bs.save()
+
+    return JsonResponse({
+        "ok": True,
+        "updated_at": bs.updated_at.isoformat(),
+        "updated_by": request.user.username,
+    })

@@ -158,12 +158,23 @@ function extendStroke(e) {
 }
 
 function endStroke() {
-        // When mouse/touch is released, start the laser timer
-    if (currentStroke && currentStroke.isLaser) {
-        currentStroke.expireAt = performance.now() + laserLifetime;
-    }
-    currentStroke = null;
-    erasingNow = false;   // stop erasing when mouse lifted
+  // If we just finished a real stroke, sync it
+  if (currentStroke && !currentStroke.isLaser) {
+    window.markBoardDirty?.();
+  }
+
+  // If we were erasing, sync the erase result once on mouse-up
+  if (erasingNow) {
+    window.markBoardDirty?.();
+  }
+
+  // Laser timing
+  if (currentStroke && currentStroke.isLaser) {
+    currentStroke.expireAt = Date.now() + laserLifetime;
+  }
+
+  currentStroke = null;
+  erasingNow = false;
 }
 
 function getBoardCoords(e) {

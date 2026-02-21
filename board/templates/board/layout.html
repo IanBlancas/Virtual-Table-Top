@@ -124,6 +124,7 @@
   <script>
     // --- minimal pan & zoom controller ---
     const wrap  = document.getElementById('wrap');
+    const draw_Button = document.getElementById("draw_Button");
     const board = document.getElementById('board');
     const resetBtn = document.getElementById('resetBtn');
     const diceBtn = document.getElementById('diceBtn')
@@ -159,7 +160,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 // Draw mode toggle
-document.getElementById("draw_Button").addEventListener("click", () => {
+draw_Button.addEventListener("click", () => {
     const active = Drawing.toggle();
     draw_Button.classList.toggle("active", active);
 
@@ -601,17 +602,25 @@ function makeDraggable(el, handle = el) {
 if (!window._flatTopCardKeyHandlerInstalled) {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Delete') {
-      // remove selected playing cards
+      const before = document.querySelectorAll('.playing-card.draggable.selected, .token.selected').length;
+
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
-      // remove selected tokens
       document.querySelectorAll('.token.selected').forEach(t => t.remove());
-      // prevent browser navigation on Backspace
+
+      if (before > 0) markBoardDirty();
+
       if (e.key === 'Backspace') e.preventDefault();
     }
+
     if (e.key === 'f' || e.key === 'F') {
+      let flippedAny = false;
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
-        if (typeof c.flipCard === 'function') c.flipCard();
+        if (typeof c.flipCard === 'function') {
+          c.flipCard();
+          flippedAny = true;
+        }
       });
+      if (flippedAny) markBoardDirty();
     }
   });
   window._flatTopCardKeyHandlerInstalled = true;
@@ -1036,9 +1045,16 @@ Widget.builders.cards = function(props = {}) {
   function buildDeck(){ const d=[]; for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s.sym, color:s.color}); return d; }
   function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 
-  let deck = shuffle(buildDeck());
-  let discard = [];
-  let showBack = true;
+  let deck = Array.isArray(props.deck) ? props.deck : shuffle(buildDeck());
+  let discard = Array.isArray(props.discard) ? props.discard : [];
+  let showBack = (typeof props.showBack === 'boolean') ? props.showBack : true;
+
+  function syncDeckStateToEl() {
+    el._deck = deck;
+    el._discard = discard;
+    el._showBack = showBack;
+  }
+  syncDeckStateToEl();
 
   const cardEl = el.querySelector('.playing-card');
   const countEl = el.querySelector('.count');
@@ -1133,26 +1149,33 @@ Widget.builders.cards = function(props = {}) {
     const y = widgetRect.top - boardRect.top;
     createDraggableCard(card, x, y);
     discard.push(card);
-    renderTop(); // keep showBack state
+    syncDeckStateToEl();
+    renderTop();
     markBoardDirty();
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
     deck = shuffle(deck);
+    syncDeckStateToEl();
     renderTop();
+    markBoardDirty();
   });
 
   el.querySelector('.reset').addEventListener('click', () => {
     deck = shuffle(buildDeck());
     discard = [];
     showBack = true;
+    syncDeckStateToEl();
     renderTop();
+    markBoardDirty();
   });
 
   el.querySelector('.flip').addEventListener('click', () => {
     showBack = !showBack;
     updateFlipUi();
+    syncDeckStateToEl();
     renderTop();
+    markBoardDirty();
   });
 
   // click card to draw
@@ -1810,6 +1833,7 @@ Widget.builders.drawOptions = function(props={}) {
   clearBtn.addEventListener("click", () => {
       Drawing.strokes = [];
       Drawing.render();
+      markBoardDirty();
   });
 
   // CLOSE BUTTON
@@ -2126,6 +2150,12 @@ document.querySelectorAll('#board > .widget').forEach(el => {
       rows.push({ name, value });
     });
     base.data = { counters: rows };
+  } else if (kind === 'cards') {
+    base.data = {
+      deck: Array.isArray(el._deck) ? el._deck : null,
+      discard: Array.isArray(el._discard) ? el._discard : [],
+      showBack: !!el._showBack
+    };
   } else if (kind === 'scorecard') {
     // headers
     const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
@@ -2147,14 +2177,14 @@ document.querySelectorAll('#board > .widget').forEach(el => {
       colLabels: colHdrs,
       values
     };
-  }
+  }  
 
   items.push(base);
 });
 
 
   // 2) Tokens
-document.querySelectorAll('#board > .token').forEach(el => {
+  document.querySelectorAll('#board > .token').forEach(el => {
 
   // Prefer the persisted source if present
   let imageUrl = el.dataset.imageSrc || '';
@@ -2206,7 +2236,23 @@ document.querySelectorAll('#board > .token').forEach(el => {
     });
   });
 
-  return { version: 1, cell: CELL, items };
+  // 4) Spawned (draggable) playing cards on the board
+  document.querySelectorAll('#board > .playing-card.draggable').forEach(el => {
+    items.push({
+      kind: 'playingCard',
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width)  || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      flipped: !!el._flipped,
+      cardData: el._cardData || null,   // {rank,suit,color} OR {label,image}
+    });
+  });
+
+  const drawing = Array.isArray(window.Drawing?.strokes) ? window.Drawing.strokes : [];
+
+  return { version: 1, cell: CELL, items, drawing };
 }
 
 function downloadJSON(data, filename='flattop-board.json'){
@@ -2219,14 +2265,38 @@ function downloadJSON(data, filename='flattop-board.json'){
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
 }
 
+// --- CSRF helper functions ---
+function getCookie(name) {
+  const v = document.cookie.split(';')
+    .map(c => c.trim())
+    .filter(c => c.startsWith(name + '='));
+  if (v.length === 0) return null;
+  return decodeURIComponent(v[0].split('=')[1]);
+}
+
+function getCSRFToken() {
+  return getCookie('csrftoken') ||
+         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+         '';
+}
+
+
 function clearBoard(){
-  document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget')
-    .forEach(el => el.remove());
+  document.querySelectorAll(
+    '#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card.draggable'
+  ).forEach(el => el.remove());
 }
 
 function applyBoardState(state){
   clearBoard();
   const items = state?.items || [];
+  if (Array.isArray(state?.drawing) && window.Drawing) {
+    Drawing.strokes = state.drawing;
+    Drawing.render();
+  } else if (window.Drawing) {
+    Drawing.strokes = [];
+    Drawing.render();
+  }
   for (const it of items) {
     // Tokens
     if (it.kind === 'token') {
@@ -2290,6 +2360,85 @@ function applyBoardState(state){
       continue;
     }
 
+    if (it.kind === 'playingCard') {
+      const cardDiv = document.createElement('div');
+      cardDiv.className = 'playing-card draggable';
+      cardDiv.style.position = 'absolute';
+      cardDiv.style.left = it.x + 'px';
+      cardDiv.style.top  = it.y + 'px';
+      cardDiv.style.width  = (it.w || 40) + 'px';
+      cardDiv.style.height = (it.h || 60) + 'px';
+      cardDiv.style.zIndex = it.z || 1;
+    
+      cardDiv._cardData = it.cardData || null;
+      cardDiv._flipped  = !!it.flipped;
+    
+      function renderCardFace() {
+        if (cardDiv._flipped) {
+          cardDiv.classList.add('back');
+          cardDiv.textContent = '';
+          cardDiv.classList.remove('red');
+          // remove any prior image
+          cardDiv.querySelector('img')?.remove();
+          return;
+        }
+      
+        cardDiv.classList.remove('back');
+        cardDiv.textContent = '';
+        cardDiv.querySelector('img')?.remove();
+      
+        const cd = cardDiv._cardData || {};
+        // Standard deck card
+        if (cd.rank && cd.suit) {
+          cardDiv.textContent = `${cd.rank}${cd.suit}`;
+          if (cd.color === 'red') cardDiv.classList.add('red');
+          else cardDiv.classList.remove('red');
+          return;
+        }
+      
+        // Custom card (image or label)
+        if (cd.image) {
+          const img = document.createElement('img');
+          img.src = cd.image;
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.draggable = false;
+          cardDiv.appendChild(img);
+          cardDiv.classList.remove('red');
+          return;
+        }
+      
+        if (cd.label) {
+          cardDiv.textContent = cd.label;
+          cardDiv.classList.remove('red');
+        }
+      }
+    
+      renderCardFace();
+      makeDraggable(cardDiv, cardDiv);
+    
+      // selection
+      cardDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+        document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+        cardDiv.classList.add('selected');
+      });
+    
+      // flip method used by your global key handler
+      cardDiv.flipCard = function() {
+        cardDiv._flipped = !cardDiv._flipped;
+        renderCardFace();
+        markBoardDirty(); // IMPORTANT: flipping must push
+      };
+    
+      board.appendChild(cardDiv);
+      continue;
+    }
+
+
+// Panel widgets — restore position/size/title + inner state if we know it
 // Panel widgets — restore position/size/title + inner state if we know it
 if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
   let props = {};
@@ -2297,7 +2446,6 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
   if (it.kind === 'notes' && it.data) {
     props.text = it.data.text || '';
   } else if (it.kind === 'counters' && it.data) {
-    // our builder already supports props.counters
     props.counters = Array.isArray(it.data.counters) ? it.data.counters : [];
   } else if (it.kind === 'scorecard' && it.data) {
     props = {
@@ -2307,17 +2455,24 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
       colLabels: it.data.colLabels ?? null,
       values:    it.data.values    ?? {}
     };
+  } else if (it.kind === 'cards' && it.data) {
+    props = {
+      deck: Array.isArray(it.data.deck) ? it.data.deck : null,
+      discard: Array.isArray(it.data.discard) ? it.data.discard : [],
+      showBack: !!it.data.showBack
+    };
   }
 
   const el = Widget.create(it.kind, it.x, it.y, props);
-  el.style.width  = (it.w||el.offsetWidth)  + 'px';
-  el.style.height = (it.h||el.offsetHeight) + 'px';
+
+  el.style.width  = (it.w || el.offsetWidth) + 'px';
+  el.style.height = (it.h || el.offsetHeight) + 'px';
   el.style.zIndex = it.z || '';
 
   const hdr = el.querySelector('.header div');
   if (hdr && it.label) hdr.textContent = it.label;
 
-  // If notes builder didn’t consume props.text directly, set it post-create
+  // If notes builder didn't consume props.text directly, set it post-create
   if (it.kind === 'notes' && it.data?.text != null) {
     const ta = el.querySelector('textarea, .notes-text, .note-text');
     if (ta) ta.value = it.data.text;
@@ -2325,6 +2480,7 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
 
   continue;
 }
+
 
 
     // Fallback plain box if we don't recognize the kind
@@ -2346,6 +2502,139 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
     board.appendChild(el);
   }
 }
+
+// ===== SHARED BOARD SYNC (POLLING) =====
+
+// Tuning knobs
+const POLL_MS = 200;         // how often to check server
+const PUSH_MIN_MS = 200;      // minimum time between pushes when dirty
+
+let lastServerUpdatedAt = null;
+let lastAppliedServerStateStr = null;   // fingerprint of last server.state we applied
+let lastPushAt = 0;
+let suppressDirty = false;    // prevents "applyBoardState" from triggering push loops
+
+async function fetchServerState() {
+  const res = await fetch('/board/api/state/', { credentials: 'same-origin' });
+  if (!res.ok) return null;
+  return await res.json(); // {key, state, updated_at, updated_by}
+}
+
+async function pushLocalState() {
+  const now = Date.now();
+  if (now - lastPushAt < PUSH_MIN_MS) return false; // throttle
+  lastPushAt = now;
+
+  const body = JSON.stringify(collectBoardState());
+  const res = await fetch('/board/api/state/', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    body
+  });
+
+  if (!res.ok) {
+    console.error('Push failed', res.status, await res.text());
+    return false;
+  }
+  return true;
+}
+
+
+function stableStringify(obj) {
+  const seen = new WeakSet();
+  return JSON.stringify(obj, function(key, value) {
+    if (value && typeof value === 'object') {
+      if (seen.has(value)) return; // avoid cycles just in case
+      seen.add(value);
+
+      if (Array.isArray(value)) return value;
+
+      // sort object keys
+      const out = {};
+      Object.keys(value).sort().forEach(k => out[k] = value[k]);
+      return out;
+    }
+    return value;
+  });
+}
+
+
+async function syncTick() {
+  try {
+    // 1) If we have local unsaved changes, push them
+    if (boardDirty) {
+      const pushed = await pushLocalState();  // change pushLocalState to return true/false (see below)
+      if (pushed) boardDirty = false;         // only clear dirty if we actually pushed
+    }
+
+    // 2) Poll server; if server changed since we last saw it, pull + apply
+    const server = await fetchServerState();
+    if (!server) return;
+
+    const updatedAt = server.updated_at;
+
+    // First time: apply whatever is on server
+    if (!lastServerUpdatedAt) {
+      lastServerUpdatedAt = updatedAt;
+      if (!server.state) return;
+
+      // Band-aid: don't rebuild DOM while user is selecting stuff
+      if (document.querySelector('.selected')) return;
+
+      suppressDirty = true;
+      try {
+        const serverStateStr = stableStringify(server.state);
+        lastAppliedServerStateStr = serverStateStr;
+        applyBoardState(server.state);
+      } finally {
+        suppressDirty = false;
+      }
+      return;
+    }
+
+    // If server changed since last poll, and we aren't currently dirty, apply it
+    if (updatedAt !== lastServerUpdatedAt) {
+      lastServerUpdatedAt = updatedAt;
+
+      if (!boardDirty && server.state) {
+        // Band-aid: don't rebuild DOM while selected
+        if (document.querySelector('.selected')) return;
+
+        const serverStateStr = stableStringify(server.state);
+        if (serverStateStr === lastAppliedServerStateStr) return;
+
+        suppressDirty = true;
+        try {
+          lastAppliedServerStateStr = serverStateStr;
+          applyBoardState(server.state);
+        } finally {
+          suppressDirty = false;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Sync tick error', err);
+  }
+}
+
+
+// IMPORTANT: stop applyBoardState() from marking the board dirty during remote updates.
+// Easiest: modify markBoardDirty to no-op when suppressDirty is true.
+const _origMarkBoardDirty = markBoardDirty;
+markBoardDirty = function() {
+  if (suppressDirty) return;
+  _origMarkBoardDirty();
+};
+
+// Start syncing
+setInterval(syncTick, POLL_MS);
+
+
+
 
 // Wire File menu
 const fileSaveBtn  = document.getElementById('menu-save');
