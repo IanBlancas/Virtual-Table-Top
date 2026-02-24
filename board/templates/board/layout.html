@@ -255,6 +255,9 @@ window.addEventListener('mouseup', (e) => {
     var scale = 1;     // zoom factor
     var panX  = 0;     // translation in px
     var panY  = 0;
+    // trackpad/mouse wheel zoom sensitivity (smaller = finer control)
+    // You can override at runtime with `window.zoomSensitivity = 0.003` for example.
+    var zoomSensitivity = window.zoomSensitivity || 0.0025;
 
     // Initialize the Drawing Engine
     Drawing.init(document.getElementById("drawCanvas"));
@@ -270,36 +273,34 @@ window.addEventListener('mouseup', (e) => {
     }
     applyTransform();
 
-    // Mouse wheel zoom around cursor
-    // Replace your current wheel handler with this:
-wrap.addEventListener('wheel', (e) => {
-  e.preventDefault();
+    // Mouse wheel / trackpad zoom around cursor
+    wrap.addEventListener('wheel', (e) => {
+      e.preventDefault();
 
-  // clamp zoom step
-  const direction = Math.sign(e.deltaY);        // -1 in, +1 out
-  const factor    = direction > 0 ? 0.9 : 1.1;
-  const newScale  = Math.min(3, Math.max(0.2, scale * factor));
-  if (newScale === scale) return;
+      // Use exponential scaling driven by deltaY and sensitivity so both mouse
+      // wheel and trackpad gestures feel natural. Smaller `zoomSensitivity`
+      // yields finer control.
+      const delta = e.deltaY; // positive = zoom out, negative = zoom in
+      const factor = Math.exp(-delta * zoomSensitivity);
 
-  // Use WRAP rect for stable math across fixed headers/sidebars
-  const wrect = wrap.getBoundingClientRect();
+      const newScale = Math.min(3, Math.max(0.2, scale * factor));
+      if (newScale === scale) return;
 
-  // Board-space coords of the cursor BEFORE zoom
-  // screenX = wrect.left + (panX + bx * scale)
-  // => bx = (clientX - wrect.left - panX) / scale
-  const bx = (e.clientX - wrect.left - panX) / scale;
-  const by = (e.clientY - wrect.top  - panY) / scale;
+      // Use WRAP rect for stable math across fixed headers/sidebars
+      const wrect = wrap.getBoundingClientRect();
 
-  // Keep cursor anchored:
-  // clientX = wrect.left + (newPanX + bx * newScale)
-  // => newPanX = clientX - wrect.left - bx * newScale
-  panX = e.clientX - wrect.left - bx * newScale;
-  panY = e.clientY - wrect.top  - by * newScale;
+      // Board-space coords of the cursor BEFORE zoom
+      const bx = (e.clientX - wrect.left - panX) / scale;
+      const by = (e.clientY - wrect.top  - panY) / scale;
 
-  scale = newScale;
-  applyTransform();
-  Drawing.render();
-}, { passive: false });
+      // Keep cursor anchored after zoom
+      panX = e.clientX - wrect.left - bx * newScale;
+      panY = e.clientY - wrect.top  - by * newScale;
+
+      scale = newScale;
+      applyTransform();
+      Drawing.render();
+    }, { passive: false });
 
 
     // Middle-mouse panning (button === 1)
@@ -634,8 +635,7 @@ function toggleWidgetLock(el) {
     }
   };
 
-  // Global keydown for delete and flip (installed once so it works even if the
-// standard Cards widget hasn't been created). Uses the same semantics as the
+// Global key for delete and flip. Uses the same semantics as the
 // original handler: Delete removes selected cards, F flips selected cards.
 if (!window._flatTopCardKeyHandlerInstalled) {
   window.addEventListener('keydown', (e) => {
