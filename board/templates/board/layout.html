@@ -149,6 +149,8 @@ lasso_Button.addEventListener('click', () => {
   wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
 });
 
+
+
 // Ctrl+L toggle
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === 'l') {
@@ -718,18 +720,16 @@ Widget.builders.token = function(props = {}) {
     return null;
   }
 
+
   async function setTokenImageFromFile(file) {
-  // Persist as data URL so it survives reloads
-  const reader = new FileReader();
-  const dataUrl = await new Promise((res, rej) => {
-    reader.onerror = () => rej(reader.error);
-    reader.onload = () => res(reader.result);
-    reader.readAsDataURL(file);
-  });
-  token.dataset.imageSrc = dataUrl;
-  token.style.backgroundImage = `url("${dataUrl}")`;
-  token.classList.add('has-image');
-}
+    try {
+      const url = await uploadBoardImageFile(file);   // uploads to /board/api/upload_image/
+      setTokenImageFromUrl(url);                      // stores the URL in token.imageUrl
+    } catch (e) {
+      console.error("Token image upload failed:", e);
+      alert("Token image upload failed. Check console/network.");
+    }
+  }
 
 function setTokenImageFromUrl(url) {
   // Persist the canonical URL (works for http/https)
@@ -1140,15 +1140,22 @@ Widget.builders.cards = function(props = {}) {
 
   // buttons
   el.querySelector('.draw').addEventListener('click', () => {
-    if (deck.length === 0) return; // empty
+    if (deck.length === 0) return;
+
     const card = deck.pop();
-    // Get widget position relative to board
-    const widgetRect = el.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-    const x = widgetRect.left - boardRect.left + 100; // offset so card doesn't overlap widget
-    const y = widgetRect.top - boardRect.top;
+
+    // ✅ board-space anchor: use the widget's saved position/size
+    const wx = parseFloat(el.style.left) || 0;
+    const wy = parseFloat(el.style.top) || 0;
+    const ww = parseFloat(el.style.width) || el.offsetWidth || 0;
+
+    // spawn a bit to the right of the widget (in board pixels)
+    const x = wx + ww + 20;
+    const y = wy;
+
     createDraggableCard(card, x, y);
     discard.push(card);
+
     syncDeckStateToEl();
     renderTop();
     markBoardDirty();
@@ -1268,6 +1275,27 @@ Widget.builders.customCards = function(props = {}) {
       token = meta ? meta.getAttribute('content') : '';
     }
     return token;
+  }
+
+
+  async function uploadBoardImage(file) {
+    const fd = new FormData();
+    fd.append('image', file);
+
+    const res = await fetch('/board/api/upload_board_image/', {
+      method: 'POST',
+      body: fd,
+      headers: { 'X-CSRFToken': getCSRFToken() },
+      credentials: 'same-origin',
+    });
+
+    if (!res.ok) {
+      throw new Error(`upload_board_image failed: HTTP ${res.status}`);
+    }
+
+    const j = await res.json(); // expect { url: "/media/...." } or similar
+    if (!j.url) throw new Error('upload_board_image: no url returned');
+    return j.url;
   }
 
   async function uploadFile(file) {
@@ -1418,10 +1446,12 @@ Widget.builders.customCards = function(props = {}) {
   el.querySelector('.draw').addEventListener('click', () => {
     if (cards.length === 0) return;
     const card = cards.pop();
-    const widgetRect = el.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-    const x = widgetRect.left - boardRect.left + 100;
-    const y = widgetRect.top - boardRect.top;
+    const wx = parseFloat(el.style.left) || 0;
+    const wy = parseFloat(el.style.top) || 0;
+    const ww = parseFloat(el.style.width) || el.offsetWidth || 0;
+
+    const x = wx + ww + 20;
+    const y = wy;
     const cardDiv = document.createElement('div');
     cardDiv.className = 'playing-card draggable';
     cardDiv.style.position = 'absolute';
@@ -1983,6 +2013,29 @@ rotateBtn.addEventListener('click', (e) => {
 
 // ===== Drag-and-drop images onto the board =====
 
+async function uploadBoardImageFile(file) {
+  const fd = new FormData();
+  fd.append('image', file);
+
+  const res = await fetch('/board/api/upload_board_image/', {
+    method: 'POST',
+    body: fd,
+    headers: { 'X-CSRFToken': getCSRFToken() },
+    credentials: 'same-origin',
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`upload_board_image failed: HTTP ${res.status} ${txt}`);
+  }
+
+  const j = await res.json();
+  if (!j.url) throw new Error('upload_board_image: no url returned');
+  return j.url;
+}
+
+window.uploadBoardImageFile = uploadBoardImageFile;
+
 // Prevent default to allow drop
 ['dragenter','dragover'].forEach(evt =>
   wrap.addEventListener(evt, e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }, { passive:false })
@@ -1997,9 +2050,8 @@ wrap.addEventListener('drop', async (e) => {
   const imageFiles = files.filter(f => f.type && f.type.startsWith('image/'));
   if (imageFiles.length > 0) {
     for (const file of imageFiles) {
-      const dataUrl = await fileToDataURL(file);
-      const el = Widget.create('image', x, y, { src: dataUrl, width: 240, height: 240 });
-      // small offset so multiple files don’t stack exactly
+      const url = await uploadBoardImageFile(file);   // <-- server-hosted /media/... URL
+      const el = Widget.create('image', x, y, { src: url, width: 240, height: 240 });
       el.style.left = snap((parseFloat(el.style.left)||0) + 10) + 'px';
       el.style.top  = snap((parseFloat(el.style.top)||0) + 10) + 'px';
     }
@@ -2100,9 +2152,6 @@ setInterval(() => {
 }, AUTOSAVE_INTERVAL_MS);
 
 // ===== existing SAVE / LOAD utilities below =====
-
-// Keep JSON stable in "board pixels"
-function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
 
 // Keep JSON stable in "board pixels"
 function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
@@ -2222,7 +2271,12 @@ document.querySelectorAll('#board > .widget').forEach(el => {
   // 3) Image widgets (note: your rotation is on the IMG, not the wrapper)
   document.querySelectorAll('#board > .image-widget').forEach(el => {
     const img = el.querySelector('img.image');
-    const src = img ? img.getAttribute('src') : '';
+    let src = img ? img.getAttribute('src') : '';
+    if (src && src.startsWith('data:')) {
+      // Optional: skip or warn; skipping prevents state blowups
+      console.warn('Skipping base64 image in board state; upload it instead.');
+      src = '';
+    }
     const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
     items.push({
       kind: 'image',
@@ -2506,26 +2560,42 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
 // ===== SHARED BOARD SYNC (POLLING) =====
 
 // Tuning knobs
-const POLL_MS = 200;         // how often to check server
+const POLL_MS = 1000;         // how often to check server
 const PUSH_MIN_MS = 200;      // minimum time between pushes when dirty
 
 let lastServerUpdatedAt = null;
 let lastAppliedServerStateStr = null;   // fingerprint of last server.state we applied
 let lastPushAt = 0;
 let suppressDirty = false;    // prevents "applyBoardState" from triggering push loops
+let pendingServerState = null;
+let pendingServerUpdatedAt = null;
 
-async function fetchServerState() {
-  const res = await fetch('/board/api/state/', { credentials: 'same-origin' });
+async function fetchServerMeta() {
+  const res = await fetch('/board/api/state/?meta=1', {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
   if (!res.ok) return null;
-  return await res.json(); // {key, state, updated_at, updated_by}
+  return await res.json(); // { updated_at }
+}
+
+async function fetchServerStateFull() {
+  const res = await fetch('/board/api/state/', {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
+  if (!res.ok) return null;
+  return await res.json(); // { state, updated_at, ... }
 }
 
 async function pushLocalState() {
   const now = Date.now();
-  if (now - lastPushAt < PUSH_MIN_MS) return false; // throttle
+  if (now - lastPushAt < PUSH_MIN_MS) return false;
   lastPushAt = now;
 
-  const body = JSON.stringify(collectBoardState());
+  const localState = collectBoardState();
+  const body = JSON.stringify(localState);
+
   const res = await fetch('/board/api/state/', {
     method: 'POST',
     credentials: 'same-origin',
@@ -2540,6 +2610,10 @@ async function pushLocalState() {
     console.error('Push failed', res.status, await res.text());
     return false;
   }
+
+  // Prevent echo/re-apply churn
+  lastAppliedServerStateStr = stableStringify(localState);
+
   return true;
 }
 
@@ -2563,59 +2637,87 @@ function stableStringify(obj) {
 }
 
 
+function isUserEditingText() {
+  const ae = document.activeElement;
+  if (!ae) return false;
+
+  const isTextControl =
+    ae.tagName === 'TEXTAREA' ||
+    (ae.tagName === 'INPUT' && (
+      ae.type === 'text' ||
+      ae.type === 'number' ||
+      ae.type === 'search' ||
+      ae.type === 'url' ||
+      ae.type === 'email' ||
+      ae.type === 'password'
+    )) ||
+    ae.isContentEditable;
+
+  return isTextControl && board.contains(ae);
+}
+let syncingPaused = false;
+
 async function syncTick() {
+  if (syncingPaused) return;
+
   try {
-    // 1) If we have local unsaved changes, push them
+    // 1) Push local changes
     if (boardDirty) {
-      const pushed = await pushLocalState();  // change pushLocalState to return true/false (see below)
-      if (pushed) boardDirty = false;         // only clear dirty if we actually pushed
+      const pushed = await pushLocalState();
+      if (pushed) boardDirty = false;
     }
 
-    // 2) Poll server; if server changed since we last saw it, pull + apply
-    const server = await fetchServerState();
-    if (!server) return;
+    // 2) Poll server META (tiny). Only fetch full state when updated_at changes.
+    const meta = await fetchServerMeta();
+    if (!meta) return;
 
-    const updatedAt = server.updated_at;
+    const updatedAt = meta.updated_at;
 
-    // First time: apply whatever is on server
+    // First time: fetch full state once
     if (!lastServerUpdatedAt) {
       lastServerUpdatedAt = updatedAt;
-      if (!server.state) return;
-
-      // Band-aid: don't rebuild DOM while user is selecting stuff
+    
+      const full = await fetchServerStateFull();
+      if (!full || !full.state) return;
+    
       if (document.querySelector('.selected')) return;
-
+      if (isUserEditingText()) return;
+    
       suppressDirty = true;
       try {
-        const serverStateStr = stableStringify(server.state);
+        const serverStateStr = stableStringify(full.state);
         lastAppliedServerStateStr = serverStateStr;
-        applyBoardState(server.state);
+        applyBoardState(full.state);
       } finally {
         suppressDirty = false;
       }
       return;
     }
 
-    // If server changed since last poll, and we aren't currently dirty, apply it
-    if (updatedAt !== lastServerUpdatedAt) {
-      lastServerUpdatedAt = updatedAt;
+    // If unchanged, do nothing (fast path)
+    if (updatedAt === lastServerUpdatedAt) return;
 
-      if (!boardDirty && server.state) {
-        // Band-aid: don't rebuild DOM while selected
-        if (document.querySelector('.selected')) return;
+    // It changed: fetch full state and apply (if we’re not dirty)
+    lastServerUpdatedAt = updatedAt;
 
-        const serverStateStr = stableStringify(server.state);
-        if (serverStateStr === lastAppliedServerStateStr) return;
+    if (boardDirty) return;           // don't overwrite local pending changes
+    if (document.querySelector('.selected')) return;
+    if (isUserEditingText()) return;
 
-        suppressDirty = true;
-        try {
-          lastAppliedServerStateStr = serverStateStr;
-          applyBoardState(server.state);
-        } finally {
-          suppressDirty = false;
-        }
-      }
+    const full = await fetchServerStateFull();
+    if (!full || !full.state) return;
+
+    const serverStateStr = stableStringify(full.state);
+    if (serverStateStr === lastAppliedServerStateStr) return;
+
+    suppressDirty = true;
+    try {
+      lastAppliedServerStateStr = serverStateStr;
+      applyBoardState(full.state);
+    } finally {
+      suppressDirty = false;
     }
+
   } catch (err) {
     console.error('Sync tick error', err);
   }
@@ -2623,7 +2725,6 @@ async function syncTick() {
 
 
 // IMPORTANT: stop applyBoardState() from marking the board dirty during remote updates.
-// Easiest: modify markBoardDirty to no-op when suppressDirty is true.
 const _origMarkBoardDirty = markBoardDirty;
 markBoardDirty = function() {
   if (suppressDirty) return;
@@ -2631,7 +2732,24 @@ markBoardDirty = function() {
 };
 
 // Start syncing
-setInterval(syncTick, POLL_MS);
+let syncInFlight = false;
+
+let stopSyncLoop = false;
+
+async function syncLoop() {
+  while (!stopSyncLoop) {
+    const t0 = performance.now();
+    await syncTick();
+    const elapsed = performance.now() - t0;
+
+    // wait POLL_MS from *end* of tick; never overlap
+    const wait = Math.max(0, POLL_MS - elapsed);
+    await new Promise(r => setTimeout(r, wait));
+  }
+}
+
+// start once
+syncLoop();
 
 
 
@@ -2653,9 +2771,22 @@ fileLoadBtn?.addEventListener('click', (e) => {
 fileLoadIn?.addEventListener('change', async (e) => {
   const f = e.target.files?.[0];
   if (!f) return;
+
   try {
     const text = await f.text();
-    applyBoardState(JSON.parse(text));
+    const loaded = JSON.parse(text);
+
+    // Apply locally
+    applyBoardState(loaded);
+
+    // Publish to the lobby so everyone else gets it
+    boardDirty = true;                 // ensure syncTick won't apply remote state over us
+    const pushed = await pushLocalState();
+    if (pushed) boardDirty = false;
+
+    // Prevent "echo" from making you re-apply the same thing
+    lastAppliedServerStateStr = stableStringify(collectBoardState());
+
   } catch (err) {
     alert('Invalid save file.');
     console.error(err);

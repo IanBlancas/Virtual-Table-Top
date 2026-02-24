@@ -53,5 +53,23 @@ Widget.builders.notes = function (props = {}) {
   });
   observer.observe(el);
 
+  // Mark dirty on close (so other devices lose the notes widget too)
+  el.querySelector(".close").addEventListener("click", (e) => {
+    e.stopPropagation();
+    observer.disconnect?.();
+    el.remove();
+    if (typeof markBoardDirty === "function") markBoardDirty();
+  });
+
+  // Mark dirty while typing (debounced so we don't spam pushes)
+  area.addEventListener("input", () => {
+    if (typeof markBoardDirty === "function") markBoardDirty();
+  });
+
+  //also mark dirty when they leave the box (instant)
+  area.addEventListener("blur", () => {
+    if (typeof markBoardDirty === "function") markBoardDirty();
+  });
+
   return el;
 };

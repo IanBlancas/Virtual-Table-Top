@@ -11,9 +11,9 @@ from functools import wraps
 import hashlib, os
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt  # (not recommended) – don't use unless you must
-from .models import BoardState
 
-from .models import CardImage
+from .models import BoardState, CardImage, BoardImage
+
 
 def ajax_login_required(view_func):
     @wraps(view_func)
@@ -69,6 +69,19 @@ def board(request):
     template = loader.get_template('board/layout.html')
     return HttpResponse(template.render({}, request))
 
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+
+@require_POST
+def upload_image(request):
+    # expects multipart form-data with "image"
+    image_file = request.FILES.get('image')
+    if not image_file:
+        return JsonResponse({"error": "No image provided"}, status=400)
+
+    img = CardImage.objects.create(image=image_file)
+    return JsonResponse({"url": img.image.url})
+
 @require_POST
 @ajax_login_required
 def upload_card_image(request):
@@ -111,11 +124,19 @@ def upload_card_image(request):
 @require_http_methods(["GET", "POST"])
 @ajax_login_required
 def board_state(request):
+    bs, _ = BoardState.objects.get_or_create(
+        key="main",
+        defaults={"state": {"version": 1, "cell": 40, "items": []}}
+    )
+
     if request.method == "GET":
-        bs, _ = BoardState.objects.get_or_create(
-            key="main",
-            defaults={"state": {"version": 1, "cell": 40, "items": []}}
-        )
+        if request.GET.get("meta") == "1":
+            return JsonResponse({
+                "key": bs.key,
+                "updated_at": bs.updated_at.isoformat(),
+                "updated_by": bs.updated_by.username if bs.updated_by else None,
+            })
+
         return JsonResponse({
             "key": bs.key,
             "state": bs.state,
@@ -123,17 +144,20 @@ def board_state(request):
             "updated_by": bs.updated_by.username if bs.updated_by else None,
         })
 
-    # POST
+    # ---- POST (push) ----
     import json
     try:
         payload = json.loads(request.body.decode("utf-8"))
     except Exception:
         return JsonResponse({"error": "Invalid JSON body"}, status=400)
 
+    # light validation (optional but helpful)
     if not isinstance(payload, dict) or "items" not in payload:
-        return JsonResponse({"error": "Payload must be a board state object with an 'items' field"}, status=400)
+        return JsonResponse(
+            {"error": "Payload must be a board state object with an 'items' field"},
+            status=400
+        )
 
-    bs, _ = BoardState.objects.get_or_create(key="main")
     bs.state = payload
     bs.updated_by = request.user
     bs.save()
@@ -143,3 +167,13 @@ def board_state(request):
         "updated_at": bs.updated_at.isoformat(),
         "updated_by": request.user.username,
     })
+
+@require_POST
+@ajax_login_required
+def upload_board_image(request):
+    f = request.FILES.get('image')
+    if not f:
+        return JsonResponse({'error': 'No file uploaded (field name should be "image").'}, status=400)
+
+    bi = BoardImage.objects.create(uploaded_by=request.user, image=f)
+    return JsonResponse({'url': bi.image.url, 'id': bi.id})

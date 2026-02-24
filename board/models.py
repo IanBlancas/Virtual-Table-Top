@@ -26,3 +26,8 @@ class BoardState(models.Model):
 
     def __str__(self):
         return f"BoardState({self.key})"
+
+class BoardImage(models.Model):
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to="board_images/")
+    created_at = models.DateTimeField(auto_now_add=True)
