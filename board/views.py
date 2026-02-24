@@ -11,6 +11,7 @@ from functools import wraps
 import hashlib, os
 
 from .models import CardImage
+from django.views.decorators.csrf import csrf_exempt
 
 def ajax_login_required(view_func):
     @wraps(view_func)
@@ -104,3 +105,40 @@ def upload_card_image(request):
 
     ci = CardImage.objects.create(uploaded_by=request.user, image=f)
     return JsonResponse({'url': ci.image.url, 'id': ci.id, 'duplicate': False})
+
+
+@require_POST
+@ajax_login_required
+def upload_sound_file(request):
+    """Accept a single audio file (field name 'audio'), save to MEDIA_ROOT/sounds/, and return its URL."""
+    f = request.FILES.get('audio')
+    if not f:
+        return JsonResponse({'error': 'No file uploaded (field name should be "audio").'}, status=400)
+
+    # basic MIME check
+    content_type = getattr(f, 'content_type', '')
+    if not content_type.startswith('audio'):
+        return JsonResponse({'error': 'Uploaded file is not an audio file.'}, status=400)
+
+    sounds_dir = os.path.join(settings.MEDIA_ROOT, 'sounds')
+    os.makedirs(sounds_dir, exist_ok=True)
+
+    # create a unique filename to avoid collisions
+    import time, re
+    original = f.name
+    # sanitize filename (very small, conservative sanitization)
+    safe_name = re.sub(r'[^A-Za-z0-9._-]', '_', original)
+    filename = f"{int(time.time())}_{safe_name}"
+    dest_path = os.path.join(sounds_dir, filename)
+
+    with open(dest_path, 'wb') as out:
+        for chunk in f.chunks():
+            out.write(chunk)
+
+    # build media URL (ensure forward slashes)
+    media_url = settings.MEDIA_URL
+    if not media_url.endswith('/'):
+        media_url = media_url + '/'
+    url = f"{media_url}sounds/{filename}"
+
+    return JsonResponse({'url': url, 'name': original})

@@ -15,6 +15,8 @@ Widget.builders.soundboard = function (props = {}) {
     <div class="body">
       <div class="controls">
         <button class="stopAll">⏹ Stop All</button>
+        <button class="uploadSound">⬆ Upload</button>
+        <input type="file" class="uploadInput" accept="audio/*" style="display:none">
       </div>
       <div class="soundboard-grid">
         <div class="sound" data-sound="${staticUrl('board/sounds/bruh.mp3')}">
@@ -51,33 +53,74 @@ Widget.builders.soundboard = function (props = {}) {
   el.style.position = "absolute";
 
   const sounds = [];
-  el.querySelectorAll(".sound").forEach((container) => {
+
+  function initSoundContainer(container) {
     const audio = new Audio(container.dataset.sound);
     sounds.push(audio);
     GLOBAL_SOUNDS.add(audio);
-    audio.addEventListener("ended", () => GLOBAL_SOUNDS.delete(audio));
+    audio.addEventListener('ended', () => GLOBAL_SOUNDS.delete(audio));
 
-    const playBtn = container.querySelector(".play");
-    const loopBtn = container.querySelector(".loop");
-    const volSlider = container.querySelector(".volume");
+    const playBtn = container.querySelector('.play');
+    const loopBtn = container.querySelector('.loop');
+    const volSlider = container.querySelector('.volume');
 
-    playBtn.addEventListener("click", async () => {
-      try {
-        audio.currentTime = 0;
-        await audio.play();
-      } catch (err) {
-        console.error("Audio playback failed:", err);
-      }
+    playBtn.addEventListener('click', async () => {
+      try { audio.currentTime = 0; await audio.play(); } catch (err) { console.error('Audio playback failed:', err); }
     });
 
-    loopBtn.addEventListener("click", () => {
+    loopBtn.addEventListener('click', () => {
       audio.loop = !audio.loop;
-      loopBtn.textContent = `🔁 Loop: ${audio.loop ? "On" : "Off"}`;
+      loopBtn.textContent = `🔁 Loop: ${audio.loop ? 'On' : 'Off'}`;
     });
 
-    volSlider.addEventListener("input", () => {
-      audio.volume = volSlider.value;
-    });
+    volSlider.addEventListener('input', () => { audio.volume = volSlider.value; });
+  }
+
+  // initialize existing hardcoded sound tiles
+  el.querySelectorAll('.sound').forEach(initSoundContainer);
+
+  // helper to create a new sound tile and initialize it
+  function appendSoundTile(name, url) {
+    const grid = el.querySelector('.soundboard-grid');
+    const container = document.createElement('div');
+    container.className = 'sound';
+    container.dataset.sound = url;
+
+    const h = document.createElement('h4'); h.textContent = name; container.appendChild(h);
+    const playBtn = document.createElement('button'); playBtn.className = 'play'; playBtn.textContent = '▶ Play'; container.appendChild(playBtn);
+    const loopBtn = document.createElement('button'); loopBtn.className = 'loop'; loopBtn.textContent = '🔁 Loop: Off'; container.appendChild(loopBtn);
+    const vol = document.createElement('input'); vol.type = 'range'; vol.className = 'volume'; vol.min=0; vol.max=1; vol.step=0.01; vol.value=1; container.appendChild(vol);
+
+    grid.appendChild(container);
+    initSoundContainer(container);
+  }
+
+  // CSRF helper
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+  }
+
+  // wire upload UI
+  const uploadBtn = el.querySelector('.uploadSound');
+  const uploadInput = el.querySelector('.uploadInput');
+  uploadBtn.addEventListener('click', () => uploadInput.click());
+  uploadInput.addEventListener('change', () => {
+    const file = uploadInput.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('audio', file);
+
+    fetch('/board/api/upload_sound/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      body: fd,
+    }).then(r => r.json()).then(json => {
+      if (json.error) { alert('Upload failed: ' + json.error); return; }
+      // server returns url and name
+      appendSoundTile(json.name || file.name, json.url);
+      uploadInput.value = '';
+    }).catch(err => { console.error('Upload error', err); alert('Upload failed'); });
   });
 
 el.querySelector(".stopAll").addEventListener("click", () => {
