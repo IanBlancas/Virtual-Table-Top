@@ -63,9 +63,9 @@ def register(request):
         return HttpResponse(template.render(ctx, request))
 
 @login_required
-def board(request, code=None):
+def board(request):
     template = loader.get_template('board/layout.html')
-    return HttpResponse(template.render({"lobby_code": code }, request))
+    return HttpResponse(template.render({}, request))
 
 @require_POST
 @ajax_login_required

@@ -9,7 +9,11 @@ from board import views as board_views
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('accounts/login/',LoginView.as_view(template_name='board/login.html'),name='login'),
+    path(
+        'accounts/login/',
+        LoginView.as_view(template_name='board/login.html'),
+        name='login'
+    ),
 
     path('accounts/register/', board_views.register, name='register'),
 
@@ -18,8 +22,6 @@ urlpatterns = [
     path('', RedirectView.as_view(url='/accounts/login/', permanent=False)),
 
     path('', include('board.urls')),
-
-    path('', include("lobbies.urls")),
 ]
 
 if settings.DEBUG:

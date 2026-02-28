@@ -41,8 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'board',
-    'lobbies',
+    'board'
 ]
 
 MIDDLEWARE = [
@@ -134,5 +133,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # uses database to login and send to board
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/lobby/'      # where to go after successful login
+LOGIN_REDIRECT_URL = '/board/'      # where to go after successful login
 LOGOUT_REDIRECT_URL = '/accounts/login/'
