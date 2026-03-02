@@ -43,7 +43,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'board',
     'lobbies',
+    'channels',
 ]
+
+ASGI_APPLICATION = "flattop.asgi.application"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -73,6 +76,12 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'flattop.wsgi.application'
+
+CHANNEL_LAYERS = {
+  "default": {
+    "BACKEND": "channels.layers.InMemoryChannelLayer"
+  }
+}
 
 
 # Database

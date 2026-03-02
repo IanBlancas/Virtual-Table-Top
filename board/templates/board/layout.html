@@ -2668,6 +2668,69 @@ document.addEventListener('keydown', (e) => {
   }
 </script>
 
+<script>
+  const lobbyCode = "{{ lobby_code|default:'' }}";
+  const clientId = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+
+  let ws = null;
+  let applyingRemote = false;
+  let sendTimer = null;
+
+  function connectWS() {
+    if (!lobbyCode) {
+      console.warn("No lobby code found; realtime sync disabled.");
+      return;
+    }
+
+    const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    const url = `${proto}://${window.location.host}/ws/board/${lobbyCode}/`;
+
+    ws = new WebSocket(url);
+
+    ws.onopen = () => console.log("WS connected:", url);
+    ws.onclose = () => console.log("WS closed");
+    ws.onerror = (e) => console.error("WS error", e);
+
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+        if (msg.type !== "board_state") return;
+
+        // FIX: your code used clientID (wrong name)
+        if (msg.clientId === clientId) return;
+
+        applyingRemote = true;
+        applyBoardState(msg.state);
+        applyingRemote = false;
+      } catch (err) {
+        console.error("Bad WS message", err);
+      }
+    };
+  }
+
+  function scheduleSendState() {
+    if (applyingRemote) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    clearTimeout(sendTimer);
+    sendTimer = setTimeout(() => {
+      const state = collectBoardState();
+      ws.send(JSON.stringify({
+        type: "board_state",
+        clientId,
+        state
+      }));
+    }, 120);
+  }
+
+  const _origMarkBoardDirty = window.markBoardDirty;
+  window.markBoardDirty = function () {
+    if (typeof _origMarkBoardDirty === "function") _origMarkBoardDirty();
+    scheduleSendState();
+  };
+
+  connectWS();
+</script>
 </body>
 
 
