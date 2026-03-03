@@ -2669,8 +2669,12 @@ document.addEventListener('keydown', (e) => {
 </script>
 
 <script>
+  // --- Realtime sync (Channels) ---
+
   const lobbyCode = "{{ lobby_code|default:'' }}";
-  const clientId = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+
+  // generate a stable-ish client id for this tab
+  const clientId = (crypto?.randomUUID?.() || ("c" + Math.random().toString(16).slice(2)));
 
   let ws = null;
   let applyingRemote = false;
@@ -2682,22 +2686,22 @@ document.addEventListener('keydown', (e) => {
       return;
     }
 
-    const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    const proto = (window.location.protocol === "https:") ? "wss" : "ws";
     const url = `${proto}://${window.location.host}/ws/board/${lobbyCode}/`;
+
+    console.log("Connecting WS:", url);
 
     ws = new WebSocket(url);
 
-    ws.onopen = () => console.log("WS connected:", url);
-    ws.onclose = () => console.log("WS closed");
+    ws.onopen = () => console.log("WS connected");
+    ws.onclose = (e) => console.log("WS closed", e.code, e.reason);
     ws.onerror = (e) => console.error("WS error", e);
 
     ws.onmessage = (evt) => {
       try {
         const msg = JSON.parse(evt.data);
         if (msg.type !== "board_state") return;
-
-        // FIX: your code used clientID (wrong name)
-        if (msg.clientId === clientId) return;
+        if (msg.clientId === clientId) return; // ignore our own updates
 
         applyingRemote = true;
         applyBoardState(msg.state);
@@ -2715,14 +2719,11 @@ document.addEventListener('keydown', (e) => {
     clearTimeout(sendTimer);
     sendTimer = setTimeout(() => {
       const state = collectBoardState();
-      ws.send(JSON.stringify({
-        type: "board_state",
-        clientId,
-        state
-      }));
+      ws.send(JSON.stringify({ type: "board_state", clientId, state }));
     }, 120);
   }
 
+  // Hook your dirty-marker so any change schedules a send
   const _origMarkBoardDirty = window.markBoardDirty;
   window.markBoardDirty = function () {
     if (typeof _origMarkBoardDirty === "function") _origMarkBoardDirty();
