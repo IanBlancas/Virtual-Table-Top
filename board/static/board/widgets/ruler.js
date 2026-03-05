@@ -68,7 +68,7 @@
     const CELL = window.CELL || 40;
 
     function defaultUnitsPerCell(unit){
-      // sensible defaults: assume 1 cell = 5 ft by default
+      // defaults: assume 1 cell = 5 ft
       switch(unit){
         case 'ft': return 5;
         case 'm': return 5 / 3.28084; // meters equivalent to 5 ft
