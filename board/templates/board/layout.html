@@ -42,10 +42,10 @@
                 <div class="file dropdown">
                     <button class="menubtn">Insert</button>
                     <div class="dropdown-content">
-                        <a href="#">first</a>
-                        <a href="#">second</a>
-                        <a href="#">third</a>
-                        <a href="#">fourth</a>
+                    <a href="#" id="insertShapesBtn">Shapes</a>
+                    <a href="#" id="insertImageBtn">Image</a>
+                    <a href="#" id="insertTextBtn">Text</a>
+                    <a href="#" id="insertOtherBtn">Other</a>
                     </div>
                 </div>
 
@@ -713,7 +713,7 @@ if (!window._flatTopCardKeyHandlerInstalled) {
   // ===== Token widget (simple circular token with resize handle and x) =====
 Widget.builders.token = function(props = {}) {
   const token = document.createElement('div');
-  token.className = 'token circle'; // default circle; we’ll support square
+  token.className = 'token circle'; // default circle
   token.dataset.type = 'token';
 
   // apply initial shape if provided
@@ -2435,6 +2435,28 @@ document.addEventListener('keydown', (e) => {
 <script src="{% static 'board/widgets/notes.js' %}"></script>
 <script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
+<!-- Shapes Modal -->
+<div id="shapesModal" class="shortcuts-modal" style="display: none;">
+  <div class="shortcuts-modal-content">
+    <div class="shortcuts-modal-header">
+      <h2>Insert Shape</h2>
+      <button class="shapes-modal-close shortcuts-modal-close" title="Close">&times;</button>
+    </div>
+    <div class="shortcuts-modal-body">
+      <p class="hint">Click a shape to insert it on the board.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="shape-btn" data-shape="rectangle">Rectangle</button>
+        <button class="shape-btn" data-shape="circle">Circle</button>
+        <button class="shape-btn" data-shape="triangle">Triangle</button>
+        <button class="shape-btn" data-shape="hexagon">Hexagon</button>
+        <button class="shape-btn" data-shape="line">Line</button>
+        <button class="shape-btn" data-shape="arrow">Arrow</button>
+        <button class="shape-btn" data-shape="placeholder">Placeholder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Shortcuts Modal -->
 <div id="shortcutsModal" class="shortcuts-modal" style="display: none;">
   <div class="shortcuts-modal-content">
@@ -2553,6 +2575,226 @@ document.addEventListener('keydown', (e) => {
   document.addEventListener('keydown', (e) => {
     if (shortcutsModal && e.key === 'Escape' && shortcutsModal.style.display === 'flex') {
       closeShortcutsModal();
+    }
+  });
+
+  // ===== SHAPES MODAL =====
+  const shapesModal = document.getElementById('shapesModal');
+  const insertShapesBtn = document.getElementById('insertShapesBtn');
+  const shapesModalClose = document.querySelector('.shapes-modal-close');
+
+  function openShapesModal() {
+    if (!shapesModal) { console.error('shapesModal not found'); return; }
+    shapesModal.style.display = 'flex';
+    shapesModal.focus();
+  }
+
+  function closeShapesModal() {
+    if (!shapesModal) { console.error('shapesModal not found'); return; }
+    shapesModal.style.display = 'none';
+  }
+
+  if (insertShapesBtn) {
+    insertShapesBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openShapesModal();
+    });
+  } else {
+    console.error('insertShapesBtn element not found');
+  }
+
+  if (shapesModalClose) {
+    shapesModalClose.addEventListener('click', closeShapesModal);
+  }
+
+  if (shapesModal) {
+    shapesModal.addEventListener('click', (e) => {
+      if (e.target === shapesModal) closeShapesModal();
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (shapesModal && e.key === 'Escape' && shapesModal.style.display === 'flex') {
+      closeShapesModal();
+    }
+  });
+
+  // Create and insert a shape widget on the board
+  function createShapeWidget(kind) {
+    // compute center of current view in board coordinates
+    const wrect = wrap.getBoundingClientRect();
+    const cxScreen = wrect.left + wrect.width / 2;
+    const cyScreen = wrect.top + wrect.height / 2;
+
+    // board-space coords: (screen - wrap.left - pan) / scale
+    const x = (cxScreen - wrect.left - panX) / scale - 80; // offset by half width
+    const y = (cyScreen - wrect.top - panY) / scale - 80;  // offset by half height
+
+    const el = document.createElement('div');
+    el.className = 'shape-widget';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.width = '160px';
+    el.style.height = '160px';
+    el.dataset.angle = '0';
+
+    // SVG content for shapes
+    const color = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+    let svgInner = '';
+    if (kind === 'rectangle') {
+      svgInner = `<rect x="5" y="5" width="90" height="90" rx="0" ry="0" fill="${color}" stroke="#444" stroke-width="2"/>`; // change rx and ry for curved
+    } else if (kind === 'circle') {
+      svgInner = `<circle cx="50" cy="50" r="45" fill="${color}" stroke="#444" stroke-width="2"/>`;
+    } else if (kind === 'triangle') {
+      svgInner = `<polygon points="50,5 95,95 5,95" fill="${color}" stroke="#444" stroke-width="2"/>`;
+    } else if (kind === 'hexagon') {
+      svgInner = `<polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="${color}" stroke="#444" stroke-width="2"/>`;
+    } else if (kind === 'arrow') {
+      svgInner = `<polygon points="10,50 90,50 90,40 100,50 90,60 90,50" fill="${color}" stroke="#444" stroke-width="2"/>`;
+    } else if (kind === 'rectangle') {
+      svgInner = `<rect x="5" y="5" width="90" height="90" rx="6" ry="6" fill="${color}" stroke="#444" stroke-width="2"/>`;
+    } else if (kind === 'line') {
+      svgInner = `<rect x="5" y="5" width="90" height="90" fill="#000000" stroke="#000000" stroke-width="2"/>`;
+    } else if (kind === 'placeholder') {
+      svgInner = `<rect x="5" y="5" width="90" height="90" fill="${color}" stroke="#444" stroke-width="2"/>`;
+    }
+
+    el.innerHTML = `
+      <div class="shape-box">
+        <svg class="shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">${svgInner}</svg>
+      </div>
+      <div class="handle resize-handle" title="Resize"></div>
+      <div class="handle rotate-handle" title="Rotate"></div>
+    `;
+
+    board.appendChild(el);
+
+    makeShapeInteractive(el);
+    markBoardDirty?.();
+  }
+
+  // Track currently selected shape globally
+  let selectedShape = null;
+
+  // Interaction: drag, resize, rotate
+  function makeShapeInteractive(el) {
+    const box = el.querySelector('.shape-box');
+    const resizeHandle = el.querySelector('.resize-handle');
+    const rotateHandle = el.querySelector('.rotate-handle');
+
+    let dragging = false, dragStart = {x:0,y:0}, startLeft=0, startTop=0, activePointer=null;
+    let resizing = false, resizeStart={x:0,y:0}, startW=0, startH=0;
+    let rotating = false, rotateStartAngle=0, rotatePointerAngle=0;
+
+    // Helper to apply rotation
+    function applyRotation(angle) {
+      el.dataset.angle = angle;
+      el.style.transform = `rotate(${angle}deg)`;
+    }
+
+    // Helper to mark this shape as selected
+    function selectShape() {
+      if (selectedShape && selectedShape !== el) {
+        selectedShape.classList.remove('selected');
+      }
+      selectedShape = el;
+      el.classList.add('selected');
+    }
+
+    box.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      selectShape();
+      dragging = true; activePointer = e.pointerId;
+      box.setPointerCapture(activePointer);
+      dragStart.x = e.clientX; dragStart.y = e.clientY;
+      startLeft = parseFloat(el.style.left) || 0;
+      startTop = parseFloat(el.style.top) || 0;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (dragging && activePointer === e.pointerId) {
+        const dx = (e.clientX - dragStart.x) / scale;
+        const dy = (e.clientY - dragStart.y) / scale;
+        el.style.left = (startLeft + dx) + 'px';
+        el.style.top  = (startTop  + dy) + 'px';
+      }
+
+      if (resizing && activePointer === e.pointerId) {
+        const dx = (e.clientX - resizeStart.x) / scale;
+        const dy = (e.clientY - resizeStart.y) / scale;
+        let newW = Math.max(20, startW + dx);
+        let newH = Math.max(20, startH + dy);
+        if (e.shiftKey) {
+          const relW = (startW + dx) / startW;
+          const relH = (startH + dy) / startH;
+          // pick the direction with the larger relative change to preserve aspect
+          const scaleFactor = Math.abs(relW - 1) > Math.abs(relH - 1) ? relW : relH;
+          const sf = Math.max(0.05, scaleFactor);
+          newW = Math.max(20, startW * sf);
+          newH = Math.max(20, startH * sf);
+        }
+        el.style.width = newW + 'px';
+        el.style.height = newH + 'px';
+      }
+
+      if (rotating && activePointer === e.pointerId) {
+        const crect = el.getBoundingClientRect();
+        const cx = crect.left + crect.width/2;
+        const cy = crect.top + crect.height/2;
+        const ang = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+        const delta = ang - rotatePointerAngle;
+        const newAngle = rotateStartAngle + delta;
+        applyRotation(newAngle);
+      }
+    });
+
+    window.addEventListener('pointerup', (e) => {
+      if (dragging && activePointer === e.pointerId) {
+        dragging = false;
+        try { box.releasePointerCapture(activePointer); } catch(_){}
+        activePointer = null;
+      }
+      if (resizing && activePointer === e.pointerId) {
+        resizing = false; try { resizeHandle.releasePointerCapture(activePointer); } catch(_){}; activePointer = null;
+      }
+      if (rotating && activePointer === e.pointerId) {
+        rotating = false; try { rotateHandle.releasePointerCapture(activePointer); } catch(_){}; activePointer = null;
+      }
+    });
+
+    resizeHandle.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      resizing = true; activePointer = e.pointerId; resizeHandle.setPointerCapture(activePointer);
+      resizeStart.x = e.clientX; resizeStart.y = e.clientY;
+      startW = parseFloat(getComputedStyle(el).width) || el.offsetWidth;
+      startH = parseFloat(getComputedStyle(el).height) || el.offsetHeight;
+    });
+
+    rotateHandle.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      rotating = true; activePointer = e.pointerId; rotateHandle.setPointerCapture(activePointer);
+      const crect = el.getBoundingClientRect();
+      const cx = crect.left + crect.width/2;
+      const cy = crect.top + crect.height/2;
+      rotatePointerAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+      rotateStartAngle = parseFloat(el.dataset.angle) || 0;
+    });
+  }
+
+  document.querySelectorAll('.shape-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const shape = e.currentTarget.dataset.shape;
+      createShapeWidget(shape);
+      closeShapesModal();
+    });
+  });
+
+  // Delete key removes selected shape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Delete' && selectedShape) {
+      selectedShape.remove();
+      markBoardDirty?.();
+      selectedShape = null;
     }
   });
 
