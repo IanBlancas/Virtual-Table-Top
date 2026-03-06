@@ -27,6 +27,9 @@ Widget.builders.notes = function (props = {}) {
 
   // Setup textarea to fill widget area
   const area = el.querySelector(".notes-area");
+  const dirtySoon = debounce(() => markBoardDirty(), 300);
+  area.addEventListener('input', dirtySoon);
+  area.addEventListener('blur', () => markBoardDirty());
   const header = el.querySelector(".header");
   const body = el.querySelector(".body");
 
