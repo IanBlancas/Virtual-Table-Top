@@ -158,17 +158,12 @@ function extendStroke(e) {
 }
 
 function endStroke() {
-  if (currentStroke && currentStroke.isLaser) {
-    currentStroke.expireAt = performance.now() + laserLifetime;
-  }
-
-  // If we just finished a normal stroke, sync it
-  if (currentStroke && !currentStroke.isLaser) {
-    if (typeof window.markBoardDirty === "function") window.markBoardDirty();
-  }
-
-  currentStroke = null;
-  erasingNow = false;
+        // When mouse/touch is released, start the laser timer
+    if (currentStroke && currentStroke.isLaser) {
+        currentStroke.expireAt = performance.now() + laserLifetime;
+    }
+    currentStroke = null;
+    erasingNow = false;   // stop erasing when mouse lifted
 }
 
 function getBoardCoords(e) {
@@ -181,22 +176,18 @@ function getBoardCoords(e) {
 
 // ===== REAL ERASER: removes strokes near cursor =====
 function eraseAt(x, y, radius = 20) {
-  const r2 = radius * radius;
-  const before = Drawing.strokes.length;
+    const r2 = radius * radius;
 
-  Drawing.strokes = Drawing.strokes.filter(stroke => {
-    return !stroke.points.some(p => {
-      const dx = p.x - x;
-      const dy = p.y - y;
-      return (dx*dx + dy*dy) < r2;
+    Drawing.strokes = Drawing.strokes.filter(stroke => {
+        // keep strokes ONLY if no point is within erase radius
+        return !stroke.points.some(p => {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            return (dx*dx + dy*dy) < r2;
+        });
     });
-  });
 
-  if (Drawing.strokes.length !== before) {
-    if (typeof window.markBoardDirty === "function") window.markBoardDirty();
-  }
-
-  needsRender = true;
+    needsRender = true;
 }
 
 function render() {

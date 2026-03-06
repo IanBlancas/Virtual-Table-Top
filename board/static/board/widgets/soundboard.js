@@ -2,48 +2,6 @@
 // Global sound tracker shared by all widgets
 const GLOBAL_SOUNDS = new Set();
 
-
-
-window.soundboardRemoteStopAll = function () {
-  GLOBAL_SOUNDS.forEach((a) => {
-    a.pause();
-    a.currentTime = 0;
-    a.loop = false;
-  });
-};
-
-// At top-level in soundboard.js
-window.__pendingRemoteSounds = window.__pendingRemoteSounds || [];
-
-window.soundboardRemotePlay = async function (msg) {
-  const url = msg.url;
-  if (!url) return;
-
-  // If this client hasn't unlocked audio yet, queue it
-  if (!window.__audioUnlocked) {
-    window.__pendingRemoteSounds.push(msg);
-    console.warn("Audio locked; queued remote sound. User must interact once to enable audio.");
-    return;
-  }
-
-  const a = new Audio(url);
-  a.loop = !!msg.loop;
-
-  let v = Number(msg.volume);
-  if (!Number.isFinite(v)) v = 1;
-  a.volume = Math.min(1, Math.max(0, v));
-
-  GLOBAL_SOUNDS.add(a);
-  a.addEventListener("ended", () => GLOBAL_SOUNDS.delete(a));
-
-  try {
-    a.currentTime = 0;
-    await a.play();
-  } catch (err) {
-    console.error("Remote audio playback failed:", err);
-  }
-};
-
 // ===== Soundboard widget (HTML/JS only, draggable & resizable) =====
 Widget.builders.soundboard = function (props = {}) {
   const el = document.createElement("div");
@@ -107,24 +65,7 @@ Widget.builders.soundboard = function (props = {}) {
     const volSlider = container.querySelector('.volume');
 
     playBtn.addEventListener('click', async () => {
-      try {
-        audio.currentTime = 0;
-        await audio.play();
-      } catch (err) {
-        console.error('Audio playback failed:', err);
-        return;
-      }
-    
-      // Broadcast to lobby
-      if (typeof window.sendLobbyMessage === "function") {
-        window.sendLobbyMessage({
-          type: "sound_play",
-          clientId: window.__clientId,
-          url: container.dataset.sound,
-          loop: audio.loop,
-          volume: audio.volume
-        });
-      }
+      try { audio.currentTime = 0; await audio.play(); } catch (err) { console.error('Audio playback failed:', err); }
     });
 
     loopBtn.addEventListener('click', () => {
@@ -188,13 +129,6 @@ el.querySelector(".stopAll").addEventListener("click", () => {
     a.currentTime = 0;
     a.loop = false;
   });
-
-  if (typeof window.sendLobbyMessage === "function") {
-    window.sendLobbyMessage({
-      type: "sound_stop_all",
-      clientId: window.__clientId
-    });
-  }
 });
 
 
