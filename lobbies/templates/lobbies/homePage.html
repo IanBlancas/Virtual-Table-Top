@@ -1,0 +1,15 @@
+<h1>Game Lobby</h1>
+
+<p>
+  <a href="{% url 'lobbies:create' %}">Host a game</a>
+</p>
+
+<hr>
+
+<h2>Join a game</h2>
+<form method="post" action="{% url 'lobbies:join' %}">
+  {% csrf_token %}
+  <label>Lobby code:</label>
+  <input name="code" maxlength="12" />
+  <button type="submit">Join</button>
+</form>
