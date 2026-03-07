@@ -255,7 +255,6 @@ window.addEventListener('mouseup', (e) => {
     var panX  = 0;     // translation in px
     var panY  = 0;
     // trackpad/mouse wheel zoom sensitivity (smaller = finer control)
-    // You can override at runtime with `window.zoomSensitivity = 0.003` for example.
     var zoomSensitivity = window.zoomSensitivity || 0.0025;
 
     // Initialize the Drawing Engine
@@ -422,8 +421,7 @@ wrap.addEventListener("touchend", (e) => {
   }
 });
 
-    // Optional: Spacebar to toggle temporary panning with left mouse
-    // (handy trackpad mode—comment out if you don’t want it)
+    // Spacebar to toggle temporary panning with left mouse
     let spacePan = false;
     window.addEventListener('keydown', (e) => { if (e.code === 'Space') spacePan = true; });
     window.addEventListener('keyup',   (e) => { if (e.code === 'Space') spacePan = false; });
@@ -443,14 +441,14 @@ wrap.addEventListener("touchend", (e) => {
 
   <script>
   // ===== Shared constants/helpers =====
-  const CELL = 40; // match your CSS grid size in layoutStyle.css
+  const CELL = 40; 
   function toBoardCoords(clientX, clientY) {
     const rect = board.getBoundingClientRect();
     return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
   }
   function snap(v) { return Math.round(v / CELL) * CELL; }
 
-// Bring-to-front counter (keep this if you had it)
+// Bring-to-front counter
 let zTop = 1;
 
 // draggable that supports multi-select drag
@@ -580,6 +578,7 @@ function toggleWidgetLock(el) {
 
   // Tiny widget “registry”
   const Widget = {
+    
     builders: {},
     create(type, x=0, y=0, props={}) {
       if (!this.builders[type]) throw new Error(`Unknown widget: ${type}`);
@@ -634,8 +633,7 @@ function toggleWidgetLock(el) {
     }
   };
 
-// Global key for delete and flip. Uses the same semantics as the
-// original handler: Delete removes selected cards, F flips selected cards.
+// Global key for delete and flip: Delete removes selected cards, F flips selected cards.
 if (!window._flatTopCardKeyHandlerInstalled) {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Delete') {
@@ -645,18 +643,21 @@ if (!window._flatTopCardKeyHandlerInstalled) {
       document.querySelectorAll('.token.selected').forEach(t => t.remove());
       // prevent browser navigation on Backspace
       if (e.key === 'Backspace') e.preventDefault();
+      markBoardDirty();
     }
     if (e.key === 'f' || e.key === 'F') {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
         if (typeof c.flipCard === 'function') c.flipCard();
+        
       });
+      markBoardDirty();
     }
   });
   window._flatTopCardKeyHandlerInstalled = true;
 }
 
   // ===== Dice Roller widget =====
-  Widget.builders.dice = function(props={}){
+  Widget.builders.dice = function(props = {}) {
     const el = document.createElement('div');
     el.className = 'widget';
     el.dataset.type = 'dice';
@@ -667,36 +668,99 @@ if (!window._flatTopCardKeyHandlerInstalled) {
       </div>
       <div class="body">
         <div class="row">
-          <input type="text" class="expr" placeholder="Ex: d20, 3d6+2, 2d8-1" value="${props.expr||''}" />
+          <input type="text" class="expr" placeholder="Ex: d20, 3d6+2, 2d8-1" value="${props.expr || ''}" />
           <button class="roll">Roll</button>
         </div>
         <div class="results"><div class="muted">No rolls yet.</div></div>
       </div>
     `;
+    
     makeDraggable(el, el.querySelector('.header'));
+    
     const input = el.querySelector('.expr');
     const rollBt = el.querySelector('.roll');
     const out = el.querySelector('.results');
-
-    rollBt.addEventListener('click', ()=>{
-      const text = (input.value||'d20').trim();
+    
+    // Persisted roll history for syncing + save/load
+    let rollHistory = Array.isArray(props.rolls) ? props.rolls.slice() : [];
+    
+    function fmtMod(m) {
+      if (!m) return '';
+      return m > 0 ? `+${m}` : `${m}`;
+    }
+  
+    function renderHistory() {
+      out.innerHTML = '';
+      if (!rollHistory.length) {
+        out.innerHTML = '<div class="muted">No rolls yet.</div>';
+        return;
+      }
+      for (let i = rollHistory.length - 1; i >= 0; i--) {
+        const r = rollHistory[i];
+        const detail = `${r.n}d${r.sides}${fmtMod(r.mod)}`;
+        const line = `<div>[${r.ts}] <b>${detail}</b> → <b>${r.total}</b> <span class="muted">(rolls: ${r.rolls.join(', ')})</span></div>`;
+        out.insertAdjacentHTML('beforeend', line);
+      }
+    }
+  
+    function getDiceData() {
+      return {
+        expr: (input.value || '').trim(),
+        rolls: rollHistory.slice()
+      };
+    }
+  
+    // Expose for collectBoardState()
+    el.getDiceData = getDiceData;
+  
+    // Render any restored history
+    renderHistory();
+  
+    rollBt.addEventListener('click', () => {
+      const text = (input.value || 'd20').trim();
       const spec = parseDice(text);
       if (!spec) {
         out.insertAdjacentHTML('afterbegin', `<div>⚠️ Invalid: <code>${escapeHtml(text)}</code></div>`);
         return;
       }
+    
       const rolls = roll(spec.n, spec.sides);
-      const total = rolls.reduce((a,b)=>a+b,0) + spec.mod;
-      if (out.firstElementChild?.classList.contains('muted')) out.firstElementChild.remove();
-      const ts = new Date().toLocaleTimeString();
-      const detail = `${spec.n}d${spec.sides}${spec.mod? (spec.mod>0?`+${spec.mod}`:`${spec.mod}`):''}`;
-      out.insertAdjacentHTML('afterbegin', `<div>[${ts}] <b>${detail}</b> → <b>${total}</b> <span class="muted">(rolls: ${rolls.join(', ')})</span></div>`);
+      const total = rolls.reduce((a, b) => a + b, 0) + spec.mod;
+    
+      const entry = {
+        ts: new Date().toLocaleTimeString(),
+        n: spec.n,
+        sides: spec.sides,
+        mod: spec.mod,
+        rolls,
+        total
+      };
+    
+      rollHistory.push(entry);
+    
+      // Keep history bounded (optional)
+      const MAX_ROLLS = 50;
+      if (rollHistory.length > MAX_ROLLS) rollHistory = rollHistory.slice(-MAX_ROLLS);
+    
+      // Render newest-first at top (to match the current UX)
+      if (out.firstElementChild && out.firstElementChild.classList.contains('muted')) out.firstElementChild.remove();
+      const detail = `${spec.n}d${spec.sides}${fmtMod(spec.mod)}`;
+      out.insertAdjacentHTML(
+        'afterbegin',
+        `<div>[${entry.ts}] <b>${detail}</b> → <b>${total}</b> <span class="muted">(rolls: ${rolls.join(', ')})</span></div>`
+      );
+    
+      // This triggers the WS broadcast of board_state
+      markBoardDirty();
     });
-    input.addEventListener('keydown', e=>{ if (e.key==='Enter') rollBt.click(); });
-
+  
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') rollBt.click();
+    });
+  
     return el;
   };
-
+  
   function parseDice(s){
     const m = /^\s*(\d*)\s*[dD]\s*(\d+)\s*([+-]\s*\d+)?\s*$/.exec(s);
     if (!m) return null;
@@ -1037,13 +1101,51 @@ cardsCustomBtn.addEventListener('click', (e) => {
 });
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
+// ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 Widget.builders.cards = function(props = {}) {
+  // --- deck model ---
+  const SUITS = [
+    { sym: "♠", color: "black" },
+    { sym: "♥", color: "red"   },
+    { sym: "♣", color: "black" },
+    { sym: "♦", color: "red"   },
+  ];
+  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+
+  function buildDeck() {
+    const d = [];
+    for (const s of SUITS) {
+      for (const r of RANKS) d.push({ rank: r, suit: s.sym, color: s.color });
+    }
+    return d;
+  }
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // --- state (restore if provided) ---
+  let deck, discard, showBack;
+  if (props.deckState) {
+    deck = Array.isArray(props.deckState.deck) ? props.deckState.deck : shuffle(buildDeck());
+    discard = Array.isArray(props.deckState.discard) ? props.deckState.discard : [];
+    showBack = !!props.deckState.showBack;
+  } else {
+    deck = shuffle(buildDeck());
+    discard = [];
+    showBack = true;
+  }
+
   const el = document.createElement('div');
   el.className = 'widget cards-widget';
   el.dataset.type = 'cards';
   el.innerHTML = `
     <div class="header">
-      <div>🃏 Standard Card Deck</div>
+      <div>Standard Card Deck</div>
       <button class="close" title="Remove">&times;</button>
     </div>
     <div class="body">
@@ -1063,20 +1165,10 @@ Widget.builders.cards = function(props = {}) {
 
   makeDraggable(el, el.querySelector('.header'));
 
-  // --- deck model ---
-  const SUITS = [
-    { sym: "♠", color: "black" },
-    { sym: "♥", color: "red"   },
-    { sym: "♣", color: "black" },
-    { sym: "♦", color: "red"   },
-  ];
-  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
-  function buildDeck(){ const d=[]; for (const s of SUITS) for (const r of RANKS) d.push({rank:r, suit:s.sym, color:s.color}); return d; }
-  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
-
-  let deck = shuffle(buildDeck());
-  let discard = [];
-  let showBack = true;
+  function syncDeckStateToEl() {
+    el._deckState = { deck, discard, showBack };
+  }
+  syncDeckStateToEl();
 
   const cardEl = el.querySelector('.playing-card');
   const countEl = el.querySelector('.count');
@@ -1098,14 +1190,13 @@ Widget.builders.cards = function(props = {}) {
         cardEl.textContent = '';
         cardEl.classList.remove('red');
       } else {
-        cardEl.textContent = 'A♠'; // Default face for deck (front)
+        cardEl.textContent = 'A♠';
         cardEl.classList.remove('red');
       }
     }
     updateFlipUi();
   }
 
-  // Helper to create a draggable card on the board
   function createDraggableCard(card, x, y) {
     const cardDiv = document.createElement('div');
     cardDiv.className = 'playing-card draggable';
@@ -1115,9 +1206,10 @@ Widget.builders.cards = function(props = {}) {
     cardDiv.style.width = '40px';
     cardDiv.style.height = '60px';
     cardDiv.style.zIndex = 9999;
-    // Store card data and flip state on the element
+
     cardDiv._cardData = card;
     cardDiv._flipped = showBack;
+
     function renderCardFace() {
       if (cardDiv._flipped) {
         cardDiv.classList.add('back');
@@ -1130,54 +1222,54 @@ Widget.builders.cards = function(props = {}) {
         else cardDiv.classList.remove('red');
       }
     }
+
     renderCardFace();
     makeDraggable(cardDiv, cardDiv);
-    // Selection logic
+
     cardDiv.addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
-      // also deselect tokens when selecting a card
       document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
       cardDiv.classList.add('selected');
     });
-    // Deselect on board click
-    /*board.addEventListener('click', () => {
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
-    });
-    */
-   board.addEventListener('click', () => {
-  if (usingLasso) return;
-  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-});
 
-    // Flip on 'f' key
+    board.addEventListener('click', () => {
+      if (usingLasso) return;
+      document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+    });
+
     cardDiv.flipCard = function() {
       cardDiv._flipped = !cardDiv._flipped;
       renderCardFace();
     };
+
     board.appendChild(cardDiv);
   }
 
-
-
-  // buttons
   el.querySelector('.draw').addEventListener('click', () => {
-    if (deck.length === 0) return; // empty
+    if (deck.length === 0) return;
     const card = deck.pop();
-    // Get widget position relative to board
-    const widgetRect = el.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-    const x = widgetRect.left - boardRect.left + 100; // offset so card doesn't overlap widget
-    const y = widgetRect.top - boardRect.top;
+
+    const wx = parseFloat(el.style.left) || 0;
+    const wy = parseFloat(el.style.top) || 0;
+
+    // Spawn to the right of the widget, near the top
+    const x = wx + (el.offsetWidth || 260) + 20;
+    const y = wy + 20;
+
     createDraggableCard(card, x, y);
     discard.push(card);
-    renderTop(); // keep showBack state
+
+    renderTop();
+    syncDeckStateToEl();
     markBoardDirty();
   });
 
   el.querySelector('.shuffle').addEventListener('click', () => {
     deck = shuffle(deck);
     renderTop();
+    syncDeckStateToEl();
+    markBoardDirty();
   });
 
   el.querySelector('.reset').addEventListener('click', () => {
@@ -1185,15 +1277,17 @@ Widget.builders.cards = function(props = {}) {
     discard = [];
     showBack = true;
     renderTop();
+    syncDeckStateToEl();
+    markBoardDirty();
   });
 
   el.querySelector('.flip').addEventListener('click', () => {
     showBack = !showBack;
-    updateFlipUi();
     renderTop();
+    syncDeckStateToEl();
+    markBoardDirty();
   });
 
-  // click card to draw
   cardEl.addEventListener('click', () => el.querySelector('.draw').click());
 
   renderTop();
@@ -1252,6 +1346,35 @@ Widget.builders.customCards = function(props = {}) {
   const fileInput = el.querySelector('.card-images-input');
   const cardListEl = el.querySelector('.card-list');
   const toggleListBtn = el.querySelector('.toggle-list');
+
+  if (props.deckState) {
+    uploadedImageCards = Array.isArray(props.deckState.uploadedImageCards) ? props.deckState.uploadedImageCards : [];
+    showBack = !!props.deckState.showBack;
+
+    if (typeof props.deckState.defsText === 'string') defs.value = props.deckState.defsText;
+
+    // restore deck contents if supplied; otherwise rebuild from defs
+    cards = Array.isArray(props.deckState.cards) ? props.deckState.cards : [];
+    if (!cards.length) buildFromDefs();
+
+    // restore size inputs if present
+    const wIn = el.querySelector('.card-width');
+    const hIn = el.querySelector('.card-height');
+    if (wIn && props.deckState.cardWidth) wIn.value = props.deckState.cardWidth;
+    if (hIn && props.deckState.cardHeight) hIn.value = props.deckState.cardHeight;
+  }
+
+
+  function syncCustomStateToEl() {
+    el._customDeckState = {
+      cards,
+      uploadedImageCards,
+      defsText: defs.value,
+      showBack,
+      cardWidth: parseInt(el.querySelector('.card-width')?.value || '60', 10) || 60,
+      cardHeight: parseInt(el.querySelector('.card-height')?.value || '90', 10) || 90,
+    };
+  }
 
   // Make list collapsible and bounded in height to avoid huge widgets
   if (toggleListBtn) {
@@ -1397,6 +1520,8 @@ Widget.builders.customCards = function(props = {}) {
         buildFromDefs();
         renderCardsList();
         renderCount();
+        syncCustomStateToEl();
+        markBoardDirty();
       });
 
       row.appendChild(thumb);
@@ -1424,6 +1549,8 @@ Widget.builders.customCards = function(props = {}) {
         console.error('Upload failed', err);
         alert('Upload failed: ' + err.message);
       }
+      syncCustomStateToEl();
+      markBoardDirty();
     }
     // clear input
     fileInput.value = '';
@@ -1433,10 +1560,12 @@ Widget.builders.customCards = function(props = {}) {
   el.querySelector('.draw').addEventListener('click', () => {
     if (cards.length === 0) return;
     const card = cards.pop();
-    const widgetRect = el.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-    const x = widgetRect.left - boardRect.left + 100;
-    const y = widgetRect.top - boardRect.top;
+    const wx = parseFloat(el.style.left) || 0;
+    const wy = parseFloat(el.style.top) || 0;
+
+    // Spawn to the right of the widget, near the top
+    const x = wx + (el.offsetWidth || 260) + 20;
+    const y = wy + 20;
     const cardDiv = document.createElement('div');
     cardDiv.className = 'playing-card draggable';
     cardDiv.style.position = 'absolute';
@@ -1450,7 +1579,7 @@ Widget.builders.customCards = function(props = {}) {
     cardDiv.style.zIndex = 9999;
     // store card data and flip state similar to the standard deck cards
     cardDiv._cardData = card;
-  cardDiv._flipped = !!showBack; // default to current showBack setting
+    cardDiv._flipped = !!showBack; // default to current showBack setting
 
     function renderCardFace() {
       if (cardDiv._flipped) {
@@ -1492,9 +1621,9 @@ Widget.builders.customCards = function(props = {}) {
     });
     */
    board.addEventListener('click', () => {
-  if (usingLasso) return;
-  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-});
+    if (usingLasso) return;
+    document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+    });
 
 
     // flip method used by global key handler
@@ -1505,15 +1634,18 @@ Widget.builders.customCards = function(props = {}) {
 
     board.appendChild(cardDiv);
     renderCount();
+    syncCustomStateToEl();
     markBoardDirty();
   });
 
-  el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); });
+  el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); syncCustomStateToEl(); markBoardDirty(); });
   el.querySelector('.reset').addEventListener('click', () => {
     // Rebuild the deck from uploaded images + textarea, then shuffle — this restarts the deck
     resetToDefs();
     shuffleArr(cards);
     renderCount();
+    syncCustomStateToEl();
+    markBoardDirty();
   });
 
   // flip button toggles whether new cards come out face-down (and updates preview)
@@ -1525,15 +1657,21 @@ Widget.builders.customCards = function(props = {}) {
     e.preventDefault();
     showBack = !showBack;
     updateFlipUi();
+    syncCustomStateToEl();
+    markBoardDirty();
   });
   updateFlipUi();
 
   // live update when defs change
-  defs.addEventListener('blur', () => { buildFromDefs(); renderCount(); });
-  defs.addEventListener('keydown', (e)=>{ if (e.key==='Escape') defs.blur(); });
+  defs.addEventListener('blur', () => { buildFromDefs(); renderCardsList(); renderCount(); syncCustomStateToEl(); markBoardDirty(); });
+  defs.addEventListener('keydown', (e)=>{ if (e.key==='Escape') defs.blur(); syncCustomStateToEl(); markBoardDirty(); });
 
   // init
-  buildFromDefs(); shuffleArr(cards); renderCount();
+  if (!cards.length) buildFromDefs();   // don't overwrite restored state unnecessarily
+  shuffleArr(cards);
+  renderCardsList();                    // <-- this is the missing piece
+  renderCount();
+  syncCustomStateToEl();                // keep element state consistent
 
   // close
   el.querySelector('.close').addEventListener('click', ()=> el.remove());
@@ -1565,7 +1703,7 @@ Widget.builders.counters = function(props = {}) {
   const rows = el.querySelector('.rows');
   const addBtn = el.querySelector('.add-row');
   const close  = el.querySelector('.close');
-  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); markBoardDirty(); });
 
   // helpers
   const clampInt = (v) => {
@@ -1584,7 +1722,6 @@ Widget.builders.counters = function(props = {}) {
     `;
 
 
-    const valueInput = row.querySelector('.value');
 
     function n() { return clampInt(parseInt(valueInput.value, 10)); }
     function set(v) { valueInput.value = clampInt(v); }
@@ -1592,14 +1729,18 @@ Widget.builders.counters = function(props = {}) {
     
 
     // typing: commit on Enter / blur; sanitize on input
-    valueInput.addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter') valueInput.blur();
-      // Arrow controls: ±1; hold Shift for ±5
-      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); e.preventDefault(); }
-      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); e.preventDefault(); }
+    const nameInput  = row.querySelector('.name');
+    const valueInput = row.querySelector('.value');
+
+    nameInput.addEventListener('blur', () => markBoardDirty());
+
+    valueInput.addEventListener('keydown', (e)=> {
+      if (e.key === 'Enter') { valueInput.blur(); e.stopPropagation(); }
+      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
+      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
       e.stopPropagation();
     });
-    valueInput.addEventListener('blur', () => set(n()));
+    valueInput.addEventListener('blur', () => { set(n()); markBoardDirty(); });
     valueInput.addEventListener('input', ()=>{
       // live-clean non-digits except leading '-'
       const m = valueInput.value.match(/^-?\d*/);
@@ -1665,7 +1806,7 @@ Widget.builders.scorecard = function(props = {}) {
     if (e.key === 'ArrowDown') { e.preventDefault(); adjustSelected(-5); }
   };
   window.addEventListener('keydown', _scoreKeyHandler);
-  close.addEventListener('click', (e) => { e.stopPropagation(); window.removeEventListener('keydown', _scoreKeyHandler); el.remove(); });
+  close.addEventListener('click', (e) => { e.stopPropagation(); window.removeEventListener('keydown', _scoreKeyHandler); el.remove(); markBoardDirty(); });
   const expandBtn = el.querySelector('.expand');
   expandBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
@@ -1692,7 +1833,7 @@ Widget.builders.scorecard = function(props = {}) {
       th.dataset.c = c;
       th.textContent = (props.colLabels && props.colLabels[c]) || `Col ${c+1}`;
       th.addEventListener('dblclick', (e)=> { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
-      th.addEventListener('blur', ()=> { th.contentEditable = 'false'; });
+      th.addEventListener('blur', ()=> { th.contentEditable = 'false'; markBoardDirty(); });
       thead.appendChild(th);
     }
     tbl.appendChild(thead);
@@ -1718,9 +1859,16 @@ Widget.builders.scorecard = function(props = {}) {
         inp.type = 'number';
         inp.className = 'cell-input';
         inp.value = (props.values && props.values[`${r},${c}`]) ?? 0;
+        const dirtySoon = debounce(() => markBoardDirty(), 300);
+
+        inp.addEventListener('input', dirtySoon);   // optional but nice
+        inp.addEventListener('blur', () => markBoardDirty());
+        inp.addEventListener('change', () => markBoardDirty());
+        inp.addEventListener('keydown', (ev)=> {
+          if (ev.key === 'Enter') { inp.blur(); ev.stopPropagation(); }
+        });
         inp.addEventListener('mousedown', (ev)=> ev.stopPropagation());
         inp.addEventListener('click', (ev)=> { ev.stopPropagation(); selectCell(td); inp.focus(); });
-  inp.addEventListener('keydown', (ev)=> { if (ev.key === 'Enter') { inp.blur(); ev.stopPropagation(); } });
         td.appendChild(inp);
         tr.appendChild(td);
       }
@@ -1846,8 +1994,9 @@ Widget.builders.drawOptions = function(props={}) {
 
   // CLEAR CANVAS
   clearBtn.addEventListener("click", () => {
-      Drawing.strokes = [];
-      Drawing.render();
+    Drawing.strokes = [];
+    Drawing.render();
+    if (typeof window.markBoardDirty === "function") window.markBoardDirty();
   });
 
   // CLOSE BUTTON
@@ -2059,6 +2208,15 @@ function fileToDataURL(file) {
 let autosaveFileHandle = null;   // chosen via "Choose autosave file…"
 let boardDirty = false;          // becomes true when the board changes
 
+function debounce(fn, ms = 250) {
+  let t = null;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+
 function markBoardDirty() {
   boardDirty = true;
 }
@@ -2072,6 +2230,35 @@ async function writeAutosaveToFile() {
   await writable.write(stateJson);
   await writable.close();
 }
+
+const dirtySoonGlobal = debounce(() => markBoardDirty(), 250);
+
+document.addEventListener('input', (e) => {
+  const board = document.getElementById('board');
+  if (!board || !board.contains(e.target)) return;
+
+  if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
+    dirtySoonGlobal();
+  }
+}, true);
+
+document.addEventListener('change', (e) => {
+  const board = document.getElementById('board');
+  if (!board || !board.contains(e.target)) return;
+
+  if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
+    markBoardDirty();
+  }
+}, true);
+
+document.addEventListener('blur', (e) => {
+  const board = document.getElementById('board');
+  if (!board || !board.contains(e.target)) return;
+
+  if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
+    markBoardDirty();
+  }
+}, true);
 
 // Prompt the user once to pick a JSON file to autosave into
 async function chooseAutosaveFile() {
@@ -2102,7 +2289,7 @@ async function chooseAutosaveFile() {
 }
 
 // Periodic autosave timer: every 5 seconds if the board is dirty
-const AUTOSAVE_INTERVAL_MS = 55000;
+const AUTOSAVE_INTERVAL_MS = 5000;
 
 setInterval(() => {
   if (!autosaveFileHandle) return;
@@ -2153,7 +2340,7 @@ document.querySelectorAll('#board > .widget').forEach(el => {
 
   // Capture per-widget state
   if (kind === 'notes') {
-    // try common selectors; adjust if your notes.js uses a specific class
+    // try common selectors; adjust if notes.js uses a specific class
     const ta = el.querySelector('textarea, .notes-text, .note-text');
     base.data = { text: ta ? ta.value : '' };
   } else if (kind === 'counters') {
@@ -2185,6 +2372,17 @@ document.querySelectorAll('#board > .widget').forEach(el => {
       colLabels: colHdrs,
       values
     };
+  } else if (kind === 'cards') {
+    base.data = { deckState: el._deckState || null };
+  } else if (kind === 'customCards') {
+    base.data = { deckState: el._customDeckState || null };
+  } else if (kind === 'dice') {
+      if (typeof el.getDiceData === 'function') {
+        base.data = el.getDiceData();
+      } else {
+        const expr = el.querySelector('.expr')?.value || '';
+        base.data = { expr: expr.trim(), rolls: [] };
+      }
   }
 
   items.push(base);
@@ -2227,7 +2425,7 @@ document.querySelectorAll('#board > .token').forEach(el => {
 });
 
 
-  // 3) Image widgets (note: your rotation is on the IMG, not the wrapper)
+  // 3) Image widgets (note: rotation is on the IMG, not the wrapper)
   document.querySelectorAll('#board > .image-widget').forEach(el => {
     const img = el.querySelector('img.image');
     const src = img ? img.getAttribute('src') : '';
@@ -2244,7 +2442,39 @@ document.querySelectorAll('#board > .token').forEach(el => {
     });
   });
 
-  return { version: 1, cell: CELL, items };
+    // 4) Playing cards
+  document.querySelectorAll('#board > .playing-card.draggable').forEach(el => {
+    const img = el.querySelector('img');
+    const cardData =
+      el._cardData ? el._cardData : (
+        img ? { image: img.getAttribute('src') || '', label: '' } :
+              { label: (el.textContent || '').trim() }
+      );
+
+    items.push({
+      kind: 'card',
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width)  || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      flipped: !!(el._flipped ?? el.classList.contains('back')),
+      card: cardData
+    });
+  });
+
+  const strokes = (window.Drawing && Array.isArray(window.Drawing.strokes))
+    ? window.Drawing.strokes
+        .filter(s => !s.isLaser) // don't sync laser strokes
+        .map(s => ({
+          color: s.color,
+          size: s.size,
+          points: s.points
+        }))
+    : [];
+
+  return { version: 1, cell: CELL, items, drawing: { strokes } };
+
 }
 
 function downloadJSON(data, filename='flattop-board.json'){
@@ -2258,17 +2488,30 @@ function downloadJSON(data, filename='flattop-board.json'){
 }
 
 function clearBoard(){
-  document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget')
+  document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card')
     .forEach(el => el.remove());
 }
 
 function applyBoardState(state){
   clearBoard();
+
+  if (window.Drawing && state && state.drawing && Array.isArray(state.drawing.strokes)) {
+    // rebuild strokes
+    window.Drawing.strokes = state.drawing.strokes.map(s => ({
+      color: s.color || "#000000",
+      size:  s.size  || 4,
+      points: Array.isArray(s.points) ? s.points : [],
+      isLaser: false,
+      expireAt: null
+    }));
+    window.Drawing.render?.();
+  }
+
   const items = state?.items || [];
   for (const it of items) {
     // Tokens
     if (it.kind === 'token') {
-      // your Widget.create(type, x, y, props)
+      // Widget.create(type, x, y, props)
       if (typeof Widget?.create === 'function' && Widget.builders?.token) {
         const el = Widget.create('token', it.x, it.y, {
           size: Math.max(it.w, it.h),
@@ -2345,6 +2588,13 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
       colLabels: it.data.colLabels ?? null,
       values:    it.data.values    ?? {}
     };
+  } else if (it.kind === 'cards' && it.data?.deckState) {
+    props.deckState = it.data.deckState;
+  } else if (it.kind === 'customCards' && it.data?.deckState) {
+    props.deckState = it.data.deckState;
+  } else if (it.kind === 'dice' && it.data) {
+      props.expr = it.data.expr || '';
+      props.rolls = Array.isArray(it.data.rolls) ? it.data.rolls : [];
   }
 
   const el = Widget.create(it.kind, it.x, it.y, props);
@@ -2361,6 +2611,75 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
     if (ta) ta.value = it.data.text;
   }
 
+  continue;
+}
+
+if (it.kind === 'card') {
+  const cardDiv = document.createElement('div');
+  cardDiv.className = 'playing-card draggable';
+  cardDiv.style.position = 'absolute';
+  cardDiv.style.left = it.x + 'px';
+  cardDiv.style.top  = it.y + 'px';
+  cardDiv.style.width  = (it.w || 40) + 'px';
+  cardDiv.style.height = (it.h || 60) + 'px';
+  cardDiv.style.zIndex = it.z || '';
+
+  const card = it.card || {};
+  cardDiv._cardData = card;
+  cardDiv._flipped = !!it.flipped;
+
+  function renderCardFace() {
+    cardDiv.textContent = '';
+    cardDiv.innerHTML = '';
+    if (cardDiv._flipped) {
+      cardDiv.classList.add('back');
+      cardDiv.classList.remove('red');
+      return;
+    }
+    cardDiv.classList.remove('back');
+
+    // image-style card
+    if (card.image) {
+      const img = document.createElement('img');
+      img.src = card.image;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.draggable = false;
+      cardDiv.appendChild(img);
+      cardDiv.classList.remove('red');
+      return;
+    }
+
+    // standard deck card
+    if (card.rank && card.suit) {
+      cardDiv.textContent = `${card.rank}${card.suit}`;
+      if (card.color === 'red') cardDiv.classList.add('red');
+      else cardDiv.classList.remove('red');
+      return;
+    }
+
+    // fallback label
+    cardDiv.textContent = card.label || '';
+    cardDiv.classList.remove('red');
+  }
+
+  renderCardFace();
+  makeDraggable(cardDiv, cardDiv);
+
+  cardDiv.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+    cardDiv.classList.add('selected');
+  });
+
+  cardDiv.flipCard = function() {
+    cardDiv._flipped = !cardDiv._flipped;
+    renderCardFace();
+  };
+
+  board.appendChild(cardDiv);
   continue;
 }
 
@@ -2909,6 +3228,149 @@ document.addEventListener('keydown', (e) => {
   }
 </script>
 
+<script>
+  // --- Realtime sync (Channels) ---
+
+  const lobbyCode = "{{ lobby_code|default:'' }}";
+
+  // generate a stable-ish client id for this tab
+  const clientId = (crypto?.randomUUID?.() || ("c" + Math.random().toString(16).slice(2)));
+  window.__clientId = clientId;
+  let ws = null;
+  let applyingRemote = false;
+  let sendTimer = null;
+
+  let reconnectDelay = 500;
+
+  // One-time audio unlock for autoplay policies
+  window.__audioUnlocked = false;
+
+  function unlockAudioOnce() {
+    if (window.__audioUnlocked) return;
+    window.__audioUnlocked = true;
+
+    if (Array.isArray(window.__pendingRemoteSounds) && window.__pendingRemoteSounds.length) {
+      const queued = window.__pendingRemoteSounds.slice();
+      window.__pendingRemoteSounds.length = 0;
+      queued.forEach(m => window.soundboardRemotePlay?.(m));
+    }
+
+    // Create a silent audio element and attempt play/pause to unlock
+    const a = new Audio();
+    a.muted = true;
+
+    // A very short silent WAV data URI (works as a "no-op" unlock in many browsers)
+    a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+    }).catch(() => {
+      // Some browsers still require a more explicit user action; the flag is still useful
+    });
+  }
+
+  // Unlock on first user gesture anywhere on the page
+  document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+  document.addEventListener("keydown", unlockAudioOnce, { once: true });
+
+
+  function connectWS() {
+    if (!lobbyCode) return;
+
+    const proto = (window.location.protocol === "https:") ? "wss" : "ws";
+    const url = `${proto}://${window.location.host}/ws/board/${lobbyCode}/`;
+
+    ws = new WebSocket(url);
+
+    window.__ws = ws;
+
+    window.sendLobbyMessage = function (payload) {
+      try {
+        if (window.__ws && window.__ws.readyState === WebSocket.OPEN) {
+          window.__ws.send(JSON.stringify(payload));
+        }
+      } catch (e) {
+        console.error("sendLobbyMessage failed", e);
+      }
+    };
+
+    ws.onopen = () => {
+      console.log("WS connected");
+      reconnectDelay = 500;
+    };
+
+    ws.onclose = (e) => {
+      console.log("WS closed", e.code, e.reason);
+
+      // try reconnect
+      setTimeout(() => {
+        reconnectDelay = Math.min(10000, reconnectDelay * 1.8);
+        connectWS();
+      }, reconnectDelay);
+    };
+
+    ws.onerror = (e) => {
+      console.error("WS error", e);
+      // force close so onclose triggers reconnect
+      try { ws.close(); } catch {}
+    };
+
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+      
+        // ignore our own echoes
+        if (msg.clientId && msg.clientId === clientId) return;
+      
+        if (msg.type === "board_state") {
+          applyingRemote = true;
+          applyBoardState(msg.state);
+          applyingRemote = false;
+          return;
+        }
+      
+        // --- NEW: sound sync messages ---
+        if (msg.type === "sound_play") {
+          if (typeof window.soundboardRemotePlay === "function") {
+            window.soundboardRemotePlay(msg);
+          }
+          return;
+        }
+      
+        if (msg.type === "sound_stop_all") {
+          if (typeof window.soundboardRemoteStopAll === "function") {
+            window.soundboardRemoteStopAll();
+          }
+          return;
+        }
+      
+      } catch (err) {
+        console.error("Bad WS message", err);
+      }
+    };
+  }
+
+  function scheduleSendState() {
+    if (applyingRemote) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    clearTimeout(sendTimer);
+    sendTimer = setTimeout(() => {
+      const state = collectBoardState();
+      ws.send(JSON.stringify({ type: "board_state", clientId, state }));
+    }, 120);
+  }
+
+  // Hook the dirty-marker so any change schedules a send
+  const _origMarkBoardDirty = window.markBoardDirty;
+  window.markBoardDirty = function () {
+    if (typeof _origMarkBoardDirty === "function") _origMarkBoardDirty();
+    scheduleSendState();
+  };
+
+  connectWS();
+</script>
 </body>
 
 

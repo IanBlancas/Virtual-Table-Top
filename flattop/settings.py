@@ -26,7 +26,14 @@ SECRET_KEY = 'django-insecure-j9r59q#xye0$&6v_(it5fe#sls!6r22di!vc(heh^f#v(4k8_i
 DEBUG = True
 
 #for using url with cloudflare
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    ".trycloudflare.com",
+]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.trycloudflare.com",
@@ -41,8 +48,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'board'
+    'board',
+    'lobbies',
+    'channels',
 ]
+
+ASGI_APPLICATION = "flattop.asgi.application"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -72,6 +83,12 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'flattop.wsgi.application'
+
+CHANNEL_LAYERS = {
+  "default": {
+    "BACKEND": "channels.layers.InMemoryChannelLayer"
+  }
+}
 
 
 # Database
