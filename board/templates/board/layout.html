@@ -14,7 +14,7 @@
 <body>
     <header class="top">
         <div class="left">
-            <h1>Lobby Owner: Name</h1>
+            <h1>Lobby Host: {{ lobby.host.username }}</h1>
 
             <div class="menubtn-row">
                 <div class="file dropdown">
@@ -33,7 +33,7 @@
                     <button class="menubtn">Lobby</button>
                     <div class="dropdown-content">
                         <a href="#">Session Controls</a>
-                        <a href="#">Manage Players</a>
+                        <a href="#" id="managePlayersBtn">Manage Players</a>
                         <a href="#">Settings</a>
                         <a href="#">Utility</a>
                     </div>
@@ -3370,6 +3370,79 @@ document.addEventListener('keydown', (e) => {
   };
 
   connectWS();
+</script>
+<!-- Player Management -->
+<div id="managePlayersModal" class="modal-hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Players in Lobby</h3>
+            <button id="closeManagePlayersBtn">X</button>
+        </div>
+
+        <div class="modal-body">
+            <ul>
+                {% for member in members %}
+                    <li>
+                        {{ member.user.username }}
+
+                        {% if member.user == lobby.host %}
+                            (Host)
+                        {% endif %}
+
+                        {% if is_host and member.user != lobby.host %}
+                            <form method="post" action="{% url 'lobbies:kick_player' lobby.code member.user.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit">Kick</button>
+                            </form>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+  const managePlayersModal = document.getElementById('managePlayersModal');
+  const managePlayersBtn = document.getElementById('managePlayersBtn');
+  const closeManagePlayersBtn = document.getElementById('closeManagePlayersBtn');
+
+  function openManagePlayersModal() {
+    if (!managePlayersModal) {
+      console.error('managePlayersModal not found');
+      return;
+    }
+    managePlayersModal.classList.remove('modal-hidden');
+    managePlayersModal.classList.add('modal-show');
+  }
+
+  function closeManagePlayersModal() {
+    if (!managePlayersModal) {
+      console.error('managePlayersModal not found');
+      return;
+    }
+    managePlayersModal.classList.remove('modal-show');
+    managePlayersModal.classList.add('modal-hidden');
+  }
+
+  if (managePlayersBtn) {
+    managePlayersBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openManagePlayersModal();
+    });
+  }
+
+  if (closeManagePlayersBtn) {
+    closeManagePlayersBtn.addEventListener('click', closeManagePlayersModal);
+  }
+
+  if (managePlayersModal) {
+    managePlayersModal.addEventListener('click', (e) => {
+      if (e.target === managePlayersModal) {
+        closeManagePlayersModal();
+      }
+    });
+  }
 </script>
 </body>
 

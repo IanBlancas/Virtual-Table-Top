@@ -20,6 +20,10 @@ class Lobby(models.Model):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
     created_at = models.DateTimeField(default=timezone.now)
 
+    @property
+    def display_name(self):
+        return f"{self.host.username}'s Lobby"
+
     def save(self, *args, **kwargs):
         # auto-generate a unique code when the lobby is first created
         if not self.code:

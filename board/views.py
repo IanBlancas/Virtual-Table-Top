@@ -9,6 +9,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.conf import settings
 from functools import wraps
 import hashlib, os
+from django.shortcuts import get_object_or_404, redirect
+from lobbies.models import Lobby, LobbyMember
 
 from .models import CardImage
 from django.views.decorators.csrf import csrf_exempt
@@ -64,8 +66,19 @@ def register(request):
 
 @login_required
 def board(request, code=None):
-    template = loader.get_template('board/layout.html')
-    return HttpResponse(template.render({"lobby_code": code }, request))
+    lobby = get_object_or_404(Lobby, code=code)
+
+    members = LobbyMember.objects.select_related("user").filter(lobby=lobby)
+
+    context = {
+        "lobby_code": code,
+        "lobby": lobby,
+        "members": members,
+        "is_host": request.user == lobby.host,
+    }
+
+    template = loader.get_template("board/layout.html")
+    return HttpResponse(template.render(context, request))
 
 @require_POST
 @ajax_login_required
