@@ -100,6 +100,16 @@
       <button id="addNotesWidget">Notes</button>
       <button id="chatBtn">Chat</button>
     </div>
+    
+    <div id="private-panel" class="private-panel">
+      <h3>Private Board <small>(only you see this)</small></h3>
+      <div class="private-controls">
+        <!-- Controls removed: creation via main widget buttons (choose Private when spawning) -->
+      </div>
+      <div id="private-board" class="private-board" style="position:relative; width:260px; height:180px; border:1px solid #ccc; background:#f7f7f7; overflow:auto; padding:6px;">
+        <!-- Private widgets will be placed here; they are not included in shared board state -->
+      </div>
+    </div>
     </aside>
 
     <main class="mainBoard">
@@ -116,6 +126,13 @@
   </div>
 
 <script src="{% static 'board/widgets/drawing.js' %}"></script>
+<script src="{% static 'board/widgets/privateBoard.js' %}"></script>
+
+<script>
+  window.addEventListener('load', () => {
+    if (window.PrivateBoard) PrivateBoard.init({ container: '#private-panel' });
+  });
+</script>
 
   <script>
     // --- minimal pan & zoom controller ---
@@ -580,7 +597,7 @@ function toggleWidgetLock(el) {
   const Widget = {
     
     builders: {},
-    create(type, x=0, y=0, props={}) {
+    create(type, x=0, y=0, props={}, container=null) {
       if (!this.builders[type]) throw new Error(`Unknown widget: ${type}`);
       const el = this.builders[type](props);
       el.style.position = 'absolute';
@@ -628,7 +645,8 @@ function toggleWidgetLock(el) {
         closeBtn.addEventListener('click', handleCloseClick);
         closeBtn.addEventListener('touchend', handleCloseClick, { passive: false });
       }
-      board.appendChild(el);
+      const target = container || board;
+      target.appendChild(el);
       return el;
     }
   };
@@ -1058,47 +1076,67 @@ token.addEventListener('drop', async (e) => {
 
 
   // ===== Hook the sidebar buttons =====
-diceBtn.addEventListener('click', ()=> {
-  Widget.create('dice', 0, 0);
-  markBoardDirty();
-});
-tokenBtn.addEventListener('click', ()=> {
-  Widget.create('token', 0, 0);
-  markBoardDirty();
-});
+  diceBtn.addEventListener('click', (e)=> { spawnWidget('dice', e.target); });
+  tokenBtn.addEventListener('click', (e)=> { spawnWidget('token', e.target); });
 const scoreBtn = document.getElementById('scoreBtn');
-scoreBtn.addEventListener('click', ()=> {
-  Widget.create('scorecard', 0, 0);
-  markBoardDirty();
-});
+  scoreBtn.addEventListener('click', (e)=> { spawnWidget('scorecard', e.target); });
   // new dropdown menu items
   const cardsDeckBtn = document.getElementById('cardsDeckBtn');
   const cardsCustomBtn = document.getElementById('cardsCustomBtn');
-  cardsDeckBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  Widget.create('cards', 0, 0);
-  markBoardDirty();
-});
-cardsCustomBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  Widget.create('customCards', 0, 0);
-  markBoardDirty();
-});
+  cardsDeckBtn.addEventListener('click', (e) => { e.preventDefault(); spawnWidget('cards', e.target); });
+  cardsCustomBtn.addEventListener('click', (e) => { e.preventDefault(); spawnWidget('customCards', e.target); });
   const soundBtn = document.getElementById('soundBtn');
-  soundBtn.addEventListener('click', ()=> {
-  Widget.create('soundboard', 0, 0);
-  markBoardDirty();
-});
-  const addNotesBtn = document.getElementById('addNotesWidget');
-  addNotesBtn.addEventListener('click', ()=> {
-  Widget.create('notes', 0, 0);
-  markBoardDirty();
-});
-  const chatBtn = document.getElementById('chatBtn');
-  chatBtn.addEventListener('click', () => {
-  Widget.create('chat', 0, 0);
-  markBoardDirty();
-});
+  soundBtn.addEventListener('click', (e)=> { spawnWidget('soundboard', e.target); });
+    const addNotesBtn = document.getElementById('addNotesWidget');
+    addNotesBtn.addEventListener('click', (e)=> { spawnWidget('notes', e.target); });
+    const chatBtn = document.getElementById('chatBtn');
+    chatBtn.addEventListener('click', (e) => { spawnWidget('chat', e.target); });
+
+  // --- spawn helper + chooser UI ---
+  function showSpawnChoice(anchorEl){
+    return new Promise((resolve) => {
+      // remove existing
+      const existing = document.getElementById('spawn-choice');
+      if (existing) existing.remove();
+
+      const box = document.createElement('div');
+      box.id = 'spawn-choice';
+      box.style.position = 'absolute';
+      box.style.padding = '6px';
+      box.style.background = '#fff';
+      box.style.border = '1px solid #ccc';
+      box.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+      box.style.zIndex = 9999;
+
+      const pub = document.createElement('button'); pub.textContent = 'Public';
+      const priv = document.createElement('button'); priv.textContent = 'Private';
+      pub.style.marginRight = '6px';
+      box.appendChild(pub); box.appendChild(priv);
+
+      document.body.appendChild(box);
+      const rect = anchorEl.getBoundingClientRect();
+      box.style.left = (rect.right + 6) + 'px';
+      box.style.top  = rect.top + 'px';
+
+      const cleanup = (choice) => { box.remove(); resolve(choice); };
+      pub.addEventListener('click', () => cleanup('public'));
+      priv.addEventListener('click', () => cleanup('private'));
+      // cancel on outside click
+      const onDoc = (ev) => { if (!box.contains(ev.target)) { document.removeEventListener('click', onDoc); cleanup('public'); } };
+      setTimeout(() => document.addEventListener('click', onDoc), 0);
+    });
+  }
+
+  async function spawnWidget(type, anchorEl){
+    const choice = await showSpawnChoice(anchorEl || document.body);
+    const container = (choice === 'private' && window.PrivateBoard && PrivateBoard.contentEl) ? PrivateBoard.contentEl : null;
+    try {
+      Widget.create(type, 0, 0, {}, container);
+      if (!container) markBoardDirty();
+    } catch (e) {
+      console.error('Failed to create widget', e);
+    }
+  }
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
