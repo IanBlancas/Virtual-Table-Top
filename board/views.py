@@ -68,6 +68,10 @@ def register(request):
 def board(request, code=None):
     lobby = get_object_or_404(Lobby, code=code)
 
+    is_member = LobbyMember.objects.filter(lobby=lobby, user=request.user).exists()
+    if not is_member:
+        return redirect("lobbies:home")
+
     members = LobbyMember.objects.select_related("user").filter(lobby=lobby)
 
     context = {
