@@ -122,12 +122,21 @@
     const wrap  = document.getElementById('wrap');
     const board = document.getElementById('board');
     const resetBtn = document.getElementById('resetBtn');
-    const diceBtn = document.getElementById('diceBtn')
-    const tokenBtn = document.getElementById('tokenBtn')
+    const diceBtn = document.getElementById('diceBtn');
+    const tokenBtn = document.getElementById('tokenBtn');
     const cardsBtn = document.getElementById('cardsBtn');
     const counterBtn = document.getElementById('counterBtn');
+    const scoreBtn = document.getElementById('scoreBtn');
+    const cardsCustomBtn = document.getElementById('cardsCustomBtn');
+    const soundBtn = document.getElementById('soundBtn');
+    const addNotesBtn = document.getElementById('addNotesWidget');
+    const chatBtn = document.getElementById('chatBtn');
+    const cardsDeckBtn = document.getElementById('cardsDeckBtn');
+    const drawButton = document.getElementById('draw_Button');
     counterBtn.addEventListener('click', () => {
-      Widget.create('counters', 0, 0);
+      const el = Widget.create('counters', 0, 0);
+      emitItemUpsert(el);
+      queueItemUpsert(el, 0);
       markBoardDirty();
     });
 
@@ -155,9 +164,9 @@ window.addEventListener('keydown', (e) => {
 });
 
 // Draw mode toggle
-document.getElementById("draw_Button").addEventListener("click", () => {
+drawButton.addEventListener("click", () => {
     const active = Drawing.toggle();
-    draw_Button.classList.toggle("active", active);
+    drawButton.classList.toggle("active", active);
 
     if (active) {
         usingLasso = false;
@@ -439,16 +448,47 @@ wrap.addEventListener("touchend", (e) => {
 
   
 
-  <script>
+<script>
   // ===== Shared constants/helpers =====
-  const CELL = 40; 
+  const CELL = 40; // match your CSS grid size in layoutStyle.css
   function toBoardCoords(clientX, clientY) {
     const rect = board.getBoundingClientRect();
     return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
   }
   function snap(v) { return Math.round(v / CELL) * CELL; }
+  function pxToNum(v) { return v ? parseFloat(v) || 0 : 0; }
 
-// Bring-to-front counter
+  function newItemId() {
+    return (crypto?.randomUUID?.() || ('id-' + Math.random().toString(16).slice(2)));
+  }
+
+  function ensureItemId(el, preferredId = null) {
+    if (!el.dataset.itemId) {
+      el.dataset.itemId = preferredId || newItemId();
+    }
+    return el.dataset.itemId;
+  }
+
+  function getItemById(itemId) {
+    if (!itemId) return null;
+    return document.querySelector(`[data-item-id="${CSS.escape(itemId)}"]`);
+  }
+
+  function getSyncRoot(node) {
+   if (!node) return null;
+   return node.closest('.widget, .token, .image-widget, .playing-card.draggable');
+  }
+
+  function isPatchSyncable(el) {
+  return !!el && (
+    el.classList.contains('widget') ||
+    el.classList.contains('token') ||
+    el.classList.contains('image-widget') ||
+    el.classList.contains('playing-card')
+  );
+}
+
+// Bring-to-front counter (keep this if you had it)
 let zTop = 1;
 
 // draggable that supports multi-select drag
@@ -507,11 +547,17 @@ function makeDraggable(el, handle = el) {
 
     function endDrag() {
       if (!dragging) return;
-      dragging = false;
+      dragging = false;   
+
       dragTargets.forEach(t => {
         t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
         t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
-      });
+      });   
+
+      dragTargets.forEach(t => {
+        queueItemUpsert(t.el, 0);
+      });   
+
       dragTargets = [];
       touchId = null;
       markBoardDirty();
@@ -623,36 +669,64 @@ function toggleWidgetLock(el) {
       if (closeBtn) {
         const handleCloseClick = (e) => {
           e.stopPropagation();
+          const itemId = el.dataset.itemId;
           el.remove();
+          emitItemRemove(itemId);
+          markBoardDirty();
         };
         closeBtn.addEventListener('click', handleCloseClick);
         closeBtn.addEventListener('touchend', handleCloseClick, { passive: false });
       }
+      ensureItemId(el, props.id);
       board.appendChild(el);
       return el;
     }
   };
 
-// Global key for delete and flip: Delete removes selected cards, F flips selected cards.
+// Global key for delete and flip. Uses the same semantics as the
+// original handler: Delete removes selected cards, F flips selected cards.
+// Global key for delete and flip.
 if (!window._flatTopCardKeyHandlerInstalled) {
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Delete') {
-      // remove selected playing cards
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
-      // remove selected tokens
-      document.querySelectorAll('.token.selected').forEach(t => t.remove());
-      // prevent browser navigation on Backspace
-      if (e.key === 'Backspace') e.preventDefault();
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    const typing =
+      tag === 'input' ||
+      tag === 'textarea' ||
+      document.activeElement?.isContentEditable;
+
+    // Don't treat typing in inputs as board shortcuts
+    if (typing) return;
+
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
+        const itemId = c.dataset.itemId;
+        c.remove();
+        emitItemRemove(itemId);
+      });
+
+      document.querySelectorAll('.token.selected').forEach(t => {
+        const itemId = t.dataset.itemId;
+        t.remove();
+        emitItemRemove(itemId);
+      });
+
+      e.preventDefault();
       markBoardDirty();
+      return;
     }
+
     if (e.key === 'f' || e.key === 'F') {
       document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
         if (typeof c.flipCard === 'function') c.flipCard();
-        
       });
+
+      e.preventDefault();
+      
       markBoardDirty();
+      return;
     }
   });
+
   window._flatTopCardKeyHandlerInstalled = true;
 }
 
@@ -742,7 +816,7 @@ if (!window._flatTopCardKeyHandlerInstalled) {
       const MAX_ROLLS = 50;
       if (rollHistory.length > MAX_ROLLS) rollHistory = rollHistory.slice(-MAX_ROLLS);
     
-      // Render newest-first at top (to match the current UX)
+      // Render newest-first at top (to match your current UX)
       if (out.firstElementChild && out.firstElementChild.classList.contains('muted')) out.firstElementChild.remove();
       const detail = `${spec.n}d${spec.sides}${fmtMod(spec.mod)}`;
       out.insertAdjacentHTML(
@@ -750,7 +824,8 @@ if (!window._flatTopCardKeyHandlerInstalled) {
         `<div>[${entry.ts}] <b>${detail}</b> → <b>${total}</b> <span class="muted">(rolls: ${rolls.join(', ')})</span></div>`
       );
     
-      // This triggers the WS broadcast of board_state
+      // This triggers your WS broadcast of board_state
+      queueItemUpsert(el, 0);
       markBoardDirty();
     });
   
@@ -776,7 +851,7 @@ if (!window._flatTopCardKeyHandlerInstalled) {
   // ===== Token widget (simple circular token with resize handle and x) =====
 Widget.builders.token = function(props = {}) {
   const token = document.createElement('div');
-  token.className = 'token circle'; // default circle
+  token.className = 'token circle'; // default circle; we’ll support square
   token.dataset.type = 'token';
 
   // apply initial shape if provided
@@ -1059,46 +1134,51 @@ token.addEventListener('drop', async (e) => {
 
   // ===== Hook the sidebar buttons =====
 diceBtn.addEventListener('click', ()=> {
-  Widget.create('dice', 0, 0);
+  const el = Widget.create('dice', 0, 0);
+  emitItemUpsert(el);
   markBoardDirty();
 });
+
 tokenBtn.addEventListener('click', ()=> {
-  Widget.create('token', 0, 0);
+  const el = Widget.create('token', 0, 0);
+  emitItemUpsert(el);
   markBoardDirty();
 });
-const scoreBtn = document.getElementById('scoreBtn');
+
 scoreBtn.addEventListener('click', ()=> {
-  Widget.create('scorecard', 0, 0);
+  const el = Widget.create('scorecard', 0, 0);
+  emitItemUpsert(el);
   markBoardDirty();
 });
   // new dropdown menu items
-  const cardsDeckBtn = document.getElementById('cardsDeckBtn');
-  const cardsCustomBtn = document.getElementById('cardsCustomBtn');
   cardsDeckBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  Widget.create('cards', 0, 0);
-  markBoardDirty();
+    e.preventDefault();
+    const el = Widget.create('cards', 0, 0);
+    emitItemUpsert(el);
+    markBoardDirty();
 });
 cardsCustomBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  Widget.create('customCards', 0, 0);
+  const el = Widget.create('customCards', 0, 0);
+  emitItemUpsert(el);
   markBoardDirty();
 });
-  const soundBtn = document.getElementById('soundBtn');
-  soundBtn.addEventListener('click', ()=> {
-  Widget.create('soundboard', 0, 0);
+soundBtn.addEventListener('click', ()=> {
+  const el = Widget.create('soundboard', 0, 0);
+  emitItemUpsert(el);
   markBoardDirty();
 });
-  const addNotesBtn = document.getElementById('addNotesWidget');
-  addNotesBtn.addEventListener('click', ()=> {
-  Widget.create('notes', 0, 0);
+addNotesBtn.addEventListener('click', ()=> {
+  const el = Widget.create('notes', 0, 0);
+  emitItemUpsert(el);
   markBoardDirty();
 });
-  const chatBtn = document.getElementById('chatBtn');
-  chatBtn.addEventListener('click', () => {
-  Widget.create('chat', 0, 0);
+chatBtn.addEventListener('click', () => {
+  const el = Widget.create('chat', 0, 0);
+  emitItemUpsert(el);
   markBoardDirty();
 });
+
 
   // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
 // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
@@ -1200,6 +1280,7 @@ Widget.builders.cards = function(props = {}) {
   function createDraggableCard(card, x, y) {
     const cardDiv = document.createElement('div');
     cardDiv.className = 'playing-card draggable';
+    cardDiv.dataset.itemId = newItemId();
     cardDiv.style.position = 'absolute';
     cardDiv.style.left = snap(x) + 'px';
     cardDiv.style.top = snap(y) + 'px';
@@ -1241,9 +1322,16 @@ Widget.builders.cards = function(props = {}) {
     cardDiv.flipCard = function() {
       cardDiv._flipped = !cardDiv._flipped;
       renderCardFace();
+        if (typeof queueItemUpsert === 'function') {
+          queueItemUpsert(cardDiv, 0);
+        }
     };
 
     board.appendChild(cardDiv);
+
+    if (typeof emitItemUpsert === 'function') {
+      emitItemUpsert(cardDiv);
+    }
   }
 
   el.querySelector('.draw').addEventListener('click', () => {
@@ -1262,6 +1350,7 @@ Widget.builders.cards = function(props = {}) {
 
     renderTop();
     syncDeckStateToEl();
+    queueItemUpsert(el, 0);
     markBoardDirty();
   });
 
@@ -1269,6 +1358,7 @@ Widget.builders.cards = function(props = {}) {
     deck = shuffle(deck);
     renderTop();
     syncDeckStateToEl();
+    queueItemUpsert(el, 0);
     markBoardDirty();
   });
 
@@ -1278,6 +1368,7 @@ Widget.builders.cards = function(props = {}) {
     showBack = true;
     renderTop();
     syncDeckStateToEl();
+    queueItemUpsert(el, 0);
     markBoardDirty();
   });
 
@@ -1285,6 +1376,7 @@ Widget.builders.cards = function(props = {}) {
     showBack = !showBack;
     renderTop();
     syncDeckStateToEl();
+    queueItemUpsert(el, 0);
     markBoardDirty();
   });
 
@@ -1521,6 +1613,7 @@ Widget.builders.customCards = function(props = {}) {
         renderCardsList();
         renderCount();
         syncCustomStateToEl();
+        queueItemUpsert(el, 0);
         markBoardDirty();
       });
 
@@ -1550,6 +1643,7 @@ Widget.builders.customCards = function(props = {}) {
         alert('Upload failed: ' + err.message);
       }
       syncCustomStateToEl();
+      queueItemUpsert(el, 0);
       markBoardDirty();
     }
     // clear input
@@ -1568,6 +1662,7 @@ Widget.builders.customCards = function(props = {}) {
     const y = wy + 20;
     const cardDiv = document.createElement('div');
     cardDiv.className = 'playing-card draggable';
+    cardDiv.dataset.itemId = newItemId();
     cardDiv.style.position = 'absolute';
     cardDiv.style.left = snap(x) + 'px';
     cardDiv.style.top = snap(y) + 'px';
@@ -1630,21 +1725,29 @@ Widget.builders.customCards = function(props = {}) {
     cardDiv.flipCard = function() {
       cardDiv._flipped = !cardDiv._flipped;
       renderCardFace();
+      if (typeof queueItemUpsert === 'function') {
+        queueItemUpsert(cardDiv, 0);
+      }
     };
 
     board.appendChild(cardDiv);
+    if (typeof emitItemUpsert === 'function') {
+      emitItemUpsert(cardDiv);
+    }
     renderCount();
     syncCustomStateToEl();
+    queueItemUpsert(el, 0);
     markBoardDirty();
   });
 
-  el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); syncCustomStateToEl(); markBoardDirty(); });
+  el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
   el.querySelector('.reset').addEventListener('click', () => {
     // Rebuild the deck from uploaded images + textarea, then shuffle — this restarts the deck
     resetToDefs();
     shuffleArr(cards);
     renderCount();
     syncCustomStateToEl();
+    queueItemUpsert(el, 0);
     markBoardDirty();
   });
 
@@ -1658,23 +1761,22 @@ Widget.builders.customCards = function(props = {}) {
     showBack = !showBack;
     updateFlipUi();
     syncCustomStateToEl();
+    queueItemUpsert(el, 0);
     markBoardDirty();
   });
   updateFlipUi();
 
   // live update when defs change
-  defs.addEventListener('blur', () => { buildFromDefs(); renderCardsList(); renderCount(); syncCustomStateToEl(); markBoardDirty(); });
-  defs.addEventListener('keydown', (e)=>{ if (e.key==='Escape') defs.blur(); syncCustomStateToEl(); markBoardDirty(); });
+  defs.addEventListener('blur', () => { buildFromDefs(); renderCardsList(); renderCount(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
+  defs.addEventListener('keydown', (e)=>{ if (e.key==='Escape') defs.blur(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
 
   // init
   if (!cards.length) buildFromDefs();   // don't overwrite restored state unnecessarily
   shuffleArr(cards);
-  renderCardsList();                    // <-- this is the missing piece
+  renderCardsList();                    
   renderCount();
   syncCustomStateToEl();                // keep element state consistent
-
-  // close
-  el.querySelector('.close').addEventListener('click', ()=> el.remove());
+  queueItemUpsert(el, 0);
 
   return el;
 };
@@ -1703,7 +1805,7 @@ Widget.builders.counters = function(props = {}) {
   const rows = el.querySelector('.rows');
   const addBtn = el.querySelector('.add-row');
   const close  = el.querySelector('.close');
-  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); markBoardDirty(); });
+  close.addEventListener('click', (e) => { e.stopPropagation(); const itemId = el.dataset.itemId; el.remove(); emitItemRemove(itemId); markBoardDirty(); });
 
   // helpers
   const clampInt = (v) => {
@@ -1806,7 +1908,7 @@ Widget.builders.scorecard = function(props = {}) {
     if (e.key === 'ArrowDown') { e.preventDefault(); adjustSelected(-5); }
   };
   window.addEventListener('keydown', _scoreKeyHandler);
-  close.addEventListener('click', (e) => { e.stopPropagation(); window.removeEventListener('keydown', _scoreKeyHandler); el.remove(); markBoardDirty(); });
+  close.addEventListener('click', (e) => { e.stopPropagation(); window.removeEventListener('keydown', _scoreKeyHandler); const itemId = el.dataset.itemId; el.remove(); emitItemRemove(itemId); markBoardDirty(); });
   const expandBtn = el.querySelector('.expand');
   expandBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
@@ -1994,16 +2096,15 @@ Widget.builders.drawOptions = function(props={}) {
 
   // CLEAR CANVAS
   clearBtn.addEventListener("click", () => {
-    Drawing.strokes = [];
-    Drawing.render();
-    if (typeof window.markBoardDirty === "function") window.markBoardDirty();
+      Drawing.strokes = [];
+      Drawing.render();
   });
 
   // CLOSE BUTTON
   closeBtn.addEventListener("click", () => {
-      el.remove();
+      const itemId = el.dataset.itemId; el.remove(); emitItemRemove(itemId); markBoardDirty();
       Drawing.disable();
-      draw_Button.classList.remove("active");
+      drawButton.classList.remove("active");
   });
 
   return el;
@@ -2038,8 +2139,7 @@ Widget.builders.image = function(props = {}) {
   el.appendChild(close);
   close.addEventListener('click', (e) => {
     e.stopPropagation();
-    el.remove();
-    markBoardDirty();
+    const itemId = el.dataset.itemId; el.remove(); emitItemRemove(itemId); markBoardDirty();
   });
 
   // place on board (Widget.create handles left/top normally)
@@ -2198,6 +2298,369 @@ function fileToDataURL(file) {
     reader.readAsDataURL(file);
   });
 }
+
+function matrixToDeg(mstr) {
+  if (!mstr || mstr === 'none') return 0;
+  const m = mstr.match(/matrix\(([-\d.e, ]+)\)/);
+  if (!m) return 0;
+  const [a, b] = m[1].split(',').map(Number);
+  return Math.round(Math.atan2(b, a) * 180 / Math.PI);
+}
+
+function serializeOneItem(el) {
+  if (!el) return null;
+
+  ensureItemId(el);
+
+  if (el.classList.contains('widget')) {
+    const kind = el.dataset.type || 'widget';
+    const title = el.querySelector('.header div')?.textContent?.trim() || '';
+
+    const base = {
+      itemId: el.dataset.itemId,
+      kind,
+      label: title,
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width) || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      data: null,
+    };
+
+    if (kind === 'notes') {
+      const ta = el.querySelector('textarea, .notes-text, .note-text, .notes-area');
+      base.data = { text: ta ? ta.value : '' };
+    } else if (kind === 'counters') {
+      const rows = [];
+      el.querySelectorAll('.counter-row').forEach(r => {
+        const name = r.querySelector('.name')?.value ?? '';
+        const value = parseInt(r.querySelector('.value')?.value ?? '0', 10) || 0;
+        rows.push({ name, value });
+      });
+      base.data = { counters: rows };
+    } else if (kind === 'scorecard') {
+      const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
+      const rowHdrs = Array.from(el.querySelectorAll('tr.data-row th.row-hdr')).map(th => th.textContent.trim());
+      const values = {};
+      el.querySelectorAll('tr.data-row').forEach((tr, r) => {
+        tr.querySelectorAll('td.cell').forEach((td, c) => {
+          const v = parseInt(td.querySelector('input.cell-input')?.value ?? '0', 10) || 0;
+          values[`${r},${c}`] = v;
+        });
+      });
+      base.data = {
+        rowsCount: rowHdrs.length,
+        colsCount: colHdrs.length,
+        rowLabels: rowHdrs,
+        colLabels: colHdrs,
+        values,
+      };
+    } else if (kind === 'cards') {
+      base.data = { deckState: el._deckState || null };
+    } else if (kind === 'customCards') {
+      base.data = { deckState: el._customDeckState || null };
+    } else if (kind === 'dice') {
+      if (typeof el.getDiceData === 'function') {
+        base.data = el.getDiceData();
+      } else {
+        const expr = el.querySelector('.expr')?.value || '';
+        base.data = { expr: expr.trim(), rolls: [] };
+      }
+    } else if (kind === 'chat') {
+      if (typeof el.getChatData === 'function') {
+        base.data = el.getChatData();
+      }
+    }
+
+    return base;
+  }
+
+  if (el.classList.contains('token')) {
+    let imageUrl = el.dataset.imageSrc || '';
+    if (!imageUrl) {
+      const bg = getComputedStyle(el).backgroundImage;
+      if (bg && bg !== 'none') {
+        const m = bg.match(/url\(["']?(.*?)["']?\)/i);
+        if (m && m[1] && !m[1].startsWith('blob:')) {
+          imageUrl = m[1];
+        }
+      }
+    }
+
+    let label = '';
+    const fc = el.firstChild;
+    if (fc && fc.nodeType === Node.TEXT_NODE) {
+      label = (fc.nodeValue || '').trim();
+    }
+
+    return {
+      itemId: el.dataset.itemId,
+      kind: 'token',
+      shape: el.classList.contains('square') ? 'square' : 'circle',
+      label,
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width) || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      imageUrl
+    };
+  }
+
+  if (el.classList.contains('image-widget')) {
+    const img = el.querySelector('img.image');
+    const src = img ? img.getAttribute('src') : '';
+    const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
+
+    return {
+      itemId: el.dataset.itemId,
+      kind: 'image',
+      src,
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width) || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      rotation
+    };
+  }
+
+  if (el.classList.contains('playing-card')) {
+    const img = el.querySelector('img');
+    const cardData =
+      el._cardData ? el._cardData : (
+        img ? { image: img.getAttribute('src') || '', label: '' }
+            : { label: (el.textContent || '').trim() }
+      );
+
+    return {
+      itemId: el.dataset.itemId,
+      kind: 'card',
+      x: pxToNum(el.style.left),
+      y: pxToNum(el.style.top),
+      w: pxToNum(el.style.width) || el.offsetWidth,
+      h: pxToNum(el.style.height) || el.offsetHeight,
+      z: pxToNum(el.style.zIndex) || 1,
+      flipped: !!(el._flipped ?? el.classList.contains('back')),
+      card: cardData
+    };
+  }
+
+  return null;
+}
+
+</script>
+
+<script>
+
+  function emitLobbyMessage(payload) {
+    if (!window.__ws || window.__ws.readyState !== WebSocket.OPEN) return;
+    window.__ws.send(JSON.stringify(payload));
+  }
+
+  window.sendLobbyMessage = emitLobbyMessage;
+
+  let applyingRemotePatch = false;
+
+  function emitItemUpsert(el) {
+    if (applyingRemotePatch) return;
+    if (!isPatchSyncable(el)) return;
+
+    const item = serializeOneItem(el);
+    if (!item) return;
+
+    emitLobbyMessage({
+      type: 'item_upsert',
+      clientId: window.__clientId,
+      item,
+    });
+  }
+
+  function emitItemRemove(itemId) {
+    if (applyingRemotePatch) return;
+    if (!itemId) return;
+
+    emitLobbyMessage({
+      type: 'item_remove',
+      clientId: window.__clientId,
+      itemId,
+    });
+  }
+
+  const pendingUpserts = new Map();
+
+  function queueItemUpsert(el, delay = 180) {
+    if (!el) return;
+    ensureItemId(el);
+    const itemId = el.dataset.itemId;
+
+    const prior = pendingUpserts.get(itemId);
+    if (prior) clearTimeout(prior);
+
+    const timer = setTimeout(() => {
+      pendingUpserts.delete(itemId);
+      emitItemUpsert(el);
+    }, delay);
+
+    pendingUpserts.set(itemId, timer);
+  }
+
+  function removeItemById(itemId) {
+    const el = getItemById(itemId);
+    if (el) el.remove();
+  }
+
+  function createOrReplaceItemFromPatch(item) {
+    if (!item || !item.kind || !item.itemId) return;
+
+    const existing = getItemById(item.itemId);
+    if (existing) existing.remove();
+
+    let el = null;
+
+    if (item.kind === 'token') {
+      el = Widget.create('token', item.x, item.y, {
+        id: item.itemId,
+        size: Math.max(item.w || CELL, item.h || CELL),
+        label: item.label || '',
+        image: item.imageUrl || '',
+        shape: item.shape || 'circle',
+      });
+      el.style.width = (item.w || el.offsetWidth) + 'px';
+      el.style.height = (item.h || el.offsetHeight) + 'px';
+    }
+    else if (item.kind === 'image') {
+      el = Widget.create('image', item.x, item.y, {
+        id: item.itemId,
+        src: item.src || '',
+        width: item.w,
+        height: item.h,
+        rotation: item.rotation || 0,
+      });
+    }
+    else if (item.kind === 'card') {
+      el = document.createElement('div');
+      el.className = 'playing-card draggable';
+      el.dataset.itemId = item.itemId;
+      el.style.position = 'absolute';
+      el.style.left = snap(item.x || 0) + 'px';
+      el.style.top  = snap(item.y || 0) + 'px';
+      el.style.width = (item.w || 120) + 'px';
+      el.style.height = (item.h || 180) + 'px';
+      el.style.zIndex = item.z || 1;
+    
+      el._cardData = item.card || {};
+      el._flipped = !!item.flipped;
+    
+      function renderCardFace() {
+        el.textContent = '';
+        el.innerHTML = '';
+      
+        if (el._flipped) {
+          el.classList.add('back');
+          el.classList.remove('red');
+          return;
+        }
+      
+        el.classList.remove('back');
+      
+        if (el._cardData?.image) {
+          const img = document.createElement('img');
+          img.src = el._cardData.image;
+          img.draggable = false;
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          el.appendChild(img);
+          el.classList.remove('red');
+          return;
+        }
+      
+        if (el._cardData?.rank && el._cardData?.suit) {
+          el.textContent = `${el._cardData.rank}${el._cardData.suit}`;
+          if (el._cardData.color === 'red') el.classList.add('red');
+          else el.classList.remove('red');
+          return;
+        }
+      
+        el.textContent = el._cardData?.label || '';
+        el.classList.remove('red');
+      }
+    
+      renderCardFace();
+      makeDraggable(el, el);
+    
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.playing-card.selected').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+    
+      el.flipCard = function() {
+        el._flipped = !el._flipped;
+        renderCardFace();
+        queueItemUpsert(el, 0);
+      };
+    
+      board.appendChild(el);
+    }
+    else {
+      const props = {
+        id: item.itemId,
+        width: item.w,
+        height: item.h,
+      };
+
+      if (item.kind === 'notes') {
+        props.text = item.data?.text || '';
+      } else if (item.kind === 'dice') {
+        props.expr = item.data?.expr || '';
+        props.rolls = item.data?.rolls || [];
+      } else if (item.kind === 'cards' || item.kind === 'customCards') {
+        props.deckState = item.data?.deckState || null;
+      } else if (item.kind === 'chat') {
+        props.messages = item.data?.messages || [];
+      } else if (item.kind === 'scorecard') {
+        Object.assign(props, item.data || {});
+      } else if (item.kind === 'counters') {
+        props.counters = item.data?.counters || [];
+      }
+
+      el = Widget.create(item.kind, item.x, item.y, props);
+
+      if (item.kind === 'chat' && typeof el.setChatData === 'function' && item.data) {
+        el.setChatData(item.data);
+      }
+    }
+
+    if (!el) return;
+
+    ensureItemId(el, item.itemId);
+    el.style.left = snap(item.x || 0) + 'px';
+    el.style.top  = snap(item.y || 0) + 'px';
+    if (item.w) el.style.width = item.w + 'px';
+    if (item.h) el.style.height = item.h + 'px';
+    el.style.zIndex = item.z || 1;
+  }
+
+  function applyRemoteMessage(msg) {
+    if (!msg) return;
+
+    if (msg.type === 'item_upsert') {
+      applyingRemotePatch = true;
+      createOrReplaceItemFromPatch(msg.item);
+      applyingRemotePatch = false;
+      return;
+    }
+
+    if (msg.type === 'item_remove') {
+      applyingRemotePatch = true;
+      removeItemById(msg.itemId);
+      applyingRemotePatch = false;
+      return;
+    }
+  }
 </script>
 
 <script>
@@ -2233,12 +2696,24 @@ async function writeAutosaveToFile() {
 
 const dirtySoonGlobal = debounce(() => markBoardDirty(), 250);
 
+const syncSoon = debounce((el) => {
+  if (!el) return;
+  if (typeof queueItemUpsert === 'function') {
+    queueItemUpsert(el, 0);
+  }
+}, 200);
+
 document.addEventListener('input', (e) => {
   const board = document.getElementById('board');
   if (!board || !board.contains(e.target)) return;
 
   if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
     dirtySoonGlobal();
+
+    if (typeof getSyncRoot === 'function') {
+      const root = getSyncRoot(e.target);
+      if (root) syncSoon(root);
+    }
   }
 }, true);
 
@@ -2248,6 +2723,11 @@ document.addEventListener('change', (e) => {
 
   if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
     markBoardDirty();
+
+    if (typeof getSyncRoot === 'function' && typeof queueItemUpsert === 'function') {
+      const root = getSyncRoot(e.target);
+      if (root) queueItemUpsert(root, 0);
+    }
   }
 }, true);
 
@@ -2257,6 +2737,11 @@ document.addEventListener('blur', (e) => {
 
   if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
     markBoardDirty();
+
+    if (typeof getSyncRoot === 'function' && typeof queueItemUpsert === 'function') {
+      const root = getSyncRoot(e.target);
+      if (root) queueItemUpsert(root, 0);
+    }
   }
 }, true);
 
@@ -2305,9 +2790,6 @@ setInterval(() => {
 // Keep JSON stable in "board pixels"
 function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
 
-// Keep JSON stable in "board pixels"
-function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
-
 // Read rotation in degrees from a CSS matrix()
 function matrixToDeg(mstr){
   if (!mstr || mstr === 'none') return 0;
@@ -2328,6 +2810,7 @@ document.querySelectorAll('#board > .widget').forEach(el => {
 
   // default payload
   const base = {
+    itemId: el.dataset.itemId || ensureItemId(el),
     kind,
     label: title,
     x: pxToNum(el.style.left),
@@ -2412,6 +2895,7 @@ document.querySelectorAll('#board > .token').forEach(el => {
   }
 
   items.push({
+    itemId: el.dataset.itemId || ensureItemId(el),
     kind: 'token',
     shape: el.classList.contains('square') ? 'square' : 'circle',
     label,
@@ -2431,6 +2915,7 @@ document.querySelectorAll('#board > .token').forEach(el => {
     const src = img ? img.getAttribute('src') : '';
     const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
     items.push({
+      itemId: el.dataset.itemId || ensureItemId(el),
       kind: 'image',
       src,
       x: pxToNum(el.style.left),
@@ -2452,6 +2937,7 @@ document.querySelectorAll('#board > .token').forEach(el => {
       );
 
     items.push({
+      itemId: el.dataset.itemId || ensureItemId(el),
       kind: 'card',
       x: pxToNum(el.style.left),
       y: pxToNum(el.style.top),
@@ -2514,6 +3000,7 @@ function applyBoardState(state){
       // Widget.create(type, x, y, props)
       if (typeof Widget?.create === 'function' && Widget.builders?.token) {
         const el = Widget.create('token', it.x, it.y, {
+          id: it.itemId,
           size: Math.max(it.w, it.h),
           label: it.label || '',
           image: it.imageUrl || '',
@@ -2539,6 +3026,7 @@ function applyBoardState(state){
     if (it.kind === 'image') {
       if (typeof Widget?.create === 'function' && Widget.builders?.image) {
         const el = Widget.create('image', it.x, it.y, {
+          id: it.itemId,
           src: it.src || '',
           width: it.w,
           height: it.h,
@@ -2573,7 +3061,7 @@ function applyBoardState(state){
 
 // Panel widgets — restore position/size/title + inner state if we know it
 if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
-  let props = {};
+  let props = {id: it.itemId};
 
   if (it.kind === 'notes' && it.data) {
     props.text = it.data.text || '';
@@ -2617,6 +3105,7 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
 if (it.kind === 'card') {
   const cardDiv = document.createElement('div');
   cardDiv.className = 'playing-card draggable';
+  cardDiv.dataset.itemId = it.itemId || newItemId();
   cardDiv.style.position = 'absolute';
   cardDiv.style.left = it.x + 'px';
   cardDiv.style.top  = it.y + 'px';
@@ -2677,6 +3166,9 @@ if (it.kind === 'card') {
   cardDiv.flipCard = function() {
     cardDiv._flipped = !cardDiv._flipped;
     renderCardFace();
+    if (typeof queueItemUpsert === 'function') {
+      queueItemUpsert(cardDiv, 0);
+    }
   };
 
   board.appendChild(cardDiv);
@@ -3238,7 +3730,6 @@ document.addEventListener('keydown', (e) => {
   window.__clientId = clientId;
   let ws = null;
   let applyingRemote = false;
-  let sendTimer = null;
 
   let reconnectDelay = 500;
 
@@ -3298,6 +3789,10 @@ document.addEventListener('keydown', (e) => {
     ws.onopen = () => {
       console.log("WS connected");
       reconnectDelay = 500;
+      window.sendLobbyMessage({
+        type: "state_request",
+        clientId: window.__clientId
+      });
     };
 
     ws.onclose = (e) => {
@@ -3320,17 +3815,40 @@ document.addEventListener('keydown', (e) => {
       try {
         const msg = JSON.parse(evt.data);
       
-        // ignore our own echoes
         if (msg.clientId && msg.clientId === clientId) return;
       
-        if (msg.type === "board_state") {
-          applyingRemote = true;
-          applyBoardState(msg.state);
-          applyingRemote = false;
+        if (msg.type === "item_upsert" || msg.type === "item_remove") {
+          applyRemoteMessage(msg);
           return;
         }
-      
-        // --- NEW: sound sync messages ---
+
+        if (msg.type === "state_request") {
+          // Another client is asking for the current board snapshot.
+          // Reply only if we actually have something on the board.
+          const hasBoardContent =
+            document.querySelector('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card');
+
+          if (hasBoardContent) {
+            window.sendLobbyMessage({
+              type: "state_snapshot",
+              clientId: window.__clientId,
+              targetClientId: msg.clientId,
+              state: collectBoardState()
+            });
+          }
+          return;
+        }
+
+        if (msg.type === "state_snapshot") {
+          // Ignore snapshots not meant for this tab
+          if (msg.targetClientId !== window.__clientId) return;
+        
+          applyingRemotePatch = true;
+          applyBoardState(msg.state || { version: 1, cell: CELL, items: [], drawing: { strokes: [] } });
+          applyingRemotePatch = false;
+          return;
+        }
+
         if (msg.type === "sound_play") {
           if (typeof window.soundboardRemotePlay === "function") {
             window.soundboardRemotePlay(msg);
@@ -3351,23 +3869,9 @@ document.addEventListener('keydown', (e) => {
     };
   }
 
-  function scheduleSendState() {
-    if (applyingRemote) return;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-    clearTimeout(sendTimer);
-    sendTimer = setTimeout(() => {
-      const state = collectBoardState();
-      ws.send(JSON.stringify({ type: "board_state", clientId, state }));
-    }, 120);
-  }
 
-  // Hook the dirty-marker so any change schedules a send
-  const _origMarkBoardDirty = window.markBoardDirty;
-  window.markBoardDirty = function () {
-    if (typeof _origMarkBoardDirty === "function") _origMarkBoardDirty();
-    scheduleSendState();
-  };
+
 
   connectWS();
 </script>

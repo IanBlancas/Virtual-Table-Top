@@ -101,6 +101,8 @@ Widget.builders.chat = function (props = {}) {
 
     addMessage(username, message);
     messageInput.value = "";
+    markBoardDirty();
+    if (typeof queueItemUpsert === 'function') queueItemUpsert(el, 0);
   }
 
   // Function to clear chat
@@ -139,10 +141,6 @@ Widget.builders.chat = function (props = {}) {
     });
   }
 
-  // Focus message input when widget is created
-  setTimeout(() => {
-    messageInput.focus();
-  }, 100);
 
   // Expose message history for save/load functionality
   el.getChatData = function() {

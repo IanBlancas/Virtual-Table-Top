@@ -2,6 +2,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+
 class BoardConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.code = self.scope["url_route"]["kwargs"]["code"]
@@ -22,7 +23,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
         except json.JSONDecodeError:
             return
 
-        # Broadcast to everyone in the same lobby
+        # Re-broadcast exactly what the sender sent.
         await self.channel_layer.group_send(
             self.group_name,
             {
