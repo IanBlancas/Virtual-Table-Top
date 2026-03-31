@@ -198,15 +198,14 @@ el.querySelector(".stopAll").addEventListener("click", () => {
 });
 
 
-el.querySelector(".close").addEventListener("click", () => {
-  // Stop and remove any active sounds from this widget
+el.querySelector(".close").addEventListener("click", (e) => {
+  e.stopPropagation();
   sounds.forEach((a) => {
     a.pause();
     a.currentTime = 0;
     a.loop = false;
     GLOBAL_SOUNDS.delete(a);
   });
-  el.remove();
 });
 
 
