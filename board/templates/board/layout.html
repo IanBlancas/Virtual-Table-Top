@@ -18,7 +18,7 @@
 
             <div class="menubtn-row">
                 <div class="file dropdown">
-                  <button class="menubtn">File</button>
+                  <button class="menubtn" id="fileMenuBtn">File</button>
                   <div class="dropdown-content">
                     <a href="#" id="menu-save">Save board (JSON)</a>
                     <a href="#" id="menu-load">Load board…</a>
@@ -30,7 +30,7 @@
                 <input id="menu-load-input" type="file" accept=".json,.txt" style="display:none" />
 
                 <div class="file dropdown">
-                    <button class="menubtn">Lobby</button>
+                    <button class="menubtn" id="lobbyMenuBtn">Lobby</button>
                     <div class="dropdown-content">
                         <a href="#">Session Controls</a>
                         <a href="#">Manage Players</a>
@@ -64,6 +64,7 @@
                     <button class="menubtn">Help</button>
                     <div class="dropdown-content">
                         <a href="#" id="shortcutsBtn">Shortcuts</a>
+                        <a href="#" id="tutorialBtn">Tutorial</a>
                         <a href="#">Documentation</a>
                         <a href="#">Report an issue</a>
                         <a href="#">About</a>
@@ -3371,6 +3372,23 @@ document.addEventListener('keydown', (e) => {
 
   connectWS();
 </script>
+
+<script>
+  // Share button
+  document.querySelector('.sharebtn').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      const btn = document.querySelector('.sharebtn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = originalText, 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  });
+</script>
+
+<script src="{% static 'board/tutorial.js' %}"></script>
 </body>
 
 
