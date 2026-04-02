@@ -63,7 +63,6 @@ def register(request):
             'next': next_url,
         }
         return HttpResponse(template.render(ctx, request))
-
 @login_required
 def board(request, code=None):
     lobby = get_object_or_404(Lobby, code=code)
@@ -74,16 +73,36 @@ def board(request, code=None):
 
     members = LobbyMember.objects.select_related("user").filter(lobby=lobby)
 
+    current_user_is_host = request.user.id == lobby.host_id
+
+    player_rows = []
+    for member in members:
+        player_rows.append({
+            "id": member.user.id,
+            "username": member.user.username,
+            "is_host_member": member.user.id == lobby.host_id,
+            "can_kick": current_user_is_host and member.user.id != lobby.host_id,
+        })
+
     context = {
         "lobby_code": code,
         "lobby": lobby,
-        "members": members,
-        "is_host": request.user == lobby.host,
+        "members": player_rows,
+        "is_host": current_user_is_host,
     }
 
     template = loader.get_template("board/layout.html")
     return HttpResponse(template.render(context, request))
 
+    context = {
+        "lobby_code": code,
+        "lobby": lobby,
+        "members": player_rows,
+        "is_host": request.user == lobby.host,
+    }
+
+    template = loader.get_template("board/layout.html")
+    return HttpResponse(template.render(context, request))
 @require_POST
 @ajax_login_required
 def upload_card_image(request):

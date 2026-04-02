@@ -3383,15 +3383,14 @@
           <ul>
             {% for member in members %}
             <li>
-              {{ member.user.username }}
+              {{ member.username }}
 
-              {% if member.user == lobby.host %}
+              {% if member.is_host_member %}
               (Host)
               {% endif %}
 
-              {% if is_host and member.user != lobby.host.id %}
-              <form method="post" action="{% url 'lobbies:kick_player' lobby.code member.user.id %}"
-                style="display:inline;">
+              {% if member.can_kick %}
+              <form method="post" action="{% url 'lobbies:kick_player' lobby.code member.id %}" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit">Kick</button>
               </form>
