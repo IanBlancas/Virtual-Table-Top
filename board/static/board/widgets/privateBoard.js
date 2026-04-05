@@ -63,6 +63,7 @@
         <div class="pbody"><textarea class="ptext">${text}</textarea></div>
       `;
       this.contentEl.appendChild(el);
+      try { el.dataset.private = '1'; } catch (e) {}
       el.querySelector('.pclose').addEventListener('click', () => el.remove());
       this._makeDraggable(el);
       return el;
@@ -85,6 +86,7 @@
       el.style.height = '48px';
       el.textContent = label;
       this.contentEl.appendChild(el);
+      try { el.dataset.private = '1'; } catch (e) {}
       this._makeDraggable(el);
       return el;
     },

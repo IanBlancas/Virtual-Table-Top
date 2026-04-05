@@ -106,7 +106,7 @@
       <div class="private-controls">
         <!-- Controls removed: creation via main widget buttons (choose Private when spawning) -->
       </div>
-      <div id="private-board" class="private-board" style="position:relative; width:260px; height:180px; border:1px solid #ccc; background:#f7f7f7; overflow:auto; padding:6px;">
+      <div id="private-board" class="private-board" style="position:relative; width:100%; height:260px; border:1px solid #ccc; background:#f7f7f7; overflow:auto; padding:6px; box-sizing:border-box;">
         <!-- Private widgets will be placed here; they are not included in shared board state -->
       </div>
     </div>
@@ -143,10 +143,7 @@
     const tokenBtn = document.getElementById('tokenBtn')
     const cardsBtn = document.getElementById('cardsBtn');
     const counterBtn = document.getElementById('counterBtn');
-    counterBtn.addEventListener('click', () => {
-      Widget.create('counters', 0, 0);
-      markBoardDirty();
-    });
+    counterBtn.addEventListener('click', (e) => { spawnWidget('counters', e.target); });
 
     // lasso click and drag
 const lasso_Button = document.getElementById('lasso_Button');
@@ -647,6 +644,10 @@ function toggleWidgetLock(el) {
       }
       const target = container || board;
       target.appendChild(el);
+      // mark items created into a non-public container as private
+      try {
+        if (container && container !== board) el.dataset.private = '1';
+      } catch (e) { /* ignore if DOM not available */ }
       return el;
     }
   };
@@ -655,10 +656,10 @@ function toggleWidgetLock(el) {
 if (!window._flatTopCardKeyHandlerInstalled) {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Delete') {
-      // remove selected playing cards
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.remove());
-      // remove selected tokens
-      document.querySelectorAll('.token.selected').forEach(t => t.remove());
+      // remove selected playing cards (ignore private items)
+      document.querySelectorAll('.playing-card.draggable.selected:not([data-private="1"])').forEach(c => c.remove());
+      // remove selected tokens (ignore private items)
+      document.querySelectorAll('.token.selected:not([data-private="1"])').forEach(t => t.remove());
       // prevent browser navigation on Backspace
       if (e.key === 'Backspace') e.preventDefault();
       markBoardDirty();
@@ -861,10 +862,14 @@ function setTokenImageFromUrl(url) {
   close.className = 'close';
   close.innerHTML = '&times;';
   token.appendChild(close);
+  function maybeMarkDirty() {
+    try { if (token.dataset && token.dataset.private === '1') return; } catch (e) {}
+    markBoardDirty();
+  }
   close.addEventListener('click', (e) => {
     e.stopPropagation();
     token.remove();
-    markBoardDirty();
+    maybeMarkDirty();
   });
 
   // Make the token accept image drops *and* stop the event from reaching the board
@@ -908,18 +913,18 @@ token.addEventListener('drop', async (e) => {
   const dt = e.dataTransfer;
   if (!dt) return;
 
-  if (dt.files && dt.files.length) {
+    if (dt.files && dt.files.length) {
     const file = dt.files[0];
     if (file && file.type && file.type.startsWith('image/')) {
       await setTokenImageFromFile(file);
-      markBoardDirty();
+        maybeMarkDirty();
       return;
     }
   }
   const url = extractUrlFromDataTransfer(dt);
   if (url) {
     setTokenImageFromUrl(url);
-    markBoardDirty();
+    maybeMarkDirty();
   }
 });
 
@@ -944,7 +949,7 @@ token.addEventListener('drop', async (e) => {
       token.classList.replace('circle','square');
     }
     refreshShapeIcon();
-    markBoardDirty();
+    maybeMarkDirty();
   });
 
 
@@ -978,7 +983,7 @@ token.addEventListener('drop', async (e) => {
     token.style.width  = snapped + 'px';
     token.style.height = snapped + 'px';
     resizeTouchId = null;
-    markBoardDirty();
+    maybeMarkDirty();
   });
   // Touch events for resizing
   handle.addEventListener('touchstart', (e) => {
@@ -1046,7 +1051,7 @@ token.addEventListener('drop', async (e) => {
       token.appendChild(handle);                  // re-attach again
       token.appendChild(close);
       token.appendChild(shapeBtn);
-      markBoardDirty();
+      maybeMarkDirty();
     });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') input.blur();
@@ -1741,7 +1746,11 @@ Widget.builders.counters = function(props = {}) {
   const rows = el.querySelector('.rows');
   const addBtn = el.querySelector('.add-row');
   const close  = el.querySelector('.close');
-  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); markBoardDirty(); });
+  function maybeMarkDirtyCounters() {
+    try { if (el.dataset && el.dataset.private === '1') return; } catch (e) {}
+    markBoardDirty();
+  }
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); maybeMarkDirtyCounters(); });
 
   // helpers
   const clampInt = (v) => {
@@ -1770,15 +1779,15 @@ Widget.builders.counters = function(props = {}) {
     const nameInput  = row.querySelector('.name');
     const valueInput = row.querySelector('.value');
 
-    nameInput.addEventListener('blur', () => markBoardDirty());
+    nameInput.addEventListener('blur', () => maybeMarkDirtyCounters());
 
     valueInput.addEventListener('keydown', (e)=> {
       if (e.key === 'Enter') { valueInput.blur(); e.stopPropagation(); }
-      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
-      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
+      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); maybeMarkDirtyCounters(); e.preventDefault(); }
+      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); maybeMarkDirtyCounters(); e.preventDefault(); }
       e.stopPropagation();
     });
-    valueInput.addEventListener('blur', () => { set(n()); markBoardDirty(); });
+    valueInput.addEventListener('blur', () => { set(n()); maybeMarkDirtyCounters(); });
     valueInput.addEventListener('input', ()=>{
       // live-clean non-digits except leading '-'
       const m = valueInput.value.match(/^-?\d*/);
@@ -1789,7 +1798,7 @@ Widget.builders.counters = function(props = {}) {
     row.querySelector('.trash').addEventListener('click', (e)=> {
       e.stopPropagation();
       row.remove();
-      markBoardDirty();
+      maybeMarkDirtyCounters();
     });
 
     rows.appendChild(row);
@@ -1802,7 +1811,7 @@ Widget.builders.counters = function(props = {}) {
   addBtn.addEventListener('click', (e)=> {
     e.stopPropagation();
     createRow({});
-    markBoardDirty();
+    maybeMarkDirtyCounters();
   });
 
   return el;
@@ -2360,7 +2369,7 @@ function collectBoardState(){
   const items = [];
 
   // 1) Panel widgets (anything with #board > .widget)
-document.querySelectorAll('#board > .widget').forEach(el => {
+document.querySelectorAll('#board > .widget:not([data-private="1"])').forEach(el => {
   const kind  = el.dataset.type || 'widget';
   const title = el.querySelector('.header div')?.textContent?.trim() || '';
 
@@ -2428,7 +2437,7 @@ document.querySelectorAll('#board > .widget').forEach(el => {
 
 
   // 2) Tokens
-document.querySelectorAll('#board > .token').forEach(el => {
+document.querySelectorAll('#board > .token:not([data-private="1"])').forEach(el => {
 
   // Prefer the persisted source if present
   let imageUrl = el.dataset.imageSrc || '';
@@ -2464,7 +2473,7 @@ document.querySelectorAll('#board > .token').forEach(el => {
 
 
   // 3) Image widgets (note: rotation is on the IMG, not the wrapper)
-  document.querySelectorAll('#board > .image-widget').forEach(el => {
+  document.querySelectorAll('#board > .image-widget:not([data-private="1"])').forEach(el => {
     const img = el.querySelector('img.image');
     const src = img ? img.getAttribute('src') : '';
     const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
@@ -2481,7 +2490,7 @@ document.querySelectorAll('#board > .token').forEach(el => {
   });
 
     // 4) Playing cards
-  document.querySelectorAll('#board > .playing-card.draggable').forEach(el => {
+  document.querySelectorAll('#board > .playing-card.draggable:not([data-private="1"])').forEach(el => {
     const img = el.querySelector('img');
     const cardData =
       el._cardData ? el._cardData : (
@@ -2526,7 +2535,7 @@ function downloadJSON(data, filename='flattop-board.json'){
 }
 
 function clearBoard(){
-  document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card')
+  document.querySelectorAll('#board > .widget:not([data-private="1"]), #board > .token:not([data-private="1"]), #board > .image-widget:not([data-private="1"]), #board > .playing-card:not([data-private="1"])')
     .forEach(el => el.remove());
 }
 
@@ -3197,7 +3206,7 @@ document.addEventListener('keydown', (e) => {
   if (zoomFitBtn) {
     zoomFitBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      const widgets = document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card');
+      const widgets = document.querySelectorAll('#board > .widget:not([data-private="1"]), #board > .token:not([data-private="1"]), #board > .image-widget:not([data-private="1"]), #board > .playing-card:not([data-private="1"])');
       if (widgets.length === 0) {
         resetView();
         return;
@@ -3244,7 +3253,7 @@ document.addEventListener('keydown', (e) => {
   if (showAllWidgetsBtn) {
     showAllWidgetsBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card').forEach(widget => {
+      document.querySelectorAll('#board > .widget:not([data-private="1"]), #board > .token:not([data-private="1"]), #board > .image-widget:not([data-private="1"]), #board > .playing-card:not([data-private="1"])').forEach(widget => {
         widget.style.display = 'block';
         widget.style.opacity = '1';
       });
@@ -3362,6 +3371,7 @@ document.addEventListener('keydown', (e) => {
         if (msg.clientId && msg.clientId === clientId) return;
       
         if (msg.type === "board_state") {
+          try { console.log('INCOMING board_state items=', (msg.state?.items||[]).length); } catch (e) {}
           applyingRemote = true;
           applyBoardState(msg.state);
           applyingRemote = false;
@@ -3396,6 +3406,14 @@ document.addEventListener('keydown', (e) => {
     clearTimeout(sendTimer);
     sendTimer = setTimeout(() => {
       const state = collectBoardState();
+      // If there are no public items and no drawing strokes, don't broadcast empty state.
+      const publicItems = Array.isArray(state.items) ? state.items.length : 0;
+      const drawingStrokes = state.drawing && Array.isArray(state.drawing.strokes) ? state.drawing.strokes.length : 0;
+      if (publicItems === 0 && drawingStrokes === 0) {
+        try { console.log('SKIP sending empty board_state (private-only)'); } catch (e) {}
+        return;
+      }
+      try { console.log('OUTGOING board_state items=', (state.items||[]).length, 'drawing=', (state.drawing?.strokes||[]).length); } catch (e) {}
       ws.send(JSON.stringify({ type: "board_state", clientId, state }));
     }, 120);
   }
