@@ -1,89 +1,89 @@
 <!doctype html>
 
 <head>
-    {% load static %}
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <link rel="stylesheet" href="{% static 'board/layoutStyle.css' %}">
-    <link rel="stylesheet" href="{% static 'board/widgets/widgets.css' %}">
+  {% load static %}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="stylesheet" href="{% static 'board/layoutStyle.css' %}">
+  <link rel="stylesheet" href="{% static 'board/widgets/widgets.css' %}">
 
-    <title>FlatTop — Board</title>
+  <title>FlatTop — Board</title>
 </head>
 
 <body>
-    <header class="top">
-        <div class="left">
-            <h1>Lobby Owner: Name</h1>
+  <header class="top">
+    <div class="left">
+      <h1>Lobby Host: {{ lobby.host.username }}</h1>
 
-            <div class="menubtn-row">
-                <div class="file dropdown">
-                  <button class="menubtn">File</button>
-                  <div class="dropdown-content">
-                    <a href="#" id="menu-save">Save board (JSON)</a>
-                    <a href="#" id="menu-load">Load board…</a>
-                    <a href="#" id="menu-autosave-file">Choose autosave file…</a>
-                  </div>
-                </div>
-
-                <!-- Hidden file input for “Load…” -->
-                <input id="menu-load-input" type="file" accept=".json,.txt" style="display:none" />
-
-                <div class="file dropdown">
-                    <button class="menubtn">Lobby</button>
-                    <div class="dropdown-content">
-                        <a href="#">Session Controls</a>
-                        <a href="#">Manage Players</a>
-                        <a href="#">Settings</a>
-                        <a href="#">Utility</a>
-                    </div>
-                </div>
-
-                <div class="file dropdown">
-                    <button class="menubtn">Insert</button>
-                    <div class="dropdown-content">
-                    <a href="#" id="insertShapesBtn">Shapes</a>
-                    <a href="#" id="insertImageBtn">Image</a>
-                    <a href="#" id="insertTextBtn">Text</a>
-                    <a href="#" id="insertOtherBtn">Other</a>
-                    </div>
-                </div>
-
-                <div class="file dropdown">
-                    <button class="menubtn">View</button>
-                    <div class="dropdown-content">
-                        <a href="#" id="toggleGridBtn">Toggle Grid</a>
-                        <a href="#" id="resetViewBtn">Reset View</a>
-                        <a href="#" id="zoomFitBtn">Zoom to fit</a>
-                        <a href="#" id="showAllWidgetsBtn">Show all widgets</a>
-                        <a href="#" id="fullscreenBtn">Fullscreen</a>
-                    </div>
-                </div>
-
-                <div class="file dropdown">
-                    <button class="menubtn">Help</button>
-                    <div class="dropdown-content">
-                        <a href="#" id="shortcutsBtn">Shortcuts</a>
-                        <a href="#">Documentation</a>
-                        <a href="#">Report an issue</a>
-                        <a href="#">About</a>
-                    </div>
-                </div>
-            </div>
+      <div class="menubtn-row">
+        <div class="file dropdown">
+          <button class="menubtn">File</button>
+          <div class="dropdown-content">
+            <a href="#" id="menu-save">Save board (JSON)</a>
+            <a href="#" id="menu-load">Load board…</a>
+            <a href="#" id="menu-autosave-file">Choose autosave file…</a>
+          </div>
         </div>
 
-        <div class="right">
-            <div class="right-row">
-                <h1>Lobby Code: {{lobby_code}}</h1>
-                <button class="sharebtn">Share</button>
-            </div>
-        </div>
-    </header>
+        <!-- Hidden file input for “Load…” -->
+        <input id="menu-load-input" type="file" accept=".json,.txt" style="display:none" />
 
-    <aside class="sidebar">
-        <h2>Widgets</h2>
+        <div class="file dropdown">
+          <button class="menubtn">Lobby</button>
+          <div class="dropdown-content">
+            <a href="#">Session Controls</a>
+            <a href="#" id="managePlayersBtn">Manage Players</a>
+            <a href="#">Settings</a>
+            <a href="#">Utility</a>
+          </div>
+        </div>
+
+        <div class="file dropdown">
+          <button class="menubtn">Insert</button>
+          <div class="dropdown-content">
+            <a href="#" id="insertShapesBtn">Shapes</a>
+            <a href="#" id="insertImageBtn">Image</a>
+            <a href="#" id="insertTextBtn">Text</a>
+            <a href="#" id="insertOtherBtn">Other</a>
+          </div>
+        </div>
+
+        <div class="file dropdown">
+          <button class="menubtn">View</button>
+          <div class="dropdown-content">
+            <a href="#" id="toggleGridBtn">Toggle Grid</a>
+            <a href="#" id="resetViewBtn">Reset View</a>
+            <a href="#" id="zoomFitBtn">Zoom to fit</a>
+            <a href="#" id="showAllWidgetsBtn">Show all widgets</a>
+            <a href="#" id="fullscreenBtn">Fullscreen</a>
+          </div>
+        </div>
+
+        <div class="file dropdown">
+          <button class="menubtn">Help</button>
+          <div class="dropdown-content">
+            <a href="#" id="shortcutsBtn">Shortcuts</a>
+            <a href="#">Documentation</a>
+            <a href="#">Report an issue</a>
+            <a href="#">About</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="right-row">
+        <h1>Lobby Code: {{lobby_code}}</h1>
+        <button class="sharebtn">Share</button>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <h2>Widgets</h2>
     <div class="widget-list">
-      <button id = "diceBtn">Dice</button>
+      <button id="diceBtn">Dice</button>
 
       <div class="file dropdown">
         <button class="menubtn">Cards</button>
@@ -93,29 +93,29 @@
         </div>
       </div>
 
-      <button id = "tokenBtn">Tokens</button>
-      <button id = "counterBtn">Counters</button>
-  <button id = "scoreBtn">Scorecard</button>
-      <button id = "soundBtn">Soundboard</button>
+      <button id="tokenBtn">Tokens</button>
+      <button id="counterBtn">Counters</button>
+      <button id="scoreBtn">Scorecard</button>
+      <button id="soundBtn">Soundboard</button>
       <button id="addNotesWidget">Notes</button>
       <button id="chatBtn">Chat</button>
     </div>
-    </aside>
+  </aside>
 
-    <main class="mainBoard">
-        <div class="toolbar">
-    <button id = "lasso_Button">Lasso</button>
-    <button id="draw_Button">Draw</button>
-    <button id="ruler_Button">Ruler</button>
+  <main class="mainBoard">
+    <div class="toolbar">
+      <button id="lasso_Button">Lasso</button>
+      <button id="draw_Button">Draw</button>
+      <button id="ruler_Button">Ruler</button>
 
-  </div>
+    </div>
 
-  <div class="wrap" id="wrap">
-    <div class="board" id="board"></div>
-    <canvas id="drawCanvas"></canvas>
-  </div>
+    <div class="wrap" id="wrap">
+      <div class="board" id="board"></div>
+      <canvas id="drawCanvas"></canvas>
+    </div>
 
-<script src="{% static 'board/widgets/drawing.js' %}"></script>
+    <script src="{% static 'board/widgets/drawing.js' %}"></script>
 
   <script>
     // --- minimal pan & zoom controller ---
@@ -139,28 +139,28 @@
       markBoardDirty();
     });
 
-    // lasso click and drag
-const lasso_Button = document.getElementById('lasso_Button');
-let usingLasso = false;
-let draggingLasso = false;
-let lasso_Start = { x: 0, y: 0 };
-let lasso_box = null;
+      // lasso click and drag
+      const lasso_Button = document.getElementById('lasso_Button');
+      let usingLasso = false;
+      let draggingLasso = false;
+      let lasso_Start = { x: 0, y: 0 };
+      let lasso_box = null;
 
-lasso_Button.addEventListener('click', () => {
-  usingLasso = !usingLasso;
-  lasso_Button.classList.toggle('active', usingLasso);
-  wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
-});
+      lasso_Button.addEventListener('click', () => {
+        usingLasso = !usingLasso;
+        lasso_Button.classList.toggle('active', usingLasso);
+        wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
+      });
 
-// Ctrl+L toggle
-window.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key === 'l') {
-    usingLasso = !usingLasso;
-    lasso_Button.classList.toggle('active', usingLasso);
-    wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
-    e.preventDefault();
-  }
-});
+      // Ctrl+L toggle
+      window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'l') {
+          usingLasso = !usingLasso;
+          lasso_Button.classList.toggle('active', usingLasso);
+          wrap.style.cursor = usingLasso ? 'crosshair' : 'default';
+          e.preventDefault();
+        }
+      });
 
 // Draw mode toggle
 drawButton.addEventListener("click", () => {
@@ -183,271 +183,271 @@ drawButton.addEventListener("click", () => {
 
 
 
-// stop right-click menu when we’re lassoing
-wrap.addEventListener('contextmenu', (e) => {
-  if (usingLasso) e.preventDefault();
-});
+      // stop right-click menu when we’re lassoing
+      wrap.addEventListener('contextmenu', (e) => {
+        if (usingLasso) e.preventDefault();
+      });
 
-// get all things we want to be selectable
-function getSelectableWidgets() {
-  return Array.from(document.querySelectorAll(
-    '.token, .playing-card.draggable, .image-widget, .widget'
-  ));
-}
+      // get all things we want to be selectable
+      function getSelectableWidgets() {
+        return Array.from(document.querySelectorAll(
+          '.token, .playing-card.draggable, .image-widget, .widget'
+        ));
+      }
 
-wrap.addEventListener('mousedown', (e) => {
-  if (!usingLasso) return;
-  if (e.button !== 0) return;
+      wrap.addEventListener('mousedown', (e) => {
+        if (!usingLasso) return;
+        if (e.button !== 0) return;
 
-  const rect = wrap.getBoundingClientRect();
-  draggingLasso = true;
+        const rect = wrap.getBoundingClientRect();
+        draggingLasso = true;
 
-  lasso_Start = {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  };
+        lasso_Start = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
 
-  lasso_box = document.createElement('div');
-  lasso_box.className = 'lasso_box';
-  lasso_box.style.left = lasso_Start.x + 'px';
-  lasso_box.style.top = lasso_Start.y + 'px';
-  lasso_box.style.width = '0px';
-  lasso_box.style.height = '0px';
-  wrap.appendChild(lasso_box);
-});
+        lasso_box = document.createElement('div');
+        lasso_box.className = 'lasso_box';
+        lasso_box.style.left = lasso_Start.x + 'px';
+        lasso_box.style.top = lasso_Start.y + 'px';
+        lasso_box.style.width = '0px';
+        lasso_box.style.height = '0px';
+        wrap.appendChild(lasso_box);
+      });
 
-window.addEventListener('mousemove', (e) => {
-  if (!draggingLasso || !lasso_box) return;
+      window.addEventListener('mousemove', (e) => {
+        if (!draggingLasso || !lasso_box) return;
 
-  const rect = wrap.getBoundingClientRect();
-  const curX = e.clientX - rect.left;
-  const curY = e.clientY - rect.top;
+        const rect = wrap.getBoundingClientRect();
+        const curX = e.clientX - rect.left;
+        const curY = e.clientY - rect.top;
 
-  const left = Math.min(lasso_Start.x, curX);
-  const top = Math.min(lasso_Start.y, curY);
-  const width = Math.abs(curX - lasso_Start.x);
-  const height = Math.abs(curY - lasso_Start.y);
+        const left = Math.min(lasso_Start.x, curX);
+        const top = Math.min(lasso_Start.y, curY);
+        const width = Math.abs(curX - lasso_Start.x);
+        const height = Math.abs(curY - lasso_Start.y);
 
-  lasso_box.style.left = left + 'px';
-  lasso_box.style.top = top + 'px';
-  lasso_box.style.width = width + 'px';
-  lasso_box.style.height = height + 'px';
-});
+        lasso_box.style.left = left + 'px';
+        lasso_box.style.top = top + 'px';
+        lasso_box.style.width = width + 'px';
+        lasso_box.style.height = height + 'px';
+      });
 
-window.addEventListener('mouseup', (e) => {
-  if (!draggingLasso) return;
-  draggingLasso = false;
+      window.addEventListener('mouseup', (e) => {
+        if (!draggingLasso) return;
+        draggingLasso = false;
 
-  const boxRect = lasso_box.getBoundingClientRect();
-  lasso_box.remove();
-  lasso_box = null;
+        const boxRect = lasso_box.getBoundingClientRect();
+        lasso_box.remove();
+        lasso_box = null;
 
-  // removes previously selected widgets
-  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+        // removes previously selected widgets
+        document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
 
-  // checks for overlapping widgets
-  const widgets = getSelectableWidgets();
-  widgets.forEach(widget => {
-    const r = widget.getBoundingClientRect();
-    const overlap =
-      r.right  > boxRect.left &&
-      r.left   < boxRect.right &&
-      r.bottom > boxRect.top &&
-      r.top    < boxRect.bottom;
+        // checks for overlapping widgets
+        const widgets = getSelectableWidgets();
+        widgets.forEach(widget => {
+          const r = widget.getBoundingClientRect();
+          const overlap =
+            r.right > boxRect.left &&
+            r.left < boxRect.right &&
+            r.bottom > boxRect.top &&
+            r.top < boxRect.bottom;
 
-    if (overlap) {
-      widget.classList.add('selected');
-    }
-  });
-});
+          if (overlap) {
+            widget.classList.add('selected');
+          }
+        });
+      });
 
-    var scale = 1;     // zoom factor
-    var panX  = 0;     // translation in px
-    var panY  = 0;
-    // trackpad/mouse wheel zoom sensitivity (smaller = finer control)
-    var zoomSensitivity = window.zoomSensitivity || 0.0025;
+      var scale = 1;     // zoom factor
+      var panX = 0;     // translation in px
+      var panY = 0;
+      // trackpad/mouse wheel zoom sensitivity (smaller = finer control)
+      var zoomSensitivity = window.zoomSensitivity || 0.0025;
 
-    // Initialize the Drawing Engine
-    Drawing.init(document.getElementById("drawCanvas"));
+      // Initialize the Drawing Engine
+      Drawing.init(document.getElementById("drawCanvas"));
 
-    function applyTransform() {
-      board.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-    }
-    function resetView() {
-      scale = 1; panX = 0; panY = 0; applyTransform();
-    }
-    if (resetBtn) {
-      resetBtn.addEventListener('click', resetView);
-    }
-    applyTransform();
-
-    // Mouse wheel / trackpad zoom around cursor
-    wrap.addEventListener('wheel', (e) => {
-      e.preventDefault();
-
-      // Use exponential scaling driven by deltaY and sensitivity so both mouse
-      // wheel and trackpad gestures feel natural. Smaller `zoomSensitivity`
-      // yields finer control.
-      const delta = e.deltaY; // positive = zoom out, negative = zoom in
-      const factor = Math.exp(-delta * zoomSensitivity);
-
-      const newScale = Math.min(3, Math.max(0.2, scale * factor));
-      if (newScale === scale) return;
-
-      // Use WRAP rect for stable math across fixed headers/sidebars
-      const wrect = wrap.getBoundingClientRect();
-
-      // Board-space coords of the cursor BEFORE zoom
-      const bx = (e.clientX - wrect.left - panX) / scale;
-      const by = (e.clientY - wrect.top  - panY) / scale;
-
-      // Keep cursor anchored after zoom
-      panX = e.clientX - wrect.left - bx * newScale;
-      panY = e.clientY - wrect.top  - by * newScale;
-
-      scale = newScale;
+      function applyTransform() {
+        board.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+      }
+      function resetView() {
+        scale = 1; panX = 0; panY = 0; applyTransform();
+      }
+      if (resetBtn) {
+        resetBtn.addEventListener('click', resetView);
+      }
       applyTransform();
-      Drawing.render();
-    }, { passive: false });
+
+      // Mouse wheel / trackpad zoom around cursor
+      wrap.addEventListener('wheel', (e) => {
+        e.preventDefault();
+
+        // Use exponential scaling driven by deltaY and sensitivity so both mouse
+        // wheel and trackpad gestures feel natural. Smaller `zoomSensitivity`
+        // yields finer control.
+        const delta = e.deltaY; // positive = zoom out, negative = zoom in
+        const factor = Math.exp(-delta * zoomSensitivity);
+
+        const newScale = Math.min(3, Math.max(0.2, scale * factor));
+        if (newScale === scale) return;
+
+        // Use WRAP rect for stable math across fixed headers/sidebars
+        const wrect = wrap.getBoundingClientRect();
+
+        // Board-space coords of the cursor BEFORE zoom
+        const bx = (e.clientX - wrect.left - panX) / scale;
+        const by = (e.clientY - wrect.top - panY) / scale;
+
+        // Keep cursor anchored after zoom
+        panX = e.clientX - wrect.left - bx * newScale;
+        panY = e.clientY - wrect.top - by * newScale;
+
+        scale = newScale;
+        applyTransform();
+        Drawing.render();
+      }, { passive: false });
 
 
-    // Middle-mouse panning (button === 1)
-    let panning = false;
-    let startX = 0, startY = 0;
-    let basePanX = 0, basePanY = 0;
+      // Middle-mouse panning (button === 1)
+      let panning = false;
+      let startX = 0, startY = 0;
+      let basePanX = 0, basePanY = 0;
 
-    wrap.addEventListener('mousedown', (e) => {
-      if (e.button !== 1) return;      // only middle button
-      panning = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      basePanX = panX;
-      basePanY = panY;
-      e.preventDefault();
-    });
+      wrap.addEventListener('mousedown', (e) => {
+        if (e.button !== 1) return;      // only middle button
+        panning = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        basePanX = panX;
+        basePanY = panY;
+        e.preventDefault();
+      });
 
-    window.addEventListener('mousemove', (e) => {
-      if (!panning) return;
-      panX = basePanX + (e.clientX - startX);
-      panY = basePanY + (e.clientY - startY);
-      applyTransform();
-      Drawing.render();
-    });
+      window.addEventListener('mousemove', (e) => {
+        if (!panning) return;
+        panX = basePanX + (e.clientX - startX);
+        panY = basePanY + (e.clientY - startY);
+        applyTransform();
+        Drawing.render();
+      });
 
-    window.addEventListener('mouseup', () => {
-      panning = false;
-    });
+      window.addEventListener('mouseup', () => {
+        panning = false;
+      });
 
-// ===== TOUCH PAN + PINCH ZOOM =====
+      // ===== TOUCH PAN + PINCH ZOOM =====
 
-// Internal state
-let isTouchPanning = false;
-let isPinching = false;
-let startPan = { x: 0, y: 0 };
-let panOrigin = { x: 0, y: 0 };
+      // Internal state
+      let isTouchPanning = false;
+      let isPinching = false;
+      let startPan = { x: 0, y: 0 };
+      let panOrigin = { x: 0, y: 0 };
 
-let pinchStartDist = 0;
-let pinchStartScale = 1;
-let pinchCenter = { x: 0, y: 0 };
+      let pinchStartDist = 0;
+      let pinchStartScale = 1;
+      let pinchCenter = { x: 0, y: 0 };
 
-// Measure distance between two touch points
-function dist(t1, t2) {
-  const dx = t1.clientX - t2.clientX;
-  const dy = t1.clientY - t2.clientY;
-  return Math.hypot(dx, dy);
-}
+      // Measure distance between two touch points
+      function dist(t1, t2) {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.hypot(dx, dy);
+      }
 
-wrap.addEventListener("touchstart", (e) => {
-  if (drawingMode) return;
-    
-  if (e.touches.length === 1) {
-    if (isPinching) return;      // don't pan if starting in pinch
-    isTouchPanning = true;
+      wrap.addEventListener("touchstart", (e) => {
+        if (drawingMode) return;
 
-    const t = e.touches[0];
-    startPan.x = t.clientX;
-    startPan.y = t.clientY;
-    panOrigin.x = panX;
-    panOrigin.y = panY;
-  }
+        if (e.touches.length === 1) {
+          if (isPinching) return;      // don't pan if starting in pinch
+          isTouchPanning = true;
 
-  if (e.touches.length === 2) {
-    isTouchPanning = false;
-    isPinching = true;
+          const t = e.touches[0];
+          startPan.x = t.clientX;
+          startPan.y = t.clientY;
+          panOrigin.x = panX;
+          panOrigin.y = panY;
+        }
 
-    pinchStartDist = dist(e.touches[0], e.touches[1]);
-    pinchStartScale = scale;
+        if (e.touches.length === 2) {
+          isTouchPanning = false;
+          isPinching = true;
 
-    pinchCenter.x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    pinchCenter.y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-  }
-}, { passive: false });
+          pinchStartDist = dist(e.touches[0], e.touches[1]);
+          pinchStartScale = scale;
 
-wrap.addEventListener("touchmove", (e) => {
-  if (drawingMode) return;
-    
-  // ----- Single finger pan -----
-  if (isTouchPanning && e.touches.length === 1) {
-    const t = e.touches[0];
-    panX = panOrigin.x + (t.clientX - startPan.x);
-    panY = panOrigin.y + (t.clientY - startPan.y);
+          pinchCenter.x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          pinchCenter.y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        }
+      }, { passive: false });
 
-    applyTransform();
-    Drawing.render?.();
-    e.preventDefault();
-    return;
-  }
+      wrap.addEventListener("touchmove", (e) => {
+        if (drawingMode) return;
 
-  // ----- Pinch zoom -----
-  if (isPinching && e.touches.length === 2) {
-    const newDist = dist(e.touches[0], e.touches[1]);
-    const zoomFactor = newDist / pinchStartDist;
+        // ----- Single finger pan -----
+        if (isTouchPanning && e.touches.length === 1) {
+          const t = e.touches[0];
+          panX = panOrigin.x + (t.clientX - startPan.x);
+          panY = panOrigin.y + (t.clientY - startPan.y);
 
-    const newScale = Math.max(0.2, Math.min(3, pinchStartScale * zoomFactor));
+          applyTransform();
+          Drawing.render?.();
+          e.preventDefault();
+          return;
+        }
 
-    const wrect = wrap.getBoundingClientRect();
-    const bx = (pinchCenter.x - wrect.left - panX) / scale;
-    const by = (pinchCenter.y - wrect.top  - panY) / scale;
+        // ----- Pinch zoom -----
+        if (isPinching && e.touches.length === 2) {
+          const newDist = dist(e.touches[0], e.touches[1]);
+          const zoomFactor = newDist / pinchStartDist;
 
-    // Re-anchor under fingers
-    panX = pinchCenter.x - wrect.left - bx * newScale;
-    panY = pinchCenter.y - wrect.top  - by * newScale;
+          const newScale = Math.max(0.2, Math.min(3, pinchStartScale * zoomFactor));
 
-    scale = newScale;
-    applyTransform();
-    Drawing.render?.();
+          const wrect = wrap.getBoundingClientRect();
+          const bx = (pinchCenter.x - wrect.left - panX) / scale;
+          const by = (pinchCenter.y - wrect.top - panY) / scale;
 
-    e.preventDefault();
-  }
-}, { passive: false });
+          // Re-anchor under fingers
+          panX = pinchCenter.x - wrect.left - bx * newScale;
+          panY = pinchCenter.y - wrect.top - by * newScale;
 
-wrap.addEventListener("touchend", (e) => {
-  if (e.touches.length === 0) {
-    isTouchPanning = false;
-    isPinching = false;
-  }
-  if (e.touches.length === 1) {
-    isPinching = false;  // user lifted one finger -> go back to panning
-  }
-});
+          scale = newScale;
+          applyTransform();
+          Drawing.render?.();
 
-    // Spacebar to toggle temporary panning with left mouse
-    let spacePan = false;
-    window.addEventListener('keydown', (e) => { if (e.code === 'Space') spacePan = true; });
-    window.addEventListener('keyup',   (e) => { if (e.code === 'Space') spacePan = false; });
+          e.preventDefault();
+        }
+      }, { passive: false });
 
-    wrap.addEventListener('mousedown', (e) => {
-      if (!(spacePan && e.button === 0)) return;  // left click with Space held
-      panning = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      basePanX = panX;
-      basePanY = panY;
-      e.preventDefault();
-    }, true);
-  </script>
+      wrap.addEventListener("touchend", (e) => {
+        if (e.touches.length === 0) {
+          isTouchPanning = false;
+          isPinching = false;
+        }
+        if (e.touches.length === 1) {
+          isPinching = false;  // user lifted one finger -> go back to panning
+        }
+      });
 
-  
+      // Spacebar to toggle temporary panning with left mouse
+      let spacePan = false;
+      window.addEventListener('keydown', (e) => { if (e.code === 'Space') spacePan = true; });
+      window.addEventListener('keyup', (e) => { if (e.code === 'Space') spacePan = false; });
+
+      wrap.addEventListener('mousedown', (e) => {
+        if (!(spacePan && e.button === 0)) return;  // left click with Space held
+        panning = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        basePanX = panX;
+        basePanY = panY;
+        e.preventDefault();
+      }, true);
+    </script>
+
+
 
 <script>
   // ===== Shared constants/helpers =====
@@ -493,62 +493,64 @@ wrap.addEventListener("touchend", (e) => {
     );
   }
 
+      // Bring-to-front counter
+      let zTop = 1;
 // Bring-to-front counter (keep this if you had it)
 let zTop = 1;
 
-// draggable that supports multi-select drag
-function makeDraggable(el, handle = el) {
-  let dragging = false;
-  let dragStartBoard = { x: 0, y: 0 };
-  // array of {el, startLeft, startTop}
-    let dragTargets = [];
-    let touchId = null;
+      // draggable that supports multi-select drag
+      function makeDraggable(el, handle = el) {
+        let dragging = false;
+        let dragStartBoard = { x: 0, y: 0 };
+        // array of {el, startLeft, startTop}
+        let dragTargets = [];
+        let touchId = null;
 
-    // modified to ignore locked widgets
-    function startDrag(clientX, clientY) {
-      if (el.classList.contains('locked')) return; // cannot drag locked widget
-      dragging = true;
-      const selected = Array.from(document.querySelectorAll('.selected'));
-      if (el.classList.contains('selected') && selected.length > 0) {
-        dragTargets = selected.map(node => ({
-          el: node,
-          startLeft: parseFloat(node.style.left) || 0,
-          startTop: parseFloat(node.style.top) || 0
-        }));
-      } else {
-        dragTargets = [{
-          el,
-          startLeft: parseFloat(el.style.left) || 0,
-          startTop: parseFloat(el.style.top) || 0
-        }];
-        document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
-        el.classList.add('selected');
-      }
-      if (!el.classList.contains('image-widget')) {
-        el.style.zIndex = ++zTop;
-      } else {
-        el.style.zIndex = 0;
-      }
-      dragStartBoard = toBoardCoords(clientX, clientY);
-    }
+        // modified to ignore locked widgets
+        function startDrag(clientX, clientY) {
+          if (el.classList.contains('locked')) return; // cannot drag locked widget
+          dragging = true;
+          const selected = Array.from(document.querySelectorAll('.selected'));
+          if (el.classList.contains('selected') && selected.length > 0) {
+            dragTargets = selected.map(node => ({
+              el: node,
+              startLeft: parseFloat(node.style.left) || 0,
+              startTop: parseFloat(node.style.top) || 0
+            }));
+          } else {
+            dragTargets = [{
+              el,
+              startLeft: parseFloat(el.style.left) || 0,
+              startTop: parseFloat(el.style.top) || 0
+            }];
+            document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+            el.classList.add('selected');
+          }
+          if (!el.classList.contains('image-widget')) {
+            el.style.zIndex = ++zTop;
+          } else {
+            el.style.zIndex = 0;
+          }
+          dragStartBoard = toBoardCoords(clientX, clientY);
+        }
 
-    function moveDrag(clientX, clientY) {
-      if (!dragging) return;
-      // double-check locked state
-      if (dragTargets.some(t => t.el.classList.contains('locked'))) {
-        dragging = false;
-        dragTargets = [];
-        touchId = null;
-        return;
-      }
-      const curBoard = toBoardCoords(clientX, clientY);
-      const dx = curBoard.x - dragStartBoard.x;
-      const dy = curBoard.y - dragStartBoard.y;
-      dragTargets.forEach(t => {
-        t.el.style.left = (t.startLeft + dx) + 'px';
-        t.el.style.top  = (t.startTop + dy) + 'px';
-      });
-    }
+        function moveDrag(clientX, clientY) {
+          if (!dragging) return;
+          // double-check locked state
+          if (dragTargets.some(t => t.el.classList.contains('locked'))) {
+            dragging = false;
+            dragTargets = [];
+            touchId = null;
+            return;
+          }
+          const curBoard = toBoardCoords(clientX, clientY);
+          const dx = curBoard.x - dragStartBoard.x;
+          const dy = curBoard.y - dragStartBoard.y;
+          dragTargets.forEach(t => {
+            t.el.style.left = (t.startLeft + dx) + 'px';
+            t.el.style.top = (t.startTop + dy) + 'px';
+          });
+        }
 
     function endDrag() {
       if (!dragging) return;
@@ -568,106 +570,106 @@ function makeDraggable(el, handle = el) {
       markBoardDirty();
     }
 
-    // Mouse events
-    handle.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return;
-      startDrag(e.clientX, e.clientY);
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    window.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      moveDrag(e.clientX, e.clientY);
-    });
-    window.addEventListener('mouseup', endDrag);
-
-    // Touch events
-    handle.addEventListener('touchstart', (e) => {
-      if (e.touches.length > 0) {
-        const t = e.touches[0];
-        touchId = t.identifier;
-        startDrag(t.clientX, t.clientY);
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }, { passive: false });
-    window.addEventListener('touchmove', (e) => {
-      if (!dragging || touchId === null) return;
-      for (let i = 0; i < e.touches.length; i++) {
-        if (e.touches[i].identifier === touchId) {
-          moveDrag(e.touches[i].clientX, e.touches[i].clientY);
-          break;
-        }
-      }
-    }, { passive: false });
-    window.addEventListener('touchend', (e) => {
-      if (!dragging || touchId === null) return;
-      endDrag();
-    });
-
-    board.addEventListener('click', () => {
-      if (usingLasso) return;
-      document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-    });
-
-}
-
-// helper to lock/unlock a widget
-function toggleWidgetLock(el) {
-  const locked = el.classList.toggle('locked');
-  const btn = el.querySelector('button.lock');
-  if (btn) btn.innerText = locked ? '🔒' : '🔓';
-  // prevent resizing while locked
-  if (locked) {
-    el.dataset.origResize = el.style.resize || '';
-    el.style.resize = 'none';
-  } else {
-    el.style.resize = el.dataset.origResize || '';
-  }
-}
-
-
-  // Tiny widget “registry”
-  const Widget = {
-    
-    builders: {},
-    create(type, x=0, y=0, props={}) {
-      if (!this.builders[type]) throw new Error(`Unknown widget: ${type}`);
-      const el = this.builders[type](props);
-      el.style.position = 'absolute';
-      el.style.left = snap(x) + 'px';
-      el.style.top  = snap(y) + 'px';
-      
-      // add lock button to header if widget supports it
-      const header = el.querySelector?.('.header');
-      if (header) {
-        // create button container to keep lock and close together
-        let btnContainer = header.querySelector('.button-group');
-        if (!btnContainer) {
-          btnContainer = document.createElement('div');
-          btnContainer.className = 'button-group';
-          header.appendChild(btnContainer);
-        }
-        
-        const lockBtn = document.createElement('button');
-        lockBtn.className = 'lock';
-        lockBtn.title = 'Lock/Unlock widget';
-        lockBtn.innerText = '🔓'; // unlocked by default
-        btnContainer.appendChild(lockBtn);
-        
-        const handleLockClick = (e) => {
+        // Mouse events
+        handle.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          startDrag(e.clientX, e.clientY);
+          e.preventDefault();
           e.stopPropagation();
-          toggleWidgetLock(el);
-        };
-        lockBtn.addEventListener('click', handleLockClick);
-        lockBtn.addEventListener('touchend', handleLockClick, { passive: false });
-        
-        // move close button to container if it exists
-        const closeBtn = header.querySelector('.close');
-        if (closeBtn && closeBtn.parentElement !== btnContainer) {
-          btnContainer.appendChild(closeBtn);
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!dragging) return;
+          moveDrag(e.clientX, e.clientY);
+        });
+        window.addEventListener('mouseup', endDrag);
+
+        // Touch events
+        handle.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) {
+            const t = e.touches[0];
+            touchId = t.identifier;
+            startDrag(t.clientX, t.clientY);
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, { passive: false });
+        window.addEventListener('touchmove', (e) => {
+          if (!dragging || touchId === null) return;
+          for (let i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === touchId) {
+              moveDrag(e.touches[i].clientX, e.touches[i].clientY);
+              break;
+            }
+          }
+        }, { passive: false });
+        window.addEventListener('touchend', (e) => {
+          if (!dragging || touchId === null) return;
+          endDrag();
+        });
+
+        board.addEventListener('click', () => {
+          if (usingLasso) return;
+          document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+        });
+
+      }
+
+      // helper to lock/unlock a widget
+      function toggleWidgetLock(el) {
+        const locked = el.classList.toggle('locked');
+        const btn = el.querySelector('button.lock');
+        if (btn) btn.innerText = locked ? '🔒' : '🔓';
+        // prevent resizing while locked
+        if (locked) {
+          el.dataset.origResize = el.style.resize || '';
+          el.style.resize = 'none';
+        } else {
+          el.style.resize = el.dataset.origResize || '';
         }
       }
+
+
+      // Tiny widget “registry”
+      const Widget = {
+
+        builders: {},
+        create(type, x = 0, y = 0, props = {}) {
+          if (!this.builders[type]) throw new Error(`Unknown widget: ${type}`);
+          const el = this.builders[type](props);
+          el.style.position = 'absolute';
+          el.style.left = snap(x) + 'px';
+          el.style.top = snap(y) + 'px';
+
+          // add lock button to header if widget supports it
+          const header = el.querySelector?.('.header');
+          if (header) {
+            // create button container to keep lock and close together
+            let btnContainer = header.querySelector('.button-group');
+            if (!btnContainer) {
+              btnContainer = document.createElement('div');
+              btnContainer.className = 'button-group';
+              header.appendChild(btnContainer);
+            }
+
+            const lockBtn = document.createElement('button');
+            lockBtn.className = 'lock';
+            lockBtn.title = 'Lock/Unlock widget';
+            lockBtn.innerText = '🔓'; // unlocked by default
+            btnContainer.appendChild(lockBtn);
+
+            const handleLockClick = (e) => {
+              e.stopPropagation();
+              toggleWidgetLock(el);
+            };
+            lockBtn.addEventListener('click', handleLockClick);
+            lockBtn.addEventListener('touchend', handleLockClick, { passive: false });
+
+            // move close button to container if it exists
+            const closeBtn = header.querySelector('.close');
+            if (closeBtn && closeBtn.parentElement !== btnContainer) {
+              btnContainer.appendChild(closeBtn);
+            }
+          }
 
       // common close button behavior if present
       const closeBtn = el.querySelector?.('.close');
@@ -732,12 +734,12 @@ if (!window._flatTopCardKeyHandlerInstalled) {
   window._flatTopCardKeyHandlerInstalled = true;
 }
 
-  // ===== Dice Roller widget =====
-  Widget.builders.dice = function(props = {}) {
-    const el = document.createElement('div');
-    el.className = 'widget';
-    el.dataset.type = 'dice';
-    el.innerHTML = `
+      // ===== Dice Roller widget =====
+      Widget.builders.dice = function (props = {}) {
+        const el = document.createElement('div');
+        el.className = 'widget';
+        el.dataset.type = 'dice';
+        el.innerHTML = `
       <div class="header">
         <div>🎲 Dice Roller</div>
         <button class="close" title="Remove">&times;</button>
@@ -856,282 +858,282 @@ Widget.builders.token = function(props = {}) {
   token.className = 'token circle'; // default circle; we’ll support square
   token.dataset.type = 'token';
 
-  // apply initial shape if provided
-  if (props.shape === 'square') token.classList.replace('circle','square');
+        // apply initial shape if provided
+        if (props.shape === 'square') token.classList.replace('circle', 'square');
 
-  // size & initial label
-  const size = props.size || 40;
-  token.style.width  = size + 'px';
-  token.style.height = size + 'px';
-  token.textContent  = (props.label || 'Token'); // put text node first
+        // size & initial label
+        const size = props.size || 40;
+        token.style.width = size + 'px';
+        token.style.height = size + 'px';
+        token.textContent = (props.label || 'Token'); // put text node first
 
-  // if created with an image URL, set it
-  if (props.image) {
-  token.dataset.imageSrc = props.image;
-  token.style.backgroundImage = `url("${props.image}")`;
-  token.classList.add('has-image');
-}
-
-  
-
-  // --- image drop helpers ---
-  function extractUrlFromDataTransfer(dt) {
-    // Prefer standard URI list (dragged from another tab)
-    const uriList = dt.getData('text/uri-list');
-    if (uriList) {
-      const first = uriList.split('\n').find(line => line && !line.startsWith('#'));
-      if (first) return first.trim();
-    }
-    // Fallback: some browsers put the URL in plain text
-    const plain = dt.getData('text/plain');
-    if (plain && /^https?:\/\//i.test(plain.trim())) return plain.trim();
-    return null;
-  }
-
-  async function setTokenImageFromFile(file) {
-  // Persist as data URL so it survives reloads
-  const reader = new FileReader();
-  const dataUrl = await new Promise((res, rej) => {
-    reader.onerror = () => rej(reader.error);
-    reader.onload = () => res(reader.result);
-    reader.readAsDataURL(file);
-  });
-  token.dataset.imageSrc = dataUrl;
-  token.style.backgroundImage = `url("${dataUrl}")`;
-  token.classList.add('has-image');
-}
-
-function setTokenImageFromUrl(url) {
-  // Persist the canonical URL (works for http/https)
-  token.dataset.imageSrc = url;
-  token.style.backgroundImage = `url("${url}")`;
-  token.classList.add('has-image');
-}
+        // if created with an image URL, set it
+        if (props.image) {
+          token.dataset.imageSrc = props.image;
+          token.style.backgroundImage = `url("${props.image}")`;
+          token.classList.add('has-image');
+        }
 
 
 
-  // resize handle
-  const handle = document.createElement('div');
-  handle.className = 'resize-handle';
-  token.appendChild(handle);
+        // --- image drop helpers ---
+        function extractUrlFromDataTransfer(dt) {
+          // Prefer standard URI list (dragged from another tab)
+          const uriList = dt.getData('text/uri-list');
+          if (uriList) {
+            const first = uriList.split('\n').find(line => line && !line.startsWith('#'));
+            if (first) return first.trim();
+          }
+          // Fallback: some browsers put the URL in plain text
+          const plain = dt.getData('text/plain');
+          if (plain && /^https?:\/\//i.test(plain.trim())) return plain.trim();
+          return null;
+        }
 
-  // close (×) button
-  const close = document.createElement('button');
-  close.className = 'close';
-  close.innerHTML = '&times;';
-  token.appendChild(close);
-  close.addEventListener('click', (e) => {
-    e.stopPropagation();
-    token.remove();
-    markBoardDirty();
-  });
+        async function setTokenImageFromFile(file) {
+          // Persist as data URL so it survives reloads
+          const reader = new FileReader();
+          const dataUrl = await new Promise((res, rej) => {
+            reader.onerror = () => rej(reader.error);
+            reader.onload = () => res(reader.result);
+            reader.readAsDataURL(file);
+          });
+          token.dataset.imageSrc = dataUrl;
+          token.style.backgroundImage = `url("${dataUrl}")`;
+          token.classList.add('has-image');
+        }
 
-  // Make the token accept image drops *and* stop the event from reaching the board
-token.addEventListener('dragenter', (e) => {
-  const dt = e.dataTransfer;
-  if (!dt) return;
-  const hasImgFile = Array.from(dt.items || [])
-    .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
-  const maybeUrl = extractUrlFromDataTransfer(dt);
-  if (hasImgFile || maybeUrl) {
-    e.preventDefault();
-    e.stopPropagation();            // <-- important
-    token.classList.add('drop-target');
-  }
-});
-
-token.addEventListener('dragover', (e) => {
-  const dt = e.dataTransfer;
-  if (!dt) return;
-  const hasImgFile = Array.from(dt.items || [])
-    .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
-  const maybeUrl = extractUrlFromDataTransfer(dt);
-  if (hasImgFile || maybeUrl) {
-    e.preventDefault();
-    e.stopPropagation();            // <-- important
-    token.classList.add('drop-target');
-    if (dt.dropEffect) dt.dropEffect = 'copy';
-  }
-});
-
-token.addEventListener('dragleave', (e) => {
-  e.stopPropagation();              // <-- so board doesn't “un-highlight” itself
-  token.classList.remove('drop-target');
-});
-
-token.addEventListener('drop', async (e) => {
-  e.preventDefault();
-  e.stopPropagation();              // <-- critical: keep board handler from firing
-  token.classList.remove('drop-target');
-
-  const dt = e.dataTransfer;
-  if (!dt) return;
-
-  if (dt.files && dt.files.length) {
-    const file = dt.files[0];
-    if (file && file.type && file.type.startsWith('image/')) {
-      await setTokenImageFromFile(file);
-      markBoardDirty();
-      return;
-    }
-  }
-  const url = extractUrlFromDataTransfer(dt);
-  if (url) {
-    setTokenImageFromUrl(url);
-    markBoardDirty();
-  }
-});
+        function setTokenImageFromUrl(url) {
+          // Persist the canonical URL (works for http/https)
+          token.dataset.imageSrc = url;
+          token.style.backgroundImage = `url("${url}")`;
+          token.classList.add('has-image');
+        }
 
 
-  // shape toggle (◯ / ◻)
-  const shapeBtn = document.createElement('button');
-  shapeBtn.className = 'shape';
-  shapeBtn.title = 'Toggle shape (circle/square)';
-  shapeBtn.textContent = '◯';
-  token.appendChild(shapeBtn);
 
-  function refreshShapeIcon() {
-    shapeBtn.textContent = token.classList.contains('square') ? '◻' : '◯';
-  }
-  refreshShapeIcon();
+        // resize handle
+        const handle = document.createElement('div');
+        handle.className = 'resize-handle';
+        token.appendChild(handle);
 
-  shapeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (token.classList.contains('square')) {
-      token.classList.replace('square','circle');
-    } else {
-      token.classList.replace('circle','square');
-    }
-    refreshShapeIcon();
-    markBoardDirty();
-  });
+        // close (×) button
+        const close = document.createElement('button');
+        close.className = 'close';
+        close.innerHTML = '&times;';
+        token.appendChild(close);
+        close.addEventListener('click', (e) => {
+          e.stopPropagation();
+          token.remove();
+          markBoardDirty();
+        });
 
+        // Make the token accept image drops *and* stop the event from reaching the board
+        token.addEventListener('dragenter', (e) => {
+          const dt = e.dataTransfer;
+          if (!dt) return;
+          const hasImgFile = Array.from(dt.items || [])
+            .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
+          const maybeUrl = extractUrlFromDataTransfer(dt);
+          if (hasImgFile || maybeUrl) {
+            e.preventDefault();
+            e.stopPropagation();            // <-- important
+            token.classList.add('drop-target');
+          }
+        });
 
-  // dragging (use the whole token as handle)
-  makeDraggable(token, token);
+        token.addEventListener('dragover', (e) => {
+          const dt = e.dataTransfer;
+          if (!dt) return;
+          const hasImgFile = Array.from(dt.items || [])
+            .some(it => it.kind === 'file' && it.type && it.type.startsWith('image/'));
+          const maybeUrl = extractUrlFromDataTransfer(dt);
+          if (hasImgFile || maybeUrl) {
+            e.preventDefault();
+            e.stopPropagation();            // <-- important
+            token.classList.add('drop-target');
+            if (dt.dropEffect) dt.dropEffect = 'copy';
+          }
+        });
 
-  // ----- resizing -----
-  let resizing = false, start = {x:0, y:0}, baseSize = size;
-  let resizeTouchId = null;
-  handle.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-    resizing = true;
-    start = toBoardCoords(e.clientX, e.clientY);
-    baseSize = parseFloat(token.style.width) || size;
-    e.preventDefault();
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!resizing) return;
-    const cur = toBoardCoords(e.clientX, e.clientY);
-    const delta = Math.max(cur.x - start.x, cur.y - start.y);
-    const newSize = Math.max(24, baseSize + delta);
-    token.style.width  = newSize + 'px';
-    token.style.height = newSize + 'px';
-    token.style.fontSize = Math.max(10, newSize / 3) + 'px';
-  });
-  window.addEventListener('mouseup', () => {
-    if (!resizing) return;
-    resizing = false;
-    const s = parseFloat(token.style.width);
-    const snapped = Math.max(CELL, snap(s));
-    token.style.width  = snapped + 'px';
-    token.style.height = snapped + 'px';
-    resizeTouchId = null;
-    markBoardDirty();
-  });
-  // Touch events for resizing
-  handle.addEventListener('touchstart', (e) => {
-    if (e.touches.length > 0) {
-      const t = e.touches[0];
-      resizeTouchId = t.identifier;
-      resizing = true;
-      start = toBoardCoords(t.clientX, t.clientY);
-      baseSize = parseFloat(token.style.width) || size;
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, { passive: false });
-  window.addEventListener('touchmove', (e) => {
-    if (!resizing || resizeTouchId === null) return;
-    for (let i = 0; i < e.touches.length; i++) {
-      if (e.touches[i].identifier === resizeTouchId) {
-        const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
-        const delta = Math.max(cur.x - start.x, cur.y - start.y);
-        const newSize = Math.max(24, baseSize + delta);
-        token.style.width  = newSize + 'px';
-        token.style.height = newSize + 'px';
-        token.style.fontSize = Math.max(10, newSize / 3) + 'px';
-        break;
-      }
-    }
-  }, { passive: false });
-  window.addEventListener('touchend', (e) => {
-    if (!resizing || resizeTouchId === null) return;
-    resizing = false;
-    const s = parseFloat(token.style.width);
-    const snapped = Math.max(CELL, snap(s));
-    token.style.width  = snapped + 'px';
-    token.style.height = snapped + 'px';
-    resizeTouchId = null;
-  });
+        token.addEventListener('dragleave', (e) => {
+          e.stopPropagation();              // <-- so board doesn't “un-highlight” itself
+          token.classList.remove('drop-target');
+        });
 
-  // ----- rename on double-click (quick patch version) -----
-  token.addEventListener('dblclick', () => {
-    // get current label text WITHOUT the × (read the first text node if present)
-    let currentLabel = '';
-    if (token.firstChild && token.firstChild.nodeType === Node.TEXT_NODE) {
-      currentLabel = token.firstChild.nodeValue;
-    } else {
-      currentLabel = token.textContent.replace('×', '').trim();
-    }
+        token.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();              // <-- critical: keep board handler from firing
+          token.classList.remove('drop-target');
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = currentLabel || 'Token';
-    input.className = 'rename';
+          const dt = e.dataTransfer;
+          if (!dt) return;
 
-    // Clearing textContent removes ALL children (including handle/close),
-    // so we will re-append them immediately after adding the input.
-    token.textContent = '';
-    token.appendChild(input);
-    token.appendChild(handle);
-    token.appendChild(close);
-    token.appendChild(shapeBtn);
+          if (dt.files && dt.files.length) {
+            const file = dt.files[0];
+            if (file && file.type && file.type.startsWith('image/')) {
+              await setTokenImageFromFile(file);
+              markBoardDirty();
+              return;
+            }
+          }
+          const url = extractUrlFromDataTransfer(dt);
+          if (url) {
+            setTokenImageFromUrl(url);
+            markBoardDirty();
+          }
+        });
 
 
-    input.focus();
-    input.addEventListener('blur', () => {
-      token.textContent = input.value || 'Token'; // put label back as text node
-      token.appendChild(handle);                  // re-attach again
-      token.appendChild(close);
-      token.appendChild(shapeBtn);
-      markBoardDirty();
-    });
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') input.blur();
-      e.stopPropagation();
-    });
-  });
+        // shape toggle (◯ / ◻)
+        const shapeBtn = document.createElement('button');
+        shapeBtn.className = 'shape';
+        shapeBtn.title = 'Toggle shape (circle/square)';
+        shapeBtn.textContent = '◯';
+        token.appendChild(shapeBtn);
 
-  // ----- selection outline -----
-  token.addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
-    token.classList.add('selected');
-  });
-  /*
-  board.addEventListener('click', () => {
-    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
-  });
-  */
- board.addEventListener('click', () => {
-  if (usingLasso) return;
-  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-});
+        function refreshShapeIcon() {
+          shapeBtn.textContent = token.classList.contains('square') ? '◻' : '◯';
+        }
+        refreshShapeIcon();
+
+        shapeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (token.classList.contains('square')) {
+            token.classList.replace('square', 'circle');
+          } else {
+            token.classList.replace('circle', 'square');
+          }
+          refreshShapeIcon();
+          markBoardDirty();
+        });
 
 
-  return token;
-};
+        // dragging (use the whole token as handle)
+        makeDraggable(token, token);
+
+        // ----- resizing -----
+        let resizing = false, start = { x: 0, y: 0 }, baseSize = size;
+        let resizeTouchId = null;
+        handle.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          resizing = true;
+          start = toBoardCoords(e.clientX, e.clientY);
+          baseSize = parseFloat(token.style.width) || size;
+          e.preventDefault();
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!resizing) return;
+          const cur = toBoardCoords(e.clientX, e.clientY);
+          const delta = Math.max(cur.x - start.x, cur.y - start.y);
+          const newSize = Math.max(24, baseSize + delta);
+          token.style.width = newSize + 'px';
+          token.style.height = newSize + 'px';
+          token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+        });
+        window.addEventListener('mouseup', () => {
+          if (!resizing) return;
+          resizing = false;
+          const s = parseFloat(token.style.width);
+          const snapped = Math.max(CELL, snap(s));
+          token.style.width = snapped + 'px';
+          token.style.height = snapped + 'px';
+          resizeTouchId = null;
+          markBoardDirty();
+        });
+        // Touch events for resizing
+        handle.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) {
+            const t = e.touches[0];
+            resizeTouchId = t.identifier;
+            resizing = true;
+            start = toBoardCoords(t.clientX, t.clientY);
+            baseSize = parseFloat(token.style.width) || size;
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, { passive: false });
+        window.addEventListener('touchmove', (e) => {
+          if (!resizing || resizeTouchId === null) return;
+          for (let i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === resizeTouchId) {
+              const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
+              const delta = Math.max(cur.x - start.x, cur.y - start.y);
+              const newSize = Math.max(24, baseSize + delta);
+              token.style.width = newSize + 'px';
+              token.style.height = newSize + 'px';
+              token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+              break;
+            }
+          }
+        }, { passive: false });
+        window.addEventListener('touchend', (e) => {
+          if (!resizing || resizeTouchId === null) return;
+          resizing = false;
+          const s = parseFloat(token.style.width);
+          const snapped = Math.max(CELL, snap(s));
+          token.style.width = snapped + 'px';
+          token.style.height = snapped + 'px';
+          resizeTouchId = null;
+        });
+
+        // ----- rename on double-click (quick patch version) -----
+        token.addEventListener('dblclick', () => {
+          // get current label text WITHOUT the × (read the first text node if present)
+          let currentLabel = '';
+          if (token.firstChild && token.firstChild.nodeType === Node.TEXT_NODE) {
+            currentLabel = token.firstChild.nodeValue;
+          } else {
+            currentLabel = token.textContent.replace('×', '').trim();
+          }
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = currentLabel || 'Token';
+          input.className = 'rename';
+
+          // Clearing textContent removes ALL children (including handle/close),
+          // so we will re-append them immediately after adding the input.
+          token.textContent = '';
+          token.appendChild(input);
+          token.appendChild(handle);
+          token.appendChild(close);
+          token.appendChild(shapeBtn);
+
+
+          input.focus();
+          input.addEventListener('blur', () => {
+            token.textContent = input.value || 'Token'; // put label back as text node
+            token.appendChild(handle);                  // re-attach again
+            token.appendChild(close);
+            token.appendChild(shapeBtn);
+            markBoardDirty();
+          });
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') input.blur();
+            e.stopPropagation();
+          });
+        });
+
+        // ----- selection outline -----
+        token.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+          token.classList.add('selected');
+        });
+        /*
+        board.addEventListener('click', () => {
+          document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+        });
+        */
+        board.addEventListener('click', () => {
+          if (usingLasso) return;
+          document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+        });
+
+
+        return token;
+      };
 
 
   // ===== Hook the sidebar buttons =====
@@ -1182,50 +1184,50 @@ chatBtn.addEventListener('click', () => {
 });
 
 
-  // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
-// ===== Standard Deck Widget (deck draw / shuffle / reset) =====
-Widget.builders.cards = function(props = {}) {
-  // --- deck model ---
-  const SUITS = [
-    { sym: "♠", color: "black" },
-    { sym: "♥", color: "red"   },
-    { sym: "♣", color: "black" },
-    { sym: "♦", color: "red"   },
-  ];
-  const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+      // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
+      // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
+      Widget.builders.cards = function (props = {}) {
+        // --- deck model ---
+        const SUITS = [
+          { sym: "♠", color: "black" },
+          { sym: "♥", color: "red" },
+          { sym: "♣", color: "black" },
+          { sym: "♦", color: "red" },
+        ];
+        const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
-  function buildDeck() {
-    const d = [];
-    for (const s of SUITS) {
-      for (const r of RANKS) d.push({ rank: r, suit: s.sym, color: s.color });
-    }
-    return d;
-  }
+        function buildDeck() {
+          const d = [];
+          for (const s of SUITS) {
+            for (const r of RANKS) d.push({ rank: r, suit: s.sym, color: s.color });
+          }
+          return d;
+        }
 
-  function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
+        function shuffle(a) {
+          for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+          }
+          return a;
+        }
 
-  // --- state (restore if provided) ---
-  let deck, discard, showBack;
-  if (props.deckState) {
-    deck = Array.isArray(props.deckState.deck) ? props.deckState.deck : shuffle(buildDeck());
-    discard = Array.isArray(props.deckState.discard) ? props.deckState.discard : [];
-    showBack = !!props.deckState.showBack;
-  } else {
-    deck = shuffle(buildDeck());
-    discard = [];
-    showBack = true;
-  }
+        // --- state (restore if provided) ---
+        let deck, discard, showBack;
+        if (props.deckState) {
+          deck = Array.isArray(props.deckState.deck) ? props.deckState.deck : shuffle(buildDeck());
+          discard = Array.isArray(props.deckState.discard) ? props.deckState.discard : [];
+          showBack = !!props.deckState.showBack;
+        } else {
+          deck = shuffle(buildDeck());
+          discard = [];
+          showBack = true;
+        }
 
-  const el = document.createElement('div');
-  el.className = 'widget cards-widget';
-  el.dataset.type = 'cards';
-  el.innerHTML = `
+        const el = document.createElement('div');
+        el.className = 'widget cards-widget';
+        el.dataset.type = 'cards';
+        el.innerHTML = `
     <div class="header">
       <div>Standard Card Deck</div>
       <button class="close" title="Remove">&times;</button>
@@ -1245,39 +1247,39 @@ Widget.builders.cards = function(props = {}) {
     </div>
   `;
 
-  makeDraggable(el, el.querySelector('.header'));
+        makeDraggable(el, el.querySelector('.header'));
 
-  function syncDeckStateToEl() {
-    el._deckState = { deck, discard, showBack };
-  }
-  syncDeckStateToEl();
+        function syncDeckStateToEl() {
+          el._deckState = { deck, discard, showBack };
+        }
+        syncDeckStateToEl();
 
-  const cardEl = el.querySelector('.playing-card');
-  const countEl = el.querySelector('.count');
-  const flipBtn = el.querySelector('.flip');
+        const cardEl = el.querySelector('.playing-card');
+        const countEl = el.querySelector('.count');
+        const flipBtn = el.querySelector('.flip');
 
-  function updateFlipUi() {
-    if (flipBtn) flipBtn.textContent = showBack ? 'Flip: On' : 'Flip: Off';
-  }
+        function updateFlipUi() {
+          if (flipBtn) flipBtn.textContent = showBack ? 'Flip: On' : 'Flip: Off';
+        }
 
-  function renderTop() {
-    countEl.textContent = `Deck: ${deck.length}`;
-    if (showBack) {
-      cardEl.classList.add('back');
-      cardEl.textContent = '';
-      cardEl.classList.remove('red');
-    } else {
-      cardEl.classList.remove('back');
-      if (deck.length === 0) {
-        cardEl.textContent = '';
-        cardEl.classList.remove('red');
-      } else {
-        cardEl.textContent = 'A♠';
-        cardEl.classList.remove('red');
-      }
-    }
-    updateFlipUi();
-  }
+        function renderTop() {
+          countEl.textContent = `Deck: ${deck.length}`;
+          if (showBack) {
+            cardEl.classList.add('back');
+            cardEl.textContent = '';
+            cardEl.classList.remove('red');
+          } else {
+            cardEl.classList.remove('back');
+            if (deck.length === 0) {
+              cardEl.textContent = '';
+              cardEl.classList.remove('red');
+            } else {
+              cardEl.textContent = 'A♠';
+              cardEl.classList.remove('red');
+            }
+          }
+          updateFlipUi();
+        }
 
   function createDraggableCard(card, x, y) {
     const cardDiv = document.createElement('div');
@@ -1290,36 +1292,36 @@ Widget.builders.cards = function(props = {}) {
     cardDiv.style.height = '60px';
     cardDiv.style.zIndex = 9999;
 
-    cardDiv._cardData = card;
-    cardDiv._flipped = showBack;
+          cardDiv._cardData = card;
+          cardDiv._flipped = showBack;
 
-    function renderCardFace() {
-      if (cardDiv._flipped) {
-        cardDiv.classList.add('back');
-        cardDiv.textContent = '';
-        cardDiv.classList.remove('red');
-      } else {
-        cardDiv.classList.remove('back');
-        cardDiv.textContent = `${card.rank}${card.suit}`;
-        if (card.color === 'red') cardDiv.classList.add('red');
-        else cardDiv.classList.remove('red');
-      }
-    }
+          function renderCardFace() {
+            if (cardDiv._flipped) {
+              cardDiv.classList.add('back');
+              cardDiv.textContent = '';
+              cardDiv.classList.remove('red');
+            } else {
+              cardDiv.classList.remove('back');
+              cardDiv.textContent = `${card.rank}${card.suit}`;
+              if (card.color === 'red') cardDiv.classList.add('red');
+              else cardDiv.classList.remove('red');
+            }
+          }
 
-    renderCardFace();
-    makeDraggable(cardDiv, cardDiv);
+          renderCardFace();
+          makeDraggable(cardDiv, cardDiv);
 
-    cardDiv.addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
-      document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
-      cardDiv.classList.add('selected');
-    });
+          cardDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+            cardDiv.classList.add('selected');
+          });
 
-    board.addEventListener('click', () => {
-      if (usingLasso) return;
-      document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-    });
+          board.addEventListener('click', () => {
+            if (usingLasso) return;
+            document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+          });
 
     cardDiv.flipCard = function() {
       cardDiv._flipped = !cardDiv._flipped;
@@ -1336,19 +1338,19 @@ Widget.builders.cards = function(props = {}) {
     }
   }
 
-  el.querySelector('.draw').addEventListener('click', () => {
-    if (deck.length === 0) return;
-    const card = deck.pop();
+        el.querySelector('.draw').addEventListener('click', () => {
+          if (deck.length === 0) return;
+          const card = deck.pop();
 
-    const wx = parseFloat(el.style.left) || 0;
-    const wy = parseFloat(el.style.top) || 0;
+          const wx = parseFloat(el.style.left) || 0;
+          const wy = parseFloat(el.style.top) || 0;
 
-    // Spawn to the right of the widget, near the top
-    const x = wx + (el.offsetWidth || 260) + 20;
-    const y = wy + 20;
+          // Spawn to the right of the widget, near the top
+          const x = wx + (el.offsetWidth || 260) + 20;
+          const y = wy + 20;
 
-    createDraggableCard(card, x, y);
-    discard.push(card);
+          createDraggableCard(card, x, y);
+          discard.push(card);
 
     renderTop();
     syncDeckStateToEl();
@@ -1382,18 +1384,18 @@ Widget.builders.cards = function(props = {}) {
     markBoardDirty();
   });
 
-  cardEl.addEventListener('click', () => el.querySelector('.draw').click());
+        cardEl.addEventListener('click', () => el.querySelector('.draw').click());
 
-  renderTop();
-  return el;
-};
+        renderTop();
+        return el;
+      };
 
-// ===== Custom Cards widget (simple custom-deck with a text area to define cards) =====
-Widget.builders.customCards = function(props = {}) {
-  const el = document.createElement('div');
-  el.className = 'widget cards-widget';
-  el.dataset.type = 'customCards';
-  el.innerHTML = `
+      // ===== Custom Cards widget (simple custom-deck with a text area to define cards) =====
+      Widget.builders.customCards = function (props = {}) {
+        const el = document.createElement('div');
+        el.className = 'widget cards-widget';
+        el.dataset.type = 'customCards';
+        el.innerHTML = `
     <div class="header">
       <div>🃏 Custom Card Deck</div>
       <button class="close" title="Remove">&times;</button>
@@ -1420,7 +1422,7 @@ Widget.builders.customCards = function(props = {}) {
         </div>
         <div class="card-list" style="display:flex;flex-direction:column;gap:6px; margin-top:6px; max-height:220px; overflow:auto;"></div>
   <div class="muted small-hint" style="font-size:12px;">Define one card per line in the box below.</div>
-        <textarea class="card-defs" style="width:100%;height:80px;margin-top:8px;border:1px solid #ccc;border-radius:6px;padding:6px;" placeholder="Ace of Spades\nTwo of Hearts\n...">${(props.defs||'').toString()}</textarea>
+        <textarea class="card-defs" style="width:100%;height:80px;margin-top:8px;border:1px solid #ccc;border-radius:6px;padding:6px;" placeholder="Ace of Spades\nTwo of Hearts\n...">${(props.defs || '').toString()}</textarea>
       </div>
     <div class="widget-footer-note muted">
         Press <kbd>F</kbd> to flip selected, <kbd>Del</kbd> to delete.
@@ -1428,172 +1430,172 @@ Widget.builders.customCards = function(props = {}) {
     </div>
   `;
 
-  makeDraggable(el, el.querySelector('.header'));
+        makeDraggable(el, el.querySelector('.header'));
 
-  let cards = [];
-  // persist uploaded images separately so Reset can fully rebuild the deck
-  // even after some cards have been drawn/removed from `cards`.
-  let uploadedImageCards = [];
-  let showBack = false; // whether newly drawn cards should start face-down
-  const countEl = el.querySelector('.count');
-  const defs = el.querySelector('.card-defs');
-  const fileInput = el.querySelector('.card-images-input');
-  const cardListEl = el.querySelector('.card-list');
-  const toggleListBtn = el.querySelector('.toggle-list');
+        let cards = [];
+        // persist uploaded images separately so Reset can fully rebuild the deck
+        // even after some cards have been drawn/removed from `cards`.
+        let uploadedImageCards = [];
+        let showBack = false; // whether newly drawn cards should start face-down
+        const countEl = el.querySelector('.count');
+        const defs = el.querySelector('.card-defs');
+        const fileInput = el.querySelector('.card-images-input');
+        const cardListEl = el.querySelector('.card-list');
+        const toggleListBtn = el.querySelector('.toggle-list');
 
-  if (props.deckState) {
-    uploadedImageCards = Array.isArray(props.deckState.uploadedImageCards) ? props.deckState.uploadedImageCards : [];
-    showBack = !!props.deckState.showBack;
+        if (props.deckState) {
+          uploadedImageCards = Array.isArray(props.deckState.uploadedImageCards) ? props.deckState.uploadedImageCards : [];
+          showBack = !!props.deckState.showBack;
 
-    if (typeof props.deckState.defsText === 'string') defs.value = props.deckState.defsText;
+          if (typeof props.deckState.defsText === 'string') defs.value = props.deckState.defsText;
 
-    // restore deck contents if supplied; otherwise rebuild from defs
-    cards = Array.isArray(props.deckState.cards) ? props.deckState.cards : [];
-    if (!cards.length) buildFromDefs();
+          // restore deck contents if supplied; otherwise rebuild from defs
+          cards = Array.isArray(props.deckState.cards) ? props.deckState.cards : [];
+          if (!cards.length) buildFromDefs();
 
-    // restore size inputs if present
-    const wIn = el.querySelector('.card-width');
-    const hIn = el.querySelector('.card-height');
-    if (wIn && props.deckState.cardWidth) wIn.value = props.deckState.cardWidth;
-    if (hIn && props.deckState.cardHeight) hIn.value = props.deckState.cardHeight;
-  }
-
-
-  function syncCustomStateToEl() {
-    el._customDeckState = {
-      cards,
-      uploadedImageCards,
-      defsText: defs.value,
-      showBack,
-      cardWidth: parseInt(el.querySelector('.card-width')?.value || '60', 10) || 60,
-      cardHeight: parseInt(el.querySelector('.card-height')?.value || '90', 10) || 90,
-    };
-  }
-
-  // Make list collapsible and bounded in height to avoid huge widgets
-  if (toggleListBtn) {
-    toggleListBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (cardListEl.style.display === 'none') {
-        cardListEl.style.display = 'flex';
-        toggleListBtn.textContent = 'Hide list';
-      } else {
-        cardListEl.style.display = 'none';
-        toggleListBtn.textContent = 'Show list';
-      }
-    });
-  }
-
-  // CSRF helper for safe POSTs
-  function getCookie(name) {
-    const v = document.cookie.split(';').map(c => c.trim()).filter(c => c.startsWith(name + '='));
-    if (v.length === 0) return null;
-    return decodeURIComponent(v[0].split('=')[1]);
-  }
-
-  function getCSRFToken() {
-    // Try to get CSRF token from cookie first
-    let token = getCookie('csrftoken');
-    // If not available, try to get from meta tag
-    if (!token) {
-      const meta = document.querySelector('meta[name="csrf-token"]');
-      token = meta ? meta.getAttribute('content') : '';
-    }
-    return token;
-  }
-
-  async function uploadFile(file) {
-    const fd = new FormData();
-    fd.append('image', file);
-    const res = await fetch('/board/api/upload_card_image/', {
-      method: 'POST',
-      body: fd,
-      headers: {
-        'X-CSRFToken': getCSRFToken()
-      }
-    });
-    if (!res.ok) {
-      let errorMsg = `HTTP ${res.status}`;
-      try {
-        const txt = await res.text();
-        // Try to parse as JSON first (in case it's our API error)
-        try {
-          const errorJson = JSON.parse(txt);
-          errorMsg = errorJson.error || errorMsg;
-        } catch {
-          // Not JSON, check if it's HTML (login redirect)
-          if (txt.includes('<!doctype') || txt.includes('<html')) {
-            errorMsg = 'Please log in first';
-          } else {
-            errorMsg = txt.substring(0, 100); // First 100 chars
-          }
+          // restore size inputs if present
+          const wIn = el.querySelector('.card-width');
+          const hIn = el.querySelector('.card-height');
+          if (wIn && props.deckState.cardWidth) wIn.value = props.deckState.cardWidth;
+          if (hIn && props.deckState.cardHeight) hIn.value = props.deckState.cardHeight;
         }
-      } catch {
-        // Could not read response text
-      }
-      throw new Error(errorMsg);
-    }
-    const j = await res.json();
-    return j.url;
-  }
 
-  function buildFromDefs(){
-    // parse the textarea for plain-label cards
-    const lines = defs.value.split('\n').map(s=>s.trim()).filter(Boolean);
-    // use the persistent uploadedImageCards (not the current `cards` which may have been drawn)
-    const imageCards = uploadedImageCards.slice();
-    const labelCards = lines.map(l => ({ label: l }));
-    cards = imageCards.concat(labelCards);
-  }
 
-  // Reset the deck to the current uploaded images + textarea definitions
-  // (reconstructs the deck even if cards were previously drawn)
-  function resetToDefs() {
-    buildFromDefs();
-    renderCardsList();
-    renderCount();
-  }
+        function syncCustomStateToEl() {
+          el._customDeckState = {
+            cards,
+            uploadedImageCards,
+            defsText: defs.value,
+            showBack,
+            cardWidth: parseInt(el.querySelector('.card-width')?.value || '60', 10) || 60,
+            cardHeight: parseInt(el.querySelector('.card-height')?.value || '90', 10) || 90,
+          };
+        }
 
-  function renderCardsList(){
-    cardListEl.innerHTML = '';
-    cards.forEach((c, idx) => {
-      const row = document.createElement('div');
-      row.style.display = 'flex';
-      row.style.alignItems = 'center';
-      row.style.gap = '8px';
+        // Make list collapsible and bounded in height to avoid huge widgets
+        if (toggleListBtn) {
+          toggleListBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (cardListEl.style.display === 'none') {
+              cardListEl.style.display = 'flex';
+              toggleListBtn.textContent = 'Hide list';
+            } else {
+              cardListEl.style.display = 'none';
+              toggleListBtn.textContent = 'Show list';
+            }
+          });
+        }
 
-  const thumb = document.createElement('div');
-  thumb.style.width = '48px';
-  thumb.style.height = '36px';
-  // prevent the thumbnail box from shrinking when there's a scrollbar
-  thumb.style.flex = '0 0 48px';
-  thumb.style.background = '#f6f6f6';
-  thumb.style.display = 'flex';
-  thumb.style.alignItems = 'center';
-  thumb.style.justifyContent = 'center';
-  thumb.style.border = '1px solid #ddd';
-      if (c.image) {
-  const img = document.createElement('img');
-  img.src = c.image;
-  // use max-width / max-height + object-fit to preserve aspect ratio and avoid distortion
-  img.style.maxWidth = '100%';
-  img.style.maxHeight = '100%';
-  img.style.objectFit = 'contain';
-  img.draggable = false;
-  thumb.style.overflow = 'hidden';
-  thumb.appendChild(img);
-      } else {
-        thumb.textContent = c.label || 'Text';
-        thumb.style.fontSize = '12px';
-        thumb.style.padding = '4px';
-      }
+        // CSRF helper for safe POSTs
+        function getCookie(name) {
+          const v = document.cookie.split(';').map(c => c.trim()).filter(c => c.startsWith(name + '='));
+          if (v.length === 0) return null;
+          return decodeURIComponent(v[0].split('=')[1]);
+        }
 
-  const label = document.createElement('input');
-  label.type = 'text'; label.value = c.label || '';
-  label.style.flex = '1';
-  // allow the input to shrink when the container is narrow (prevents pushing/shrinking the thumb)
-  label.style.minWidth = '0';
-      label.addEventListener('change', () => { c.label = label.value; });
+        function getCSRFToken() {
+          // Try to get CSRF token from cookie first
+          let token = getCookie('csrftoken');
+          // If not available, try to get from meta tag
+          if (!token) {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            token = meta ? meta.getAttribute('content') : '';
+          }
+          return token;
+        }
+
+        async function uploadFile(file) {
+          const fd = new FormData();
+          fd.append('image', file);
+          const res = await fetch('/board/api/upload_card_image/', {
+            method: 'POST',
+            body: fd,
+            headers: {
+              'X-CSRFToken': getCSRFToken()
+            }
+          });
+          if (!res.ok) {
+            let errorMsg = `HTTP ${res.status}`;
+            try {
+              const txt = await res.text();
+              // Try to parse as JSON first (in case it's our API error)
+              try {
+                const errorJson = JSON.parse(txt);
+                errorMsg = errorJson.error || errorMsg;
+              } catch {
+                // Not JSON, check if it's HTML (login redirect)
+                if (txt.includes('<!doctype') || txt.includes('<html')) {
+                  errorMsg = 'Please log in first';
+                } else {
+                  errorMsg = txt.substring(0, 100); // First 100 chars
+                }
+              }
+            } catch {
+              // Could not read response text
+            }
+            throw new Error(errorMsg);
+          }
+          const j = await res.json();
+          return j.url;
+        }
+
+        function buildFromDefs() {
+          // parse the textarea for plain-label cards
+          const lines = defs.value.split('\n').map(s => s.trim()).filter(Boolean);
+          // use the persistent uploadedImageCards (not the current `cards` which may have been drawn)
+          const imageCards = uploadedImageCards.slice();
+          const labelCards = lines.map(l => ({ label: l }));
+          cards = imageCards.concat(labelCards);
+        }
+
+        // Reset the deck to the current uploaded images + textarea definitions
+        // (reconstructs the deck even if cards were previously drawn)
+        function resetToDefs() {
+          buildFromDefs();
+          renderCardsList();
+          renderCount();
+        }
+
+        function renderCardsList() {
+          cardListEl.innerHTML = '';
+          cards.forEach((c, idx) => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.gap = '8px';
+
+            const thumb = document.createElement('div');
+            thumb.style.width = '48px';
+            thumb.style.height = '36px';
+            // prevent the thumbnail box from shrinking when there's a scrollbar
+            thumb.style.flex = '0 0 48px';
+            thumb.style.background = '#f6f6f6';
+            thumb.style.display = 'flex';
+            thumb.style.alignItems = 'center';
+            thumb.style.justifyContent = 'center';
+            thumb.style.border = '1px solid #ddd';
+            if (c.image) {
+              const img = document.createElement('img');
+              img.src = c.image;
+              // use max-width / max-height + object-fit to preserve aspect ratio and avoid distortion
+              img.style.maxWidth = '100%';
+              img.style.maxHeight = '100%';
+              img.style.objectFit = 'contain';
+              img.draggable = false;
+              thumb.style.overflow = 'hidden';
+              thumb.appendChild(img);
+            } else {
+              thumb.textContent = c.label || 'Text';
+              thumb.style.fontSize = '12px';
+              thumb.style.padding = '4px';
+            }
+
+            const label = document.createElement('input');
+            label.type = 'text'; label.value = c.label || '';
+            label.style.flex = '1';
+            // allow the input to shrink when the container is narrow (prevents pushing/shrinking the thumb)
+            label.style.minWidth = '0';
+            label.addEventListener('change', () => { c.label = label.value; });
 
       const remove = document.createElement('button'); remove.innerHTML = '🗑'; remove.title = 'Remove'; remove.className = 'trash'; remove.addEventListener('click', (e)=>{
         e.stopPropagation();
@@ -1619,15 +1621,15 @@ Widget.builders.customCards = function(props = {}) {
         markBoardDirty();
       });
 
-      row.appendChild(thumb);
-      row.appendChild(label);
-      row.appendChild(remove);
-      cardListEl.appendChild(row);
-    });
-  }
-  function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+            row.appendChild(thumb);
+            row.appendChild(label);
+            row.appendChild(remove);
+            cardListEl.appendChild(row);
+          });
+        }
+        function shuffleArr(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-  function renderCount(){ countEl.textContent = `Deck: ${cards.length}`; }
+        function renderCount() { countEl.textContent = `Deck: ${cards.length}`; }
 
   // wire file input -> upload
   fileInput.addEventListener('change', async (e)=>{
@@ -1652,12 +1654,12 @@ Widget.builders.customCards = function(props = {}) {
     fileInput.value = '';
   });
 
-  // actions
-  el.querySelector('.draw').addEventListener('click', () => {
-    if (cards.length === 0) return;
-    const card = cards.pop();
-    const wx = parseFloat(el.style.left) || 0;
-    const wy = parseFloat(el.style.top) || 0;
+        // actions
+        el.querySelector('.draw').addEventListener('click', () => {
+          if (cards.length === 0) return;
+          const card = cards.pop();
+          const wx = parseFloat(el.style.left) || 0;
+          const wy = parseFloat(el.style.top) || 0;
 
     // Spawn to the right of the widget, near the top
     const x = wx + (el.offsetWidth || 260) + 20;
@@ -1678,49 +1680,49 @@ Widget.builders.customCards = function(props = {}) {
     cardDiv._cardData = card;
     cardDiv._flipped = !!showBack; // default to current showBack setting
 
-    function renderCardFace() {
-      if (cardDiv._flipped) {
-        cardDiv.classList.add('back');
-        cardDiv.textContent = '';
-        cardDiv.classList.remove('red');
-      } else {
-        cardDiv.classList.remove('back');
-        // if card has an image, render it; otherwise render text label
-        cardDiv.textContent = '';
-        if (card.image) {
-          const img = document.createElement('img');
-          img.src = card.image;
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'cover';
-          img.draggable = false;
-          cardDiv.appendChild(img);
-        } else {
-          cardDiv.textContent = card.label;
-        }
-        cardDiv.classList.remove('red');
-      }
-    }
-    renderCardFace();
+          function renderCardFace() {
+            if (cardDiv._flipped) {
+              cardDiv.classList.add('back');
+              cardDiv.textContent = '';
+              cardDiv.classList.remove('red');
+            } else {
+              cardDiv.classList.remove('back');
+              // if card has an image, render it; otherwise render text label
+              cardDiv.textContent = '';
+              if (card.image) {
+                const img = document.createElement('img');
+                img.src = card.image;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.draggable = false;
+                cardDiv.appendChild(img);
+              } else {
+                cardDiv.textContent = card.label;
+              }
+              cardDiv.classList.remove('red');
+            }
+          }
+          renderCardFace();
 
-    makeDraggable(cardDiv, cardDiv);
+          makeDraggable(cardDiv, cardDiv);
 
-    // Selection logic (single-select)
-    cardDiv.addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
-      cardDiv.classList.add('selected');
-    });
-    // Deselect on board click
-    /*
-    board.addEventListener('click', () => {
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
-    });
-    */
-   board.addEventListener('click', () => {
-    if (usingLasso) return;
-    document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-    });
+          // Selection logic (single-select)
+          cardDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+            cardDiv.classList.add('selected');
+          });
+          // Deselect on board click
+          /*
+          board.addEventListener('click', () => {
+            document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+          });
+          */
+          board.addEventListener('click', () => {
+            if (usingLasso) return;
+            document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+          });
 
 
     // flip method used by global key handler
@@ -1779,15 +1781,15 @@ Widget.builders.customCards = function(props = {}) {
   renderCount();
   syncCustomStateToEl();                // keep element state consistent
 
-  return el;
-};
+        return el;
+      };
 
-// ===== Counters widget (multi named counters with +/-1, +/-5, type-to-edit) =====
-Widget.builders.counters = function(props = {}) {
-  const el = document.createElement('div');
-  el.className = 'widget counters-widget';
-  el.dataset.type = 'counters';
-  el.innerHTML = `
+      // ===== Counters widget (multi named counters with +/-1, +/-5, type-to-edit) =====
+      Widget.builders.counters = function (props = {}) {
+        const el = document.createElement('div');
+        el.className = 'widget counters-widget';
+        el.dataset.type = 'counters';
+        el.innerHTML = `
     <div class="header">
       <div>🔢 Counters</div>
       <div class="header-actions">
@@ -1801,23 +1803,23 @@ Widget.builders.counters = function(props = {}) {
     </div>
   `;
 
-  makeDraggable(el, el.querySelector('.header'));
+        makeDraggable(el, el.querySelector('.header'));
 
   const rows = el.querySelector('.rows');
   const addBtn = el.querySelector('.add-row');
   const close  = el.querySelector('.close');
 
-  // helpers
-  const clampInt = (v) => {
-    // allow negative; limit to 32-bit-ish range
-    if (Number.isNaN(v)) return 0;
-    return Math.max(-2147483648, Math.min(2147483647, v|0));
-  };
+        // helpers
+        const clampInt = (v) => {
+          // allow negative; limit to 32-bit-ish range
+          if (Number.isNaN(v)) return 0;
+          return Math.max(-2147483648, Math.min(2147483647, v | 0));
+        };
 
-  function createRow(data = {}) {
-    const row = document.createElement('div');
-    row.className = 'counter-row';
-    row.innerHTML = `
+        function createRow(data = {}) {
+          const row = document.createElement('div');
+          row.className = 'counter-row';
+          row.innerHTML = `
     <input class="name" type="text" placeholder="Name" value="${data.name ?? ''}" />
     <input class="value" type="number" inputmode="numeric" value="${clampInt(+data.value || 0)}" />
     <button class="trash" title="Delete counter">🗑</button>
@@ -1825,59 +1827,59 @@ Widget.builders.counters = function(props = {}) {
 
 
 
-    function n() { return clampInt(parseInt(valueInput.value, 10)); }
-    function set(v) { valueInput.value = clampInt(v); }
+          function n() { return clampInt(parseInt(valueInput.value, 10)); }
+          function set(v) { valueInput.value = clampInt(v); }
 
-    
 
-    // typing: commit on Enter / blur; sanitize on input
-    const nameInput  = row.querySelector('.name');
-    const valueInput = row.querySelector('.value');
 
-    nameInput.addEventListener('blur', () => markBoardDirty());
+          // typing: commit on Enter / blur; sanitize on input
+          const nameInput = row.querySelector('.name');
+          const valueInput = row.querySelector('.value');
 
-    valueInput.addEventListener('keydown', (e)=> {
-      if (e.key === 'Enter') { valueInput.blur(); e.stopPropagation(); }
-      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
-      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
-      e.stopPropagation();
-    });
-    valueInput.addEventListener('blur', () => { set(n()); markBoardDirty(); });
-    valueInput.addEventListener('input', ()=>{
-      // live-clean non-digits except leading '-'
-      const m = valueInput.value.match(/^-?\d*/);
-      valueInput.value = m ? m[0] : '0';
-    });
+          nameInput.addEventListener('blur', () => markBoardDirty());
 
-    // delete this row
-    row.querySelector('.trash').addEventListener('click', (e)=> {
-      e.stopPropagation();
-      row.remove();
-      markBoardDirty();
-    });
+          valueInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { valueInput.blur(); e.stopPropagation(); }
+            if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
+            if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
+            e.stopPropagation();
+          });
+          valueInput.addEventListener('blur', () => { set(n()); markBoardDirty(); });
+          valueInput.addEventListener('input', () => {
+            // live-clean non-digits except leading '-'
+            const m = valueInput.value.match(/^-?\d*/);
+            valueInput.value = m ? m[0] : '0';
+          });
 
-    rows.appendChild(row);
-  }
+          // delete this row
+          row.querySelector('.trash').addEventListener('click', (e) => {
+            e.stopPropagation();
+            row.remove();
+            markBoardDirty();
+          });
 
-  // initial rows (if provided); else one empty row
-  const initial = Array.isArray(props.counters) && props.counters.length ? props.counters : [{}];
-  initial.forEach(c => createRow(c));
+          rows.appendChild(row);
+        }
 
-  addBtn.addEventListener('click', (e)=> {
-    e.stopPropagation();
-    createRow({});
-    markBoardDirty();
-  });
+        // initial rows (if provided); else one empty row
+        const initial = Array.isArray(props.counters) && props.counters.length ? props.counters : [{}];
+        initial.forEach(c => createRow(c));
 
-  return el;
-};
+        addBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          createRow({});
+          markBoardDirty();
+        });
 
-// ===== Scorecard widget =====
-Widget.builders.scorecard = function(props = {}) {
-  const el = document.createElement('div');
-  el.className = 'widget scorecard-widget';
-  el.dataset.type = 'scorecard'; 
-  el.innerHTML = `
+        return el;
+      };
+
+      // ===== Scorecard widget =====
+      Widget.builders.scorecard = function (props = {}) {
+        const el = document.createElement('div');
+        el.className = 'widget scorecard-widget';
+        el.dataset.type = 'scorecard';
+        el.innerHTML = `
     <div class="header">
       <div>🏆 Scorecard</div>
       <div class="header-actions">
@@ -1895,7 +1897,7 @@ Widget.builders.scorecard = function(props = {}) {
     </div>
   `;
 
-  makeDraggable(el, el.querySelector('.header'));
+        makeDraggable(el, el.querySelector('.header'));
 
   const tbl = el.querySelector('.score-table');
   const addRowBtn = el.querySelector('.add-row');
@@ -1915,112 +1917,112 @@ Widget.builders.scorecard = function(props = {}) {
     expandBtn.textContent = el.classList.contains('expanded') ? '⤡' : '⤢';
   });
 
-  // internal state: number of rows & cols (excluding header row/col)
-  let rows = Math.max(1, (props.rowsCount || 2));
-  let cols = Math.max(1, (props.colsCount || 2));
-  let selectedCell = null; // {r,c,el}
+        // internal state: number of rows & cols (excluding header row/col)
+        let rows = Math.max(1, (props.rowsCount || 2));
+        let cols = Math.max(1, (props.colsCount || 2));
+        let selectedCell = null; // {r,c,el}
 
-  function buildTable() {
-    // clear
-    tbl.innerHTML = '';
+        function buildTable() {
+          // clear
+          tbl.innerHTML = '';
 
-    // header row (top-left empty cell + column headers)
-    const thead = document.createElement('tr');
-    thead.className = 'hdr-row';
-    thead.appendChild(document.createElement('th')); // empty corner
-    for (let c = 0; c < cols; c++) {
-      const th = document.createElement('th');
-      th.className = 'col-hdr';
-      th.dataset.c = c;
-      th.textContent = (props.colLabels && props.colLabels[c]) || `Col ${c+1}`;
-      th.addEventListener('dblclick', (e)=> { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
-      th.addEventListener('blur', ()=> { th.contentEditable = 'false'; markBoardDirty(); });
-      thead.appendChild(th);
-    }
-    tbl.appendChild(thead);
+          // header row (top-left empty cell + column headers)
+          const thead = document.createElement('tr');
+          thead.className = 'hdr-row';
+          thead.appendChild(document.createElement('th')); // empty corner
+          for (let c = 0; c < cols; c++) {
+            const th = document.createElement('th');
+            th.className = 'col-hdr';
+            th.dataset.c = c;
+            th.textContent = (props.colLabels && props.colLabels[c]) || `Col ${c + 1}`;
+            th.addEventListener('dblclick', (e) => { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
+            th.addEventListener('blur', () => { th.contentEditable = 'false'; markBoardDirty(); });
+            thead.appendChild(th);
+          }
+          tbl.appendChild(thead);
 
-    // body rows
-    for (let r = 0; r < rows; r++) {
-      const tr = document.createElement('tr');
-      tr.className = 'data-row';
-      // row header
-      const th = document.createElement('th');
-      th.className = 'row-hdr';
-      th.dataset.r = r;
-      th.textContent = (props.rowLabels && props.rowLabels[r]) || `Row ${r+1}`;
-      th.addEventListener('dblclick', (e)=> { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
-      th.addEventListener('blur', ()=> { th.contentEditable = 'false'; });
-      tr.appendChild(th);
+          // body rows
+          for (let r = 0; r < rows; r++) {
+            const tr = document.createElement('tr');
+            tr.className = 'data-row';
+            // row header
+            const th = document.createElement('th');
+            th.className = 'row-hdr';
+            th.dataset.r = r;
+            th.textContent = (props.rowLabels && props.rowLabels[r]) || `Row ${r + 1}`;
+            th.addEventListener('dblclick', (e) => { e.stopPropagation(); th.contentEditable = 'true'; th.focus(); });
+            th.addEventListener('blur', () => { th.contentEditable = 'false'; });
+            tr.appendChild(th);
 
-      for (let c = 0; c < cols; c++) {
-        const td = document.createElement('td');
-        td.className = 'cell';
-        td.dataset.r = r; td.dataset.c = c;
-        const inp = document.createElement('input');
-        inp.type = 'number';
-        inp.className = 'cell-input';
-        inp.value = (props.values && props.values[`${r},${c}`]) ?? 0;
-        const dirtySoon = debounce(() => markBoardDirty(), 300);
+            for (let c = 0; c < cols; c++) {
+              const td = document.createElement('td');
+              td.className = 'cell';
+              td.dataset.r = r; td.dataset.c = c;
+              const inp = document.createElement('input');
+              inp.type = 'number';
+              inp.className = 'cell-input';
+              inp.value = (props.values && props.values[`${r},${c}`]) ?? 0;
+              const dirtySoon = debounce(() => markBoardDirty(), 300);
 
-        inp.addEventListener('input', dirtySoon);   // optional but nice
-        inp.addEventListener('blur', () => markBoardDirty());
-        inp.addEventListener('change', () => markBoardDirty());
-        inp.addEventListener('keydown', (ev)=> {
-          if (ev.key === 'Enter') { inp.blur(); ev.stopPropagation(); }
+              inp.addEventListener('input', dirtySoon);   // optional but nice
+              inp.addEventListener('blur', () => markBoardDirty());
+              inp.addEventListener('change', () => markBoardDirty());
+              inp.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter') { inp.blur(); ev.stopPropagation(); }
+              });
+              inp.addEventListener('mousedown', (ev) => ev.stopPropagation());
+              inp.addEventListener('click', (ev) => { ev.stopPropagation(); selectCell(td); inp.focus(); });
+              td.appendChild(inp);
+              tr.appendChild(td);
+            }
+            tbl.appendChild(tr);
+          }
+        }
+
+        function selectCell(td) {
+          if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected');
+          selectedCell = { r: parseInt(td.dataset.r, 10), c: parseInt(td.dataset.c, 10), el: td };
+          td.classList.add('selected');
+        }
+
+        function addRow() { rows++; buildTable(); }
+        function addCol() { cols++; buildTable(); }
+        function adjustSelected(delta) {
+          if (!selectedCell) return;
+          const td = selectedCell.el;
+          const inp = td.querySelector('.cell-input');
+          const cur = parseInt(inp.value || 0, 10);
+          inp.value = cur + delta;
+          markBoardDirty();
+        }
+
+        addRowBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          addRow();
+          markBoardDirty();
         });
-        inp.addEventListener('mousedown', (ev)=> ev.stopPropagation());
-        inp.addEventListener('click', (ev)=> { ev.stopPropagation(); selectCell(td); inp.focus(); });
-        td.appendChild(inp);
-        tr.appendChild(td);
-      }
-      tbl.appendChild(tr);
-    }
-  }
+        addColBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          addCol();
+          markBoardDirty();
+        });
 
-  function selectCell(td) {
-    if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected');
-    selectedCell = { r: parseInt(td.dataset.r,10), c: parseInt(td.dataset.c,10), el: td };
-    td.classList.add('selected');
-  }
+        // click outside clears selection
+        board.addEventListener('click', () => { if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected'); selectedCell = null; });
 
-  function addRow() { rows++; buildTable(); }
-  function addCol() { cols++; buildTable(); }
-  function adjustSelected(delta) {
-    if (!selectedCell) return;
-    const td = selectedCell.el;
-    const inp = td.querySelector('.cell-input');
-    const cur = parseInt(inp.value || 0, 10);
-    inp.value = cur + delta;
-    markBoardDirty();
-  }
+        // initialize
+        buildTable();
 
-  addRowBtn.addEventListener('click', (e)=> {
-    e.stopPropagation();
-    addRow();
-    markBoardDirty();
-  });
-  addColBtn.addEventListener('click', (e)=> {
-    e.stopPropagation();
-    addCol();
-    markBoardDirty();
-  });
+        return el;
+      };
 
-  // click outside clears selection
-  board.addEventListener('click', ()=> { if (selectedCell && selectedCell.el) selectedCell.el.classList.remove('selected'); selectedCell = null; });
+      //here goes mini draw widget
+      Widget.builders.drawOptions = function (props = {}) {
+        const el = document.createElement('div');
+        el.className = 'widget draw-options-widget';
+        el.dataset.type = 'drawOptions';
 
-  // initialize
-  buildTable();
-
-  return el;
-};
-
-//here goes mini draw widget
-Widget.builders.drawOptions = function(props={}) {
-  const el = document.createElement('div');
-  el.className = 'widget draw-options-widget';
-  el.dataset.type = 'drawOptions';
-
-  el.innerHTML = `
+        el.innerHTML = `
     <div class="header">
       <div>✏️ Drawing Options</div>
       <button class="close">&times;</button>
@@ -2046,52 +2048,52 @@ Widget.builders.drawOptions = function(props={}) {
     </div>
   `;
 
-  makeDraggable(el, el.querySelector('.header'));
+        makeDraggable(el, el.querySelector('.header'));
 
-  const colorInput = el.querySelector('#drawColor');
-  const sizeInput  = el.querySelector('#drawSize');
-  const eraserBtn  = el.querySelector('#eraser_Button');
-  const laserBtn   = el.querySelector('#laser_Button');   // <<< NEW
-  const clearBtn   = el.querySelector('#clearDraw');
-  const closeBtn   = el.querySelector('.close');
+        const colorInput = el.querySelector('#drawColor');
+        const sizeInput = el.querySelector('#drawSize');
+        const eraserBtn = el.querySelector('#eraser_Button');
+        const laserBtn = el.querySelector('#laser_Button');   // <<< NEW
+        const clearBtn = el.querySelector('#clearDraw');
+        const closeBtn = el.querySelector('.close');
 
-  // ===== DRAWING TOOL LOGIC =====
+        // ===== DRAWING TOOL LOGIC =====
 
-  // Global defaults
-  window.drawColor = "#000000";
-  window.drawSize  = 4;
-  let erasing = false;
+        // Global defaults
+        window.drawColor = "#000000";
+        window.drawSize = 4;
+        let erasing = false;
 
-  // COLOR PICKER
-  colorInput.addEventListener("input", e => {
-      window.drawColor = e.target.value;
-      erasing = false;
-      eraserBtn.classList.remove("active");
-  });
+        // COLOR PICKER
+        colorInput.addEventListener("input", e => {
+          window.drawColor = e.target.value;
+          erasing = false;
+          eraserBtn.classList.remove("active");
+        });
 
-  // SIZE SLIDER
-  sizeInput.addEventListener("input", e => {
-      window.drawSize = parseInt(e.target.value, 10);
-      window.eraseSize = window.drawSize; // scale eraser radius
-  });
+        // SIZE SLIDER
+        sizeInput.addEventListener("input", e => {
+          window.drawSize = parseInt(e.target.value, 10);
+          window.eraseSize = window.drawSize; // scale eraser radius
+        });
 
-  // ERASER BUTTON
-  eraserBtn.addEventListener("click", () => {
-    eraserArmed = !eraserArmed;
-    eraserBtn.classList.toggle("active", eraserArmed);
-  });
+        // ERASER BUTTON
+        eraserBtn.addEventListener("click", () => {
+          eraserArmed = !eraserArmed;
+          eraserBtn.classList.toggle("active", eraserArmed);
+        });
 
-  // === LASER BUTTON ===
-  laserBtn.addEventListener("click", () => {
-    laserArmed = !laserArmed;
-    laserBtn.classList.toggle("active", laserArmed);
+        // === LASER BUTTON ===
+        laserBtn.addEventListener("click", () => {
+          laserArmed = !laserArmed;
+          laserBtn.classList.toggle("active", laserArmed);
 
-    // laser mode cancels eraser mode
-    if (laserArmed) {
-        eraserArmed = false;
-        eraserBtn.classList.remove("active");
-    }
-  });
+          // laser mode cancels eraser mode
+          if (laserArmed) {
+            eraserArmed = false;
+            eraserBtn.classList.remove("active");
+          }
+        });
 
   // CLEAR CANVAS
   clearBtn.addEventListener("click", () => {
@@ -2108,30 +2110,30 @@ Widget.builders.drawOptions = function(props={}) {
     drawButton.classList.remove("active");
   });
 
-  return el;
-};
-//end of mini draw widget
+        return el;
+      };
+      //end of mini draw widget
 
 
-// ===== Image widget (draggable, resizable, deletable) =====
-Widget.builders.image = function(props = {}) {
-  const el = document.createElement('div');
-  el.className = 'image-widget';
-  el.dataset.type = 'image';
-  el.style.width  = (props.width  ?? 200) + 'px';
-  el.style.height = (props.height ?? 200) + 'px';
-  el.style.position = 'absolute';
+      // ===== Image widget (draggable, resizable, deletable) =====
+      Widget.builders.image = function (props = {}) {
+        const el = document.createElement('div');
+        el.className = 'image-widget';
+        el.dataset.type = 'image';
+        el.style.width = (props.width ?? 200) + 'px';
+        el.style.height = (props.height ?? 200) + 'px';
+        el.style.position = 'absolute';
 
-  // inner elements
-  const img = document.createElement('img');
-  img.className = 'image';
-  img.draggable = false; // prevent native browser drag
-  img.src = props.src || '';
-  el.appendChild(img);
+        // inner elements
+        const img = document.createElement('img');
+        img.className = 'image';
+        img.draggable = false; // prevent native browser drag
+        img.src = props.src || '';
+        el.appendChild(img);
 
-  const handle = document.createElement('div');
-  handle.className = 'resize-handle';
-  el.appendChild(handle);
+        const handle = document.createElement('div');
+        handle.className = 'resize-handle';
+        el.appendChild(handle);
 
   const close = document.createElement('button');
   close.className = 'close';
@@ -2143,152 +2145,152 @@ Widget.builders.image = function(props = {}) {
     const itemId = el.dataset.itemId; el.remove(); emitItemRemove(itemId); markBoardDirty();
   });
 
-  // place on board (Widget.create handles left/top normally)
-  makeDraggable(el, el); // drag anywhere on the image widget
+        // place on board (Widget.create handles left/top normally)
+        makeDraggable(el, el); // drag anywhere on the image widget
 
-  // ----- resizing (keep aspect if Shift is held) -----
-  let resizing = false, start={x:0,y:0}, baseW=0, baseH=0, aspect=1;
-  let resizeTouchId = null;
-  img.addEventListener('load', ()=>{ if (img.naturalWidth && img.naturalHeight) aspect = img.naturalWidth / img.naturalHeight; });
-  handle.addEventListener('mousedown', (e)=>{
-    e.stopPropagation();
-    resizing = true;
-    const p = toBoardCoords(e.clientX, e.clientY);
-    start = p;
-    baseW = parseFloat(getComputedStyle(el).width);
-    baseH = parseFloat(getComputedStyle(el).height);
-    e.preventDefault();
-  });
-  window.addEventListener('mousemove', (e)=>{
-    if (!resizing) return;
-    const cur = toBoardCoords(e.clientX, e.clientY);
-    let dx = cur.x - start.x;
-    let dy = cur.y - start.y;
+        // ----- resizing (keep aspect if Shift is held) -----
+        let resizing = false, start = { x: 0, y: 0 }, baseW = 0, baseH = 0, aspect = 1;
+        let resizeTouchId = null;
+        img.addEventListener('load', () => { if (img.naturalWidth && img.naturalHeight) aspect = img.naturalWidth / img.naturalHeight; });
+        handle.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          resizing = true;
+          const p = toBoardCoords(e.clientX, e.clientY);
+          start = p;
+          baseW = parseFloat(getComputedStyle(el).width);
+          baseH = parseFloat(getComputedStyle(el).height);
+          e.preventDefault();
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!resizing) return;
+          const cur = toBoardCoords(e.clientX, e.clientY);
+          let dx = cur.x - start.x;
+          let dy = cur.y - start.y;
 
-    let newW = Math.max(40, baseW + dx);
-    let newH = Math.max(40, baseH + dy);
+          let newW = Math.max(40, baseW + dx);
+          let newH = Math.max(40, baseH + dy);
 
-    if (e.shiftKey) {
-      if (newW / newH > aspect) newW = newH * aspect; else newH = newW / aspect;
-    }
-    el.style.width  = newW + 'px';
-    el.style.height = newH + 'px';
-  });
-  window.addEventListener('mouseup', ()=>{
-    if (!resizing) return;
-    resizing = false;
-    const w = parseFloat(getComputedStyle(el).width);
-    const h = parseFloat(getComputedStyle(el).height);
-    el.style.width  = Math.max(CELL, snap(w)) + 'px';
-    el.style.height = Math.max(CELL, snap(h)) + 'px';
-    resizeTouchId = null;
-    markBoardDirty();
-  });
-  // Touch events for resizing
-  handle.addEventListener('touchstart', (e) => {
-    if (e.touches.length > 0) {
-      const t = e.touches[0];
-      resizeTouchId = t.identifier;
-      resizing = true;
-      const p = toBoardCoords(t.clientX, t.clientY);
-      start = p;
-      baseW = parseFloat(getComputedStyle(el).width);
-      baseH = parseFloat(getComputedStyle(el).height);
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, { passive: false });
-  window.addEventListener('touchmove', (e) => {
-    if (!resizing || resizeTouchId === null) return;
-    for (let i = 0; i < e.touches.length; i++) {
-      if (e.touches[i].identifier === resizeTouchId) {
-        const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
-        let dx = cur.x - start.x;
-        let dy = cur.y - start.y;
-        let newW = Math.max(40, baseW + dx);
-        let newH = Math.max(40, baseH + dy);
-        el.style.width  = newW + 'px';
-        el.style.height = newH + 'px';
-        break;
-      }
-    }
-  }, { passive: false });
-  window.addEventListener('touchend', ()=>{
-    if (!resizing || resizeTouchId === null) return;
-    resizing = false;
-    const w = parseFloat(getComputedStyle(el).width);
-    const h = parseFloat(getComputedStyle(el).height);
-    el.style.width  = Math.max(CELL, snap(w)) + 'px';
-    el.style.height = Math.max(CELL, snap(h)) + 'px';
-    resizeTouchId = null;
-  });
-  // ROTATE 90° button (next to the close button)
-const rotateBtn = document.createElement('button');
-rotateBtn.className = 'rotate';
-rotateBtn.innerHTML = '⟳';
-rotateBtn.title = 'Rotate 90°';
-el.appendChild(rotateBtn);
+          if (e.shiftKey) {
+            if (newW / newH > aspect) newW = newH * aspect; else newH = newW / aspect;
+          }
+          el.style.width = newW + 'px';
+          el.style.height = newH + 'px';
+        });
+        window.addEventListener('mouseup', () => {
+          if (!resizing) return;
+          resizing = false;
+          const w = parseFloat(getComputedStyle(el).width);
+          const h = parseFloat(getComputedStyle(el).height);
+          el.style.width = Math.max(CELL, snap(w)) + 'px';
+          el.style.height = Math.max(CELL, snap(h)) + 'px';
+          resizeTouchId = null;
+          markBoardDirty();
+        });
+        // Touch events for resizing
+        handle.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) {
+            const t = e.touches[0];
+            resizeTouchId = t.identifier;
+            resizing = true;
+            const p = toBoardCoords(t.clientX, t.clientY);
+            start = p;
+            baseW = parseFloat(getComputedStyle(el).width);
+            baseH = parseFloat(getComputedStyle(el).height);
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, { passive: false });
+        window.addEventListener('touchmove', (e) => {
+          if (!resizing || resizeTouchId === null) return;
+          for (let i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === resizeTouchId) {
+              const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
+              let dx = cur.x - start.x;
+              let dy = cur.y - start.y;
+              let newW = Math.max(40, baseW + dx);
+              let newH = Math.max(40, baseH + dy);
+              el.style.width = newW + 'px';
+              el.style.height = newH + 'px';
+              break;
+            }
+          }
+        }, { passive: false });
+        window.addEventListener('touchend', () => {
+          if (!resizing || resizeTouchId === null) return;
+          resizing = false;
+          const w = parseFloat(getComputedStyle(el).width);
+          const h = parseFloat(getComputedStyle(el).height);
+          el.style.width = Math.max(CELL, snap(w)) + 'px';
+          el.style.height = Math.max(CELL, snap(h)) + 'px';
+          resizeTouchId = null;
+        });
+        // ROTATE 90° button (next to the close button)
+        const rotateBtn = document.createElement('button');
+        rotateBtn.className = 'rotate';
+        rotateBtn.innerHTML = '⟳';
+        rotateBtn.title = 'Rotate 90°';
+        el.appendChild(rotateBtn);
 
-let rotation = props.rotation ? (props.rotation % 360) : 0;
-img.style.transformOrigin = 'center center';
-img.style.transform = `rotate(${rotation}deg)`;
+        let rotation = props.rotation ? (props.rotation % 360) : 0;
+        img.style.transformOrigin = 'center center';
+        img.style.transform = `rotate(${rotation}deg)`;
 
-rotateBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  rotation = (rotation + 90) % 360;
-  img.style.transform = `rotate(${rotation}deg)`;
-  markBoardDirty();
-  
-});
+        rotateBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          rotation = (rotation + 90) % 360;
+          img.style.transform = `rotate(${rotation}deg)`;
+          markBoardDirty();
 
-  return el;
-};
+        });
+
+        return el;
+      };
 
 
-// ===== Drag-and-drop images onto the board =====
+      // ===== Drag-and-drop images onto the board =====
 
-// Prevent default to allow drop
-['dragenter','dragover'].forEach(evt =>
-  wrap.addEventListener(evt, e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }, { passive:false })
-);
-wrap.addEventListener('drop', async (e) => {
-  e.preventDefault();
-  // Drop position in BOARD coords
-  const { x, y } = toBoardCoords(e.clientX, e.clientY);
+      // Prevent default to allow drop
+      ['dragenter', 'dragover'].forEach(evt =>
+        wrap.addEventListener(evt, e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }, { passive: false })
+      );
+      wrap.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        // Drop position in BOARD coords
+        const { x, y } = toBoardCoords(e.clientX, e.clientY);
 
-  // 1) If we got files (local images)
-  const files = Array.from(e.dataTransfer.files || []);
-  const imageFiles = files.filter(f => f.type && f.type.startsWith('image/'));
-  if (imageFiles.length > 0) {
-    for (const file of imageFiles) {
-      const dataUrl = await fileToDataURL(file);
-      const el = Widget.create('image', x, y, { src: dataUrl, width: 240, height: 240 });
-      // small offset so multiple files don’t stack exactly
-      el.style.left = snap((parseFloat(el.style.left)||0) + 10) + 'px';
-      el.style.top  = snap((parseFloat(el.style.top)||0) + 10) + 'px';
-    }
-    markBoardDirty();
-    return;
-  }
+        // 1) If we got files (local images)
+        const files = Array.from(e.dataTransfer.files || []);
+        const imageFiles = files.filter(f => f.type && f.type.startsWith('image/'));
+        if (imageFiles.length > 0) {
+          for (const file of imageFiles) {
+            const dataUrl = await fileToDataURL(file);
+            const el = Widget.create('image', x, y, { src: dataUrl, width: 240, height: 240 });
+            // small offset so multiple files don’t stack exactly
+            el.style.left = snap((parseFloat(el.style.left) || 0) + 10) + 'px';
+            el.style.top = snap((parseFloat(el.style.top) || 0) + 10) + 'px';
+          }
+          markBoardDirty();
+          return;
+        }
 
-  // 2) Otherwise, check for a URL (dragged from another tab)
-  // Prefer 'text/uri-list'; fall back to plain text or HTML.
-  const dt = e.dataTransfer;
-  let url = dt.getData('text/uri-list') || dt.getData('text/plain');
+        // 2) Otherwise, check for a URL (dragged from another tab)
+        // Prefer 'text/uri-list'; fall back to plain text or HTML.
+        const dt = e.dataTransfer;
+        let url = dt.getData('text/uri-list') || dt.getData('text/plain');
 
-  // If HTML was dragged (e.g., an <img>), try to extract the first <img src>
-  if ((!url || !/^https?:/i.test(url)) && dt.types.includes('text/html')) {
-    const html = dt.getData('text/html');
-    const m = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
-    if (m) url = m[1];
-  }
+        // If HTML was dragged (e.g., an <img>), try to extract the first <img src>
+        if ((!url || !/^https?:/i.test(url)) && dt.types.includes('text/html')) {
+          const html = dt.getData('text/html');
+          const m = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+          if (m) url = m[1];
+        }
 
-  if (url && /^https?:/i.test(url)) {
-    // Create an image widget that hot-links the remote asset
-    Widget.create('image', x, y, { src: url, width: 320, height: 220 });
-    markBoardDirty();
-  }
-});
+        if (url && /^https?:/i.test(url)) {
+          // Create an image widget that hot-links the remote asset
+          Widget.create('image', x, y, { src: url, width: 320, height: 220 });
+          markBoardDirty();
+        }
+      });
 
 // helper: file -> data URL
 function fileToDataURL(file) {
@@ -2753,36 +2755,36 @@ function serializeOneItem(el) {
   }
 </script>
 
-<script>
-// ===== SAVE / LOAD =====
+    <script>
+      // ===== SAVE / LOAD =====
 
-// --- AUTOSAVE TO A USER-CHOSEN FILE (host-only) ---
+      // --- AUTOSAVE TO A USER-CHOSEN FILE (host-only) ---
 
-let autosaveFileHandle = null;   // chosen via "Choose autosave file…"
-let boardDirty = false;          // becomes true when the board changes
+      let autosaveFileHandle = null;   // chosen via "Choose autosave file…"
+      let boardDirty = false;          // becomes true when the board changes
 
-function debounce(fn, ms = 250) {
-  let t = null;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
+      function debounce(fn, ms = 250) {
+        let t = null;
+        return (...args) => {
+          clearTimeout(t);
+          t = setTimeout(() => fn(...args), ms);
+        };
+      }
 
 
-function markBoardDirty() {
-  boardDirty = true;
-}
+      function markBoardDirty() {
+        boardDirty = true;
+      }
 
-// Write the current board state into the autosave file
-async function writeAutosaveToFile() {
-  if (!autosaveFileHandle) return;
+      // Write the current board state into the autosave file
+      async function writeAutosaveToFile() {
+        if (!autosaveFileHandle) return;
 
-  const stateJson = JSON.stringify(collectBoardState(), null, 2);
-  const writable = await autosaveFileHandle.createWritable();
-  await writable.write(stateJson);
-  await writable.close();
-}
+        const stateJson = JSON.stringify(collectBoardState(), null, 2);
+        const writable = await autosaveFileHandle.createWritable();
+        await writable.write(stateJson);
+        await writable.close();
+      }
 
 const dirtySoonGlobal = debounce(() => markBoardDirty(), 250);
 
@@ -2793,9 +2795,9 @@ const syncSoon = debounce((el) => {
   }
 }, 200);
 
-document.addEventListener('input', (e) => {
-  const board = document.getElementById('board');
-  if (!board || !board.contains(e.target)) return;
+      document.addEventListener('input', (e) => {
+        const board = document.getElementById('board');
+        if (!board || !board.contains(e.target)) return;
 
   if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
     dirtySoonGlobal();
@@ -2807,9 +2809,9 @@ document.addEventListener('input', (e) => {
   }
 }, true);
 
-document.addEventListener('change', (e) => {
-  const board = document.getElementById('board');
-  if (!board || !board.contains(e.target)) return;
+      document.addEventListener('change', (e) => {
+        const board = document.getElementById('board');
+        if (!board || !board.contains(e.target)) return;
 
   if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
     markBoardDirty();
@@ -2821,9 +2823,9 @@ document.addEventListener('change', (e) => {
   }
 }, true);
 
-document.addEventListener('blur', (e) => {
-  const board = document.getElementById('board');
-  if (!board || !board.contains(e.target)) return;
+      document.addEventListener('blur', (e) => {
+        const board = document.getElementById('board');
+        if (!board || !board.contains(e.target)) return;
 
   if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
     markBoardDirty();
@@ -2835,63 +2837,63 @@ document.addEventListener('blur', (e) => {
   }
 }, true);
 
-// Prompt the user once to pick a JSON file to autosave into
-async function chooseAutosaveFile() {
-  if (!('showSaveFilePicker' in window)) {
-    alert('Autosave-to-file is only supported in Chromium-based browsers (Chrome, Edge).');
-    return;
-  }
-
-  try {
-    autosaveFileHandle = await window.showSaveFilePicker({
-      suggestedName: 'flattop_autosave.json',
-      types: [
-        {
-          description: 'FlatTop Board Save',
-          accept: { 'application/json': ['.json'] }
+      // Prompt the user once to pick a JSON file to autosave into
+      async function chooseAutosaveFile() {
+        if (!('showSaveFilePicker' in window)) {
+          alert('Autosave-to-file is only supported in Chromium-based browsers (Chrome, Edge).');
+          return;
         }
-      ]
-    });
 
-    // Immediately write an initial snapshot
-    await writeAutosaveToFile();
-    boardDirty = false;
-    alert('Autosave file set. The board will now be autosaved periodically.');
-  } catch (err) {
-    // user probably hit cancel
-    console.error('Autosave file selection cancelled or failed:', err);
-  }
-}
+        try {
+          autosaveFileHandle = await window.showSaveFilePicker({
+            suggestedName: 'flattop_autosave.json',
+            types: [
+              {
+                description: 'FlatTop Board Save',
+                accept: { 'application/json': ['.json'] }
+              }
+            ]
+          });
 
-// Periodic autosave timer: every 5 seconds if the board is dirty
-const AUTOSAVE_INTERVAL_MS = 5000;
+          // Immediately write an initial snapshot
+          await writeAutosaveToFile();
+          boardDirty = false;
+          alert('Autosave file set. The board will now be autosaved periodically.');
+        } catch (err) {
+          // user probably hit cancel
+          console.error('Autosave file selection cancelled or failed:', err);
+        }
+      }
 
-setInterval(() => {
-  if (!autosaveFileHandle) return;
-  if (!boardDirty) return;
+      // Periodic autosave timer: every 5 seconds if the board is dirty
+      const AUTOSAVE_INTERVAL_MS = 5000;
 
-  writeAutosaveToFile()
-    .catch(err => console.error('Autosave failed:', err));
-  boardDirty = false;
-}, AUTOSAVE_INTERVAL_MS);
+      setInterval(() => {
+        if (!autosaveFileHandle) return;
+        if (!boardDirty) return;
+
+        writeAutosaveToFile()
+          .catch(err => console.error('Autosave failed:', err));
+        boardDirty = false;
+      }, AUTOSAVE_INTERVAL_MS);
 
 // ===== existing SAVE / LOAD utilities below =====
 
-// Keep JSON stable in "board pixels"
-function pxToNum(v){ return v ? parseFloat(v) || 0 : 0; }
+      // Keep JSON stable in "board pixels"
+      function pxToNum(v) { return v ? parseFloat(v) || 0 : 0; }
 
-// Read rotation in degrees from a CSS matrix()
-function matrixToDeg(mstr){
-  if (!mstr || mstr === 'none') return 0;
-  const m = mstr.match(/matrix\(([-\d.e, ]+)\)/);
-  if (!m) return 0;
-  const [a,b] = m[1].split(',').map(Number);
-  return Math.round(Math.atan2(b, a) * 180 / Math.PI);
-}
+      // Read rotation in degrees from a CSS matrix()
+      function matrixToDeg(mstr) {
+        if (!mstr || mstr === 'none') return 0;
+        const m = mstr.match(/matrix\(([-\d.e, ]+)\)/);
+        if (!m) return 0;
+        const [a, b] = m[1].split(',').map(Number);
+        return Math.round(Math.atan2(b, a) * 180 / Math.PI);
+      }
 
-// Build a snapshot of the board
-function collectBoardState(){
-  const items = [];
+      // Build a snapshot of the board
+      function collectBoardState() {
+        const items = [];
 
   // 1) Panel widgets (anything with #board > .widget)
 document.querySelectorAll('#board > .widget').forEach(el => {
@@ -2912,78 +2914,78 @@ document.querySelectorAll('#board > .widget').forEach(el => {
     data: null
   };
 
-  // Capture per-widget state
-  if (kind === 'notes') {
-    // try common selectors; adjust if notes.js uses a specific class
-    const ta = el.querySelector('textarea, .notes-text, .note-text');
-    base.data = { text: ta ? ta.value : '' };
-  } else if (kind === 'counters') {
-    const rows = [];
-    el.querySelectorAll('.counter-row').forEach(r => {
-      const name  = r.querySelector('.name')?.value ?? '';
-      const value = parseInt(r.querySelector('.value')?.value ?? '0', 10) || 0;
-      rows.push({ name, value });
-    });
-    base.data = { counters: rows };
-  } else if (kind === 'scorecard') {
-    // headers
-    const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
-    const rowHdrs = Array.from(el.querySelectorAll('tr.data-row th.row-hdr')).map(th => th.textContent.trim());
+          // Capture per-widget state
+          if (kind === 'notes') {
+            // try common selectors; adjust if notes.js uses a specific class
+            const ta = el.querySelector('textarea, .notes-text, .note-text');
+            base.data = { text: ta ? ta.value : '' };
+          } else if (kind === 'counters') {
+            const rows = [];
+            el.querySelectorAll('.counter-row').forEach(r => {
+              const name = r.querySelector('.name')?.value ?? '';
+              const value = parseInt(r.querySelector('.value')?.value ?? '0', 10) || 0;
+              rows.push({ name, value });
+            });
+            base.data = { counters: rows };
+          } else if (kind === 'scorecard') {
+            // headers
+            const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
+            const rowHdrs = Array.from(el.querySelectorAll('tr.data-row th.row-hdr')).map(th => th.textContent.trim());
 
-    // values keyed by "r,c"
-    const values = {};
-    el.querySelectorAll('tr.data-row').forEach((tr, r) => {
-      tr.querySelectorAll('td.cell').forEach((td, c) => {
-        const v = parseInt(td.querySelector('input.cell-input')?.value ?? '0', 10) || 0;
-        values[`${r},${c}`] = v;
-      });
-    });
+            // values keyed by "r,c"
+            const values = {};
+            el.querySelectorAll('tr.data-row').forEach((tr, r) => {
+              tr.querySelectorAll('td.cell').forEach((td, c) => {
+                const v = parseInt(td.querySelector('input.cell-input')?.value ?? '0', 10) || 0;
+                values[`${r},${c}`] = v;
+              });
+            });
 
-    base.data = {
-      rowsCount: rowHdrs.length,
-      colsCount: colHdrs.length,
-      rowLabels: rowHdrs,
-      colLabels: colHdrs,
-      values
-    };
-  } else if (kind === 'cards') {
-    base.data = { deckState: el._deckState || null };
-  } else if (kind === 'customCards') {
-    base.data = { deckState: el._customDeckState || null };
-  } else if (kind === 'dice') {
-      if (typeof el.getDiceData === 'function') {
-        base.data = el.getDiceData();
-      } else {
-        const expr = el.querySelector('.expr')?.value || '';
-        base.data = { expr: expr.trim(), rolls: [] };
-      }
-  }
+            base.data = {
+              rowsCount: rowHdrs.length,
+              colsCount: colHdrs.length,
+              rowLabels: rowHdrs,
+              colLabels: colHdrs,
+              values
+            };
+          } else if (kind === 'cards') {
+            base.data = { deckState: el._deckState || null };
+          } else if (kind === 'customCards') {
+            base.data = { deckState: el._customDeckState || null };
+          } else if (kind === 'dice') {
+            if (typeof el.getDiceData === 'function') {
+              base.data = el.getDiceData();
+            } else {
+              const expr = el.querySelector('.expr')?.value || '';
+              base.data = { expr: expr.trim(), rolls: [] };
+            }
+          }
 
   items.push(base);
   });
 
 
-  // 2) Tokens
-document.querySelectorAll('#board > .token').forEach(el => {
+        // 2) Tokens
+        document.querySelectorAll('#board > .token').forEach(el => {
 
-  // Prefer the persisted source if present
-  let imageUrl = el.dataset.imageSrc || '';
-  if (!imageUrl) {
-    const bg = getComputedStyle(el).backgroundImage;
-    if (bg && bg !== 'none') {
-      const m = bg.match(/url\(["']?(.*?)["']?\)/i);
-      if (m && m[1] && !m[1].startsWith('blob:')) {
-        imageUrl = m[1]; // only keep durable (non-blob) URLs
-      }
-    }
-  }
+          // Prefer the persisted source if present
+          let imageUrl = el.dataset.imageSrc || '';
+          if (!imageUrl) {
+            const bg = getComputedStyle(el).backgroundImage;
+            if (bg && bg !== 'none') {
+              const m = bg.match(/url\(["']?(.*?)["']?\)/i);
+              if (m && m[1] && !m[1].startsWith('blob:')) {
+                imageUrl = m[1]; // only keep durable (non-blob) URLs
+              }
+            }
+          }
 
-  // read label from first text node
-  let label = '';
-  const fc = el.firstChild;
-  if (fc && fc.nodeType === Node.TEXT_NODE) {
-    label = (fc.nodeValue || '').trim();
-  }
+          // read label from first text node
+          let label = '';
+          const fc = el.firstChild;
+          if (fc && fc.nodeType === Node.TEXT_NODE) {
+            label = (fc.nodeValue || '').trim();
+          }
 
   items.push({
     itemId: el.dataset.itemId || ensureItemId(el),
@@ -3018,14 +3020,14 @@ document.querySelectorAll('#board > .token').forEach(el => {
     });
   });
 
-    // 4) Playing cards
-  document.querySelectorAll('#board > .playing-card.draggable').forEach(el => {
-    const img = el.querySelector('img');
-    const cardData =
-      el._cardData ? el._cardData : (
-        img ? { image: img.getAttribute('src') || '', label: '' } :
-              { label: (el.textContent || '').trim() }
-      );
+        // 4) Playing cards
+        document.querySelectorAll('#board > .playing-card.draggable').forEach(el => {
+          const img = el.querySelector('img');
+          const cardData =
+            el._cardData ? el._cardData : (
+              img ? { image: img.getAttribute('src') || '', label: '' } :
+                { label: (el.textContent || '').trim() }
+            );
 
     items.push({
       itemId: el.dataset.itemId || ensureItemId(el),
@@ -3055,48 +3057,48 @@ document.querySelectorAll('#board > .token').forEach(el => {
     });
   });
 
-  const strokes = (window.Drawing && Array.isArray(window.Drawing.strokes))
-    ? window.Drawing.strokes
-        .filter(s => !s.isLaser) // don't sync laser strokes
-        .map(s => ({
-          color: s.color,
-          size: s.size,
-          points: s.points
-        }))
-    : [];
+        const strokes = (window.Drawing && Array.isArray(window.Drawing.strokes))
+          ? window.Drawing.strokes
+            .filter(s => !s.isLaser) // don't sync laser strokes
+            .map(s => ({
+              color: s.color,
+              size: s.size,
+              points: s.points
+            }))
+          : [];
 
-  return { version: 1, cell: CELL, items, drawing: { strokes } };
+        return { version: 1, cell: CELL, items, drawing: { strokes } };
 
-}
+      }
 
-function downloadJSON(data, filename='flattop-board.json'){
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
-}
+      function downloadJSON(data, filename = 'flattop-board.json') {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+      }
 
 function clearBoard(){
   document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card, #board > .shape-widget')    .forEach(el => el.remove());
 }
 
-function applyBoardState(state){
-  clearBoard();
+      function applyBoardState(state) {
+        clearBoard();
 
-  if (window.Drawing && state && state.drawing && Array.isArray(state.drawing.strokes)) {
-    // rebuild strokes
-    window.Drawing.strokes = state.drawing.strokes.map(s => ({
-      color: s.color || "#000000",
-      size:  s.size  || 4,
-      points: Array.isArray(s.points) ? s.points : [],
-      isLaser: false,
-      expireAt: null
-    }));
-    window.Drawing.render?.();
-  }
+        if (window.Drawing && state && state.drawing && Array.isArray(state.drawing.strokes)) {
+          // rebuild strokes
+          window.Drawing.strokes = state.drawing.strokes.map(s => ({
+            color: s.color || "#000000",
+            size: s.size || 4,
+            points: Array.isArray(s.points) ? s.points : [],
+            isLaser: false,
+            expireAt: null
+          }));
+          window.Drawing.render?.();
+        }
 
   const items = state?.items || [];
   for (const it of items) {
@@ -3206,22 +3208,22 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
       props.rolls = Array.isArray(it.data.rolls) ? it.data.rolls : [];
   }
 
-  const el = Widget.create(it.kind, it.x, it.y, props);
-  el.style.width  = (it.w||el.offsetWidth)  + 'px';
-  el.style.height = (it.h||el.offsetHeight) + 'px';
-  el.style.zIndex = it.z || '';
+            const el = Widget.create(it.kind, it.x, it.y, props);
+            el.style.width = (it.w || el.offsetWidth) + 'px';
+            el.style.height = (it.h || el.offsetHeight) + 'px';
+            el.style.zIndex = it.z || '';
 
-  const hdr = el.querySelector('.header div');
-  if (hdr && it.label) hdr.textContent = it.label;
+            const hdr = el.querySelector('.header div');
+            if (hdr && it.label) hdr.textContent = it.label;
 
-  // If notes builder didn’t consume props.text directly, set it post-create
-  if (it.kind === 'notes' && it.data?.text != null) {
-    const ta = el.querySelector('textarea, .notes-text, .note-text');
-    if (ta) ta.value = it.data.text;
-  }
+            // If notes builder didn’t consume props.text directly, set it post-create
+            if (it.kind === 'notes' && it.data?.text != null) {
+              const ta = el.querySelector('textarea, .notes-text, .note-text');
+              if (ta) ta.value = it.data.text;
+            }
 
-  continue;
-}
+            continue;
+          }
 
 if (it.kind === 'card') {
   const cardDiv = document.createElement('div');
@@ -3234,55 +3236,55 @@ if (it.kind === 'card') {
   cardDiv.style.height = (it.h || 60) + 'px';
   cardDiv.style.zIndex = it.z || '';
 
-  const card = it.card || {};
-  cardDiv._cardData = card;
-  cardDiv._flipped = !!it.flipped;
+            const card = it.card || {};
+            cardDiv._cardData = card;
+            cardDiv._flipped = !!it.flipped;
 
-  function renderCardFace() {
-    cardDiv.textContent = '';
-    cardDiv.innerHTML = '';
-    if (cardDiv._flipped) {
-      cardDiv.classList.add('back');
-      cardDiv.classList.remove('red');
-      return;
-    }
-    cardDiv.classList.remove('back');
+            function renderCardFace() {
+              cardDiv.textContent = '';
+              cardDiv.innerHTML = '';
+              if (cardDiv._flipped) {
+                cardDiv.classList.add('back');
+                cardDiv.classList.remove('red');
+                return;
+              }
+              cardDiv.classList.remove('back');
 
-    // image-style card
-    if (card.image) {
-      const img = document.createElement('img');
-      img.src = card.image;
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'cover';
-      img.draggable = false;
-      cardDiv.appendChild(img);
-      cardDiv.classList.remove('red');
-      return;
-    }
+              // image-style card
+              if (card.image) {
+                const img = document.createElement('img');
+                img.src = card.image;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.draggable = false;
+                cardDiv.appendChild(img);
+                cardDiv.classList.remove('red');
+                return;
+              }
 
-    // standard deck card
-    if (card.rank && card.suit) {
-      cardDiv.textContent = `${card.rank}${card.suit}`;
-      if (card.color === 'red') cardDiv.classList.add('red');
-      else cardDiv.classList.remove('red');
-      return;
-    }
+              // standard deck card
+              if (card.rank && card.suit) {
+                cardDiv.textContent = `${card.rank}${card.suit}`;
+                if (card.color === 'red') cardDiv.classList.add('red');
+                else cardDiv.classList.remove('red');
+                return;
+              }
 
-    // fallback label
-    cardDiv.textContent = card.label || '';
-    cardDiv.classList.remove('red');
-  }
+              // fallback label
+              cardDiv.textContent = card.label || '';
+              cardDiv.classList.remove('red');
+            }
 
-  renderCardFace();
-  makeDraggable(cardDiv, cardDiv);
+            renderCardFace();
+            makeDraggable(cardDiv, cardDiv);
 
-  cardDiv.addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
-    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
-    cardDiv.classList.add('selected');
-  });
+            cardDiv.addEventListener('click', (e) => {
+              e.stopPropagation();
+              document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+              document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+              cardDiv.classList.add('selected');
+            });
 
   cardDiv.flipCard = function() {
     cardDiv._flipped = !cardDiv._flipped;
@@ -3292,36 +3294,36 @@ if (it.kind === 'card') {
     }
   };
 
-  board.appendChild(cardDiv);
-  continue;
-}
+            board.appendChild(cardDiv);
+            continue;
+          }
 
 
-    // Fallback plain box if we don't recognize the kind
-    const el = document.createElement('div');
-    el.className = 'widget';
-    el.style.left = it.x + 'px';
-    el.style.top  = it.y + 'px';
-    el.style.width  = it.w + 'px';
-    el.style.height = it.h + 'px';
-    el.style.zIndex = it.z || '';
-    el.innerHTML = `
+          // Fallback plain box if we don't recognize the kind
+          const el = document.createElement('div');
+          el.className = 'widget';
+          el.style.left = it.x + 'px';
+          el.style.top = it.y + 'px';
+          el.style.width = it.w + 'px';
+          el.style.height = it.h + 'px';
+          el.style.zIndex = it.z || '';
+          el.innerHTML = `
       <div class="header">
         <div>${it.label || (it.kind || 'Widget')}</div>
         <button class="close" title="Remove">&times;</button>
       </div>
       <div class="body"><div class="muted">Restored from save.</div></div>
     `;
-    el.querySelector('.close')?.addEventListener('click', () => el.remove());
-    board.appendChild(el);
-  }
-}
+          el.querySelector('.close')?.addEventListener('click', () => el.remove());
+          board.appendChild(el);
+        }
+      }
 
-// Wire File menu
-const fileSaveBtn  = document.getElementById('menu-save');
-const fileLoadBtn  = document.getElementById('menu-load');
-const fileLoadIn   = document.getElementById('menu-load-input');
-const fileAutosaveBtn = document.getElementById('menu-autosave-file');
+      // Wire File menu
+      const fileSaveBtn = document.getElementById('menu-save');
+      const fileLoadBtn = document.getElementById('menu-load');
+      const fileLoadIn = document.getElementById('menu-load-input');
+      const fileAutosaveBtn = document.getElementById('menu-autosave-file');
 
 fileSaveBtn?.addEventListener('click', (e) => {
   e.preventDefault();
@@ -3354,210 +3356,210 @@ fileLoadIn?.addEventListener('change', async (e) => {
   }
 });
 
-fileAutosaveBtn?.addEventListener('click', (e) => {
-  e.preventDefault();
-  chooseAutosaveFile();
-});
+      fileAutosaveBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        chooseAutosaveFile();
+      });
 
-// Optional: Ctrl/Cmd+S and Ctrl/Cmd+O
-document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-    e.preventDefault();
-    downloadJSON(collectBoardState(), 'flattop-board.json');
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
-    e.preventDefault();
-    document.getElementById('menu-load-input')?.click();
-  }
-});
-</script>
-<script src="{% static 'board/widgets/chat.js' %}"></script>
-<script src="{% static 'board/widgets/notes.js' %}"></script>
-<script src="{% static 'board/widgets/soundboard.js' %}"></script>
+      // Optional: Ctrl/Cmd+S and Ctrl/Cmd+O
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          downloadJSON(collectBoardState(), 'flattop-board.json');
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+          e.preventDefault();
+          document.getElementById('menu-load-input')?.click();
+        }
+      });
+    </script>
+    <script src="{% static 'board/widgets/chat.js' %}"></script>
+    <script src="{% static 'board/widgets/notes.js' %}"></script>
+    <script src="{% static 'board/widgets/soundboard.js' %}"></script>
 
-<!-- Shapes Modal -->
-<div id="shapesModal" class="shortcuts-modal" style="display: none;">
-  <div class="shortcuts-modal-content">
-    <div class="shortcuts-modal-header">
-      <h2>Insert Shape</h2>
-      <button class="shapes-modal-close shortcuts-modal-close" title="Close">&times;</button>
-    </div>
-    <div class="shortcuts-modal-body">
-      <p class="hint">Click a shape to insert it on the board.</p>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <button class="shape-btn" data-shape="rectangle">Rectangle</button>
-        <button class="shape-btn" data-shape="circle">Circle</button>
-        <button class="shape-btn" data-shape="triangle">Triangle</button>
-        <button class="shape-btn" data-shape="hexagon">Hexagon</button>
-        <button class="shape-btn" data-shape="line">Line</button>
-        <button class="shape-btn" data-shape="arrow">Arrow</button>
-        <button class="shape-btn" data-shape="placeholder">Placeholder</button>
+    <!-- Shapes Modal -->
+    <div id="shapesModal" class="shortcuts-modal" style="display: none;">
+      <div class="shortcuts-modal-content">
+        <div class="shortcuts-modal-header">
+          <h2>Insert Shape</h2>
+          <button class="shapes-modal-close shortcuts-modal-close" title="Close">&times;</button>
+        </div>
+        <div class="shortcuts-modal-body">
+          <p class="hint">Click a shape to insert it on the board.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <button class="shape-btn" data-shape="rectangle">Rectangle</button>
+            <button class="shape-btn" data-shape="circle">Circle</button>
+            <button class="shape-btn" data-shape="triangle">Triangle</button>
+            <button class="shape-btn" data-shape="hexagon">Hexagon</button>
+            <button class="shape-btn" data-shape="line">Line</button>
+            <button class="shape-btn" data-shape="arrow">Arrow</button>
+            <button class="shape-btn" data-shape="placeholder">Placeholder</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Shortcuts Modal -->
-<div id="shortcutsModal" class="shortcuts-modal" style="display: none;">
-  <div class="shortcuts-modal-content">
-    <div class="shortcuts-modal-header">
-      <h2>Keyboard Shortcuts</h2>
-      <button class="shortcuts-modal-close" title="Close">&times;</button>
+    <!-- Shortcuts Modal -->
+    <div id="shortcutsModal" class="shortcuts-modal" style="display: none;">
+      <div class="shortcuts-modal-content">
+        <div class="shortcuts-modal-header">
+          <h2>Keyboard Shortcuts</h2>
+          <button class="shortcuts-modal-close" title="Close">&times;</button>
+        </div>
+        <div class="shortcuts-modal-body">
+          <table class="shortcuts-table">
+            <tbody>
+              <tr>
+                <td class="shortcut-key">Ctrl+L</td>
+                <td class="shortcut-desc">Toggle Lasso tool</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Space</td>
+                <td class="shortcut-desc">Pan with left-click (temporary)</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Middle-Mouse Drag</td>
+                <td class="shortcut-desc">Pan the board</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Mouse Wheel</td>
+                <td class="shortcut-desc">Zoom in/out</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Delete</td>
+                <td class="shortcut-desc">Remove selected cards/tokens</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">F</td>
+                <td class="shortcut-desc">Flip selected cards</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Ctrl+S / Cmd+S</td>
+                <td class="shortcut-desc">Save board (JSON)</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Ctrl+O / Cmd+O</td>
+                <td class="shortcut-desc">Load board</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Enter</td>
+                <td class="shortcut-desc">Roll dice / Confirm input</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Arrow Up/Down</td>
+                <td class="shortcut-desc">Adjust counter value</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">Shift+Arrow Up/Down</td>
+                <td class="shortcut-desc">Adjust counter by 5</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-    <div class="shortcuts-modal-body">
-      <table class="shortcuts-table">
-        <tbody>
-          <tr>
-            <td class="shortcut-key">Ctrl+L</td>
-            <td class="shortcut-desc">Toggle Lasso tool</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Space</td>
-            <td class="shortcut-desc">Pan with left-click (temporary)</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Middle-Mouse Drag</td>
-            <td class="shortcut-desc">Pan the board</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Mouse Wheel</td>
-            <td class="shortcut-desc">Zoom in/out</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Delete</td>
-            <td class="shortcut-desc">Remove selected cards/tokens</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">F</td>
-            <td class="shortcut-desc">Flip selected cards</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Ctrl+S / Cmd+S</td>
-            <td class="shortcut-desc">Save board (JSON)</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Ctrl+O / Cmd+O</td>
-            <td class="shortcut-desc">Load board</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Enter</td>
-            <td class="shortcut-desc">Roll dice / Confirm input</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Arrow Up/Down</td>
-            <td class="shortcut-desc">Adjust counter value</td>
-          </tr>
-          <tr>
-            <td class="shortcut-key">Shift+Arrow Up/Down</td>
-            <td class="shortcut-desc">Adjust counter by 5</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
 
-<script>
-  // ===== SHORTCUTS MODAL =====
-  console.log('Initializing shortcuts modal...');
-  
-  const shortcutsModal = document.getElementById('shortcutsModal');
-  const shortcutsBtn = document.getElementById('shortcutsBtn');
-  const shortcutsModalClose = document.querySelector('.shortcuts-modal-close');
+    <script>
+      // ===== SHORTCUTS MODAL =====
+      console.log('Initializing shortcuts modal...');
 
-  console.log('shortcutsModal:', shortcutsModal);
-  console.log('shortcutsBtn:', shortcutsBtn);
-  console.log('shortcutsModalClose:', shortcutsModalClose);
+      const shortcutsModal = document.getElementById('shortcutsModal');
+      const shortcutsBtn = document.getElementById('shortcutsBtn');
+      const shortcutsModalClose = document.querySelector('.shortcuts-modal-close');
 
-  function openShortcutsModal() {
-    if (!shortcutsModal) {
-      console.error('shortcutsModal not found');
-      return;
-    }
-    shortcutsModal.style.display = 'flex';
-    shortcutsModal.focus();
-  }
+      console.log('shortcutsModal:', shortcutsModal);
+      console.log('shortcutsBtn:', shortcutsBtn);
+      console.log('shortcutsModalClose:', shortcutsModalClose);
 
-  function closeShortcutsModal() {
-    if (!shortcutsModal) {
-      console.error('shortcutsModal not found');
-      return;
-    }
-    shortcutsModal.style.display = 'none';
-  }
-
-  if (shortcutsBtn) {
-    shortcutsBtn.addEventListener('click', (e) => {
-      console.log('Shortcuts button clicked');
-      e.preventDefault();
-      openShortcutsModal();
-    });
-  } else {
-    console.error('shortcutsBtn element not found');
-  }
-
-  if (shortcutsModalClose) {
-    shortcutsModalClose.addEventListener('click', closeShortcutsModal);
-  } else {
-    console.error('shortcutsModalClose element not found');
-  }
-
-  // Close modal when clicking outside of it
-  if (shortcutsModal) {
-    shortcutsModal.addEventListener('click', (e) => {
-      if (e.target === shortcutsModal) {
-        closeShortcutsModal();
+      function openShortcutsModal() {
+        if (!shortcutsModal) {
+          console.error('shortcutsModal not found');
+          return;
+        }
+        shortcutsModal.style.display = 'flex';
+        shortcutsModal.focus();
       }
-    });
-  }
 
-  // Close modal on Escape key
-  document.addEventListener('keydown', (e) => {
-    if (shortcutsModal && e.key === 'Escape' && shortcutsModal.style.display === 'flex') {
-      closeShortcutsModal();
-    }
-  });
+      function closeShortcutsModal() {
+        if (!shortcutsModal) {
+          console.error('shortcutsModal not found');
+          return;
+        }
+        shortcutsModal.style.display = 'none';
+      }
 
-  // ===== SHAPES MODAL =====
-  const shapesModal = document.getElementById('shapesModal');
-  const insertShapesBtn = document.getElementById('insertShapesBtn');
-  const shapesModalClose = document.querySelector('.shapes-modal-close');
+      if (shortcutsBtn) {
+        shortcutsBtn.addEventListener('click', (e) => {
+          console.log('Shortcuts button clicked');
+          e.preventDefault();
+          openShortcutsModal();
+        });
+      } else {
+        console.error('shortcutsBtn element not found');
+      }
 
-  function openShapesModal() {
-    if (!shapesModal) { console.error('shapesModal not found'); return; }
-    shapesModal.style.display = 'flex';
-    shapesModal.focus();
-  }
+      if (shortcutsModalClose) {
+        shortcutsModalClose.addEventListener('click', closeShortcutsModal);
+      } else {
+        console.error('shortcutsModalClose element not found');
+      }
 
-  function closeShapesModal() {
-    if (!shapesModal) { console.error('shapesModal not found'); return; }
-    shapesModal.style.display = 'none';
-  }
+      // Close modal when clicking outside of it
+      if (shortcutsModal) {
+        shortcutsModal.addEventListener('click', (e) => {
+          if (e.target === shortcutsModal) {
+            closeShortcutsModal();
+          }
+        });
+      }
 
-  if (insertShapesBtn) {
-    insertShapesBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      openShapesModal();
-    });
-  } else {
-    console.error('insertShapesBtn element not found');
-  }
+      // Close modal on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (shortcutsModal && e.key === 'Escape' && shortcutsModal.style.display === 'flex') {
+          closeShortcutsModal();
+        }
+      });
 
-  if (shapesModalClose) {
-    shapesModalClose.addEventListener('click', closeShapesModal);
-  }
+      // ===== SHAPES MODAL =====
+      const shapesModal = document.getElementById('shapesModal');
+      const insertShapesBtn = document.getElementById('insertShapesBtn');
+      const shapesModalClose = document.querySelector('.shapes-modal-close');
 
-  if (shapesModal) {
-    shapesModal.addEventListener('click', (e) => {
-      if (e.target === shapesModal) closeShapesModal();
-    });
-  }
+      function openShapesModal() {
+        if (!shapesModal) { console.error('shapesModal not found'); return; }
+        shapesModal.style.display = 'flex';
+        shapesModal.focus();
+      }
 
-  document.addEventListener('keydown', (e) => {
-    if (shapesModal && e.key === 'Escape' && shapesModal.style.display === 'flex') {
-      closeShapesModal();
-    }
-  });
+      function closeShapesModal() {
+        if (!shapesModal) { console.error('shapesModal not found'); return; }
+        shapesModal.style.display = 'none';
+      }
+
+      if (insertShapesBtn) {
+        insertShapesBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          openShapesModal();
+        });
+      } else {
+        console.error('insertShapesBtn element not found');
+      }
+
+      if (shapesModalClose) {
+        shapesModalClose.addEventListener('click', closeShapesModal);
+      }
+
+      if (shapesModal) {
+        shapesModal.addEventListener('click', (e) => {
+          if (e.target === shapesModal) closeShapesModal();
+        });
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (shapesModal && e.key === 'Escape' && shapesModal.style.display === 'flex') {
+          closeShapesModal();
+        }
+      });
 
   function getShapeSvgInner(kind, color) {
     if (kind === 'rectangle') {
@@ -3594,7 +3596,7 @@ document.addEventListener('keydown', (e) => {
     el.style.zIndex = z;
     el.style.transform = `rotate(${angle}deg)`;
 
-    el.innerHTML = `
+        el.innerHTML = `
       <div class="shape-box">
         <svg class="shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
           ${getShapeSvgInner(shapeKind, fill)}
@@ -3631,80 +3633,80 @@ document.addEventListener('keydown', (e) => {
       markBoardDirty();
     }
 
-  // Track currently selected shape globally
-  let selectedShape = null;
+      // Track currently selected shape globally
+      let selectedShape = null;
 
-  // Interaction: drag, resize, rotate
-  function makeShapeInteractive(el) {
-    const box = el.querySelector('.shape-box');
-    const resizeHandle = el.querySelector('.resize-handle');
-    const rotateHandle = el.querySelector('.rotate-handle');
+      // Interaction: drag, resize, rotate
+      function makeShapeInteractive(el) {
+        const box = el.querySelector('.shape-box');
+        const resizeHandle = el.querySelector('.resize-handle');
+        const rotateHandle = el.querySelector('.rotate-handle');
 
-    let dragging = false, dragStart = {x:0,y:0}, startLeft=0, startTop=0, activePointer=null;
-    let resizing = false, resizeStart={x:0,y:0}, startW=0, startH=0;
-    let rotating = false, rotateStartAngle=0, rotatePointerAngle=0;
+        let dragging = false, dragStart = { x: 0, y: 0 }, startLeft = 0, startTop = 0, activePointer = null;
+        let resizing = false, resizeStart = { x: 0, y: 0 }, startW = 0, startH = 0;
+        let rotating = false, rotateStartAngle = 0, rotatePointerAngle = 0;
 
-    // Helper to apply rotation
-    function applyRotation(angle) {
-      el.dataset.angle = angle;
-      el.style.transform = `rotate(${angle}deg)`;
-    }
-
-    // Helper to mark this shape as selected
-    function selectShape() {
-      if (selectedShape && selectedShape !== el) {
-        selectedShape.classList.remove('selected');
-      }
-      selectedShape = el;
-      el.classList.add('selected');
-    }
-
-    box.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      selectShape();
-      dragging = true; activePointer = e.pointerId;
-      box.setPointerCapture(activePointer);
-      dragStart.x = e.clientX; dragStart.y = e.clientY;
-      startLeft = parseFloat(el.style.left) || 0;
-      startTop = parseFloat(el.style.top) || 0;
-    });
-
-    window.addEventListener('pointermove', (e) => {
-      if (dragging && activePointer === e.pointerId) {
-        const dx = (e.clientX - dragStart.x) / scale;
-        const dy = (e.clientY - dragStart.y) / scale;
-        el.style.left = (startLeft + dx) + 'px';
-        el.style.top  = (startTop  + dy) + 'px';
-      }
-
-      if (resizing && activePointer === e.pointerId) {
-        const dx = (e.clientX - resizeStart.x) / scale;
-        const dy = (e.clientY - resizeStart.y) / scale;
-        let newW = Math.max(20, startW + dx);
-        let newH = Math.max(20, startH + dy);
-        if (e.shiftKey) {
-          const relW = (startW + dx) / startW;
-          const relH = (startH + dy) / startH;
-          // pick the direction with the larger relative change to preserve aspect
-          const scaleFactor = Math.abs(relW - 1) > Math.abs(relH - 1) ? relW : relH;
-          const sf = Math.max(0.05, scaleFactor);
-          newW = Math.max(20, startW * sf);
-          newH = Math.max(20, startH * sf);
+        // Helper to apply rotation
+        function applyRotation(angle) {
+          el.dataset.angle = angle;
+          el.style.transform = `rotate(${angle}deg)`;
         }
-        el.style.width = newW + 'px';
-        el.style.height = newH + 'px';
-      }
 
-      if (rotating && activePointer === e.pointerId) {
-        const crect = el.getBoundingClientRect();
-        const cx = crect.left + crect.width/2;
-        const cy = crect.top + crect.height/2;
-        const ang = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
-        const delta = ang - rotatePointerAngle;
-        const newAngle = rotateStartAngle + delta;
-        applyRotation(newAngle);
-      }
-    });
+        // Helper to mark this shape as selected
+        function selectShape() {
+          if (selectedShape && selectedShape !== el) {
+            selectedShape.classList.remove('selected');
+          }
+          selectedShape = el;
+          el.classList.add('selected');
+        }
+
+        box.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          selectShape();
+          dragging = true; activePointer = e.pointerId;
+          box.setPointerCapture(activePointer);
+          dragStart.x = e.clientX; dragStart.y = e.clientY;
+          startLeft = parseFloat(el.style.left) || 0;
+          startTop = parseFloat(el.style.top) || 0;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+          if (dragging && activePointer === e.pointerId) {
+            const dx = (e.clientX - dragStart.x) / scale;
+            const dy = (e.clientY - dragStart.y) / scale;
+            el.style.left = (startLeft + dx) + 'px';
+            el.style.top = (startTop + dy) + 'px';
+          }
+
+          if (resizing && activePointer === e.pointerId) {
+            const dx = (e.clientX - resizeStart.x) / scale;
+            const dy = (e.clientY - resizeStart.y) / scale;
+            let newW = Math.max(20, startW + dx);
+            let newH = Math.max(20, startH + dy);
+            if (e.shiftKey) {
+              const relW = (startW + dx) / startW;
+              const relH = (startH + dy) / startH;
+              // pick the direction with the larger relative change to preserve aspect
+              const scaleFactor = Math.abs(relW - 1) > Math.abs(relH - 1) ? relW : relH;
+              const sf = Math.max(0.05, scaleFactor);
+              newW = Math.max(20, startW * sf);
+              newH = Math.max(20, startH * sf);
+            }
+            el.style.width = newW + 'px';
+            el.style.height = newH + 'px';
+          }
+
+          if (rotating && activePointer === e.pointerId) {
+            const crect = el.getBoundingClientRect();
+            const cx = crect.left + crect.width / 2;
+            const cy = crect.top + crect.height / 2;
+            const ang = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+            const delta = ang - rotatePointerAngle;
+            const newAngle = rotateStartAngle + delta;
+            applyRotation(newAngle);
+          }
+        });
 
     window.addEventListener('pointerup', (e) => {
       if (dragging && activePointer === e.pointerId) {
@@ -3749,24 +3751,24 @@ document.addEventListener('keydown', (e) => {
       startH = parseFloat(getComputedStyle(el).height) || el.offsetHeight;
     });
 
-    rotateHandle.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); e.stopPropagation();
-      rotating = true; activePointer = e.pointerId; rotateHandle.setPointerCapture(activePointer);
-      const crect = el.getBoundingClientRect();
-      const cx = crect.left + crect.width/2;
-      const cy = crect.top + crect.height/2;
-      rotatePointerAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
-      rotateStartAngle = parseFloat(el.dataset.angle) || 0;
-    });
-  }
+        rotateHandle.addEventListener('pointerdown', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          rotating = true; activePointer = e.pointerId; rotateHandle.setPointerCapture(activePointer);
+          const crect = el.getBoundingClientRect();
+          const cx = crect.left + crect.width / 2;
+          const cy = crect.top + crect.height / 2;
+          rotatePointerAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+          rotateStartAngle = parseFloat(el.dataset.angle) || 0;
+        });
+      }
 
-  document.querySelectorAll('.shape-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const shape = e.currentTarget.dataset.shape;
-      createShapeWidget(shape);
-      closeShapesModal();
-    });
-  });
+      document.querySelectorAll('.shape-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const shape = e.currentTarget.dataset.shape;
+          createShapeWidget(shape);
+          closeShapesModal();
+        });
+      });
 
   // Delete key removes selected shape
   document.addEventListener('keydown', (e) => {
@@ -3779,122 +3781,122 @@ document.addEventListener('keydown', (e) => {
     }
   });
 
-  // ===== GRID TOGGLE =====
-  let gridVisible = true;
-  const toggleGridBtn = document.getElementById('toggleGridBtn');
+      // ===== GRID TOGGLE =====
+      let gridVisible = true;
+      const toggleGridBtn = document.getElementById('toggleGridBtn');
 
-  function toggleGrid() {
-    gridVisible = !gridVisible;
-    if (gridVisible) {
-      board.style.backgroundImage = `
+      function toggleGrid() {
+        gridVisible = !gridVisible;
+        if (gridVisible) {
+          board.style.backgroundImage = `
         linear-gradient(#000 2px, transparent 2px),
         linear-gradient(90deg, #000 2px, transparent 2px)
       `;
-      toggleGridBtn.classList.remove('grid-toggle-active');
-    } else {
-      board.style.backgroundImage = 'none';
-      toggleGridBtn.classList.add('grid-toggle-active');
-    }
-  }
-
-  if (toggleGridBtn) {
-    toggleGridBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      toggleGrid();
-    });
-  }
-
-  // ===== VIEW MENU BUTTONS =====
-  const resetViewBtn = document.getElementById('resetViewBtn');
-  const zoomFitBtn = document.getElementById('zoomFitBtn');
-  const showAllWidgetsBtn = document.getElementById('showAllWidgetsBtn');
-  const fullscreenBtn = document.getElementById('fullscreenBtn');
-
-  // Reset View
-  if (resetViewBtn) {
-    resetViewBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      resetView();
-    });
-  }
-
-  // Zoom to Fit - fits all widgets/objects on screen
-  if (zoomFitBtn) {
-    zoomFitBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const widgets = document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card');
-      if (widgets.length === 0) {
-        resetView();
-        return;
+          toggleGridBtn.classList.remove('grid-toggle-active');
+        } else {
+          board.style.backgroundImage = 'none';
+          toggleGridBtn.classList.add('grid-toggle-active');
+        }
       }
-      
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      
-      widgets.forEach(widget => {
-        const x = parseFloat(widget.style.left) || 0;
-        const y = parseFloat(widget.style.top) || 0;
-        const width = widget.offsetWidth;
-        const height = widget.offsetHeight;
-        
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + width);
-        maxY = Math.max(maxY, y + height);
-      });
-      
-      const padding = 50;
-      const contentWidth = maxX - minX + padding * 2;
-      const contentHeight = maxY - minY + padding * 2;
-      
-      const wrect = wrap.getBoundingClientRect();
-      const viewportWidth = wrect.width;
-      const viewportHeight = wrect.height;
-      
-      const scaleX = viewportWidth / contentWidth;
-      const scaleY = viewportHeight / contentHeight;
-      scale = Math.min(scaleX, scaleY, 1);
-      
-      const centerX = minX + (maxX - minX) / 2;
-      const centerY = minY + (maxY - minY) / 2;
-      
-      panX = viewportWidth / 2 - centerX * scale;
-      panY = viewportHeight / 2 - centerY * scale;
-      
-      applyTransform();
-      Drawing.render?.();
-    });
-  }
 
-  // Show All Widgets
-  if (showAllWidgetsBtn) {
-    showAllWidgetsBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card').forEach(widget => {
-        widget.style.display = 'block';
-        widget.style.opacity = '1';
-      });
-    });
-  }
-
-  // Fullscreen
-  if (fullscreenBtn) {
-    fullscreenBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-          console.log('Fullscreen request failed:', err);
+      if (toggleGridBtn) {
+        toggleGridBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          toggleGrid();
         });
-      } else {
-        document.exitFullscreen();
       }
-    });
-  }
-</script>
 
-<script>
-  // --- Realtime sync (Channels) ---
+      // ===== VIEW MENU BUTTONS =====
+      const resetViewBtn = document.getElementById('resetViewBtn');
+      const zoomFitBtn = document.getElementById('zoomFitBtn');
+      const showAllWidgetsBtn = document.getElementById('showAllWidgetsBtn');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
 
-  const lobbyCode = "{{ lobby_code|default:'' }}";
+      // Reset View
+      if (resetViewBtn) {
+        resetViewBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          resetView();
+        });
+      }
+
+      // Zoom to Fit - fits all widgets/objects on screen
+      if (zoomFitBtn) {
+        zoomFitBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const widgets = document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card');
+          if (widgets.length === 0) {
+            resetView();
+            return;
+          }
+
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+          widgets.forEach(widget => {
+            const x = parseFloat(widget.style.left) || 0;
+            const y = parseFloat(widget.style.top) || 0;
+            const width = widget.offsetWidth;
+            const height = widget.offsetHeight;
+
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x + width);
+            maxY = Math.max(maxY, y + height);
+          });
+
+          const padding = 50;
+          const contentWidth = maxX - minX + padding * 2;
+          const contentHeight = maxY - minY + padding * 2;
+
+          const wrect = wrap.getBoundingClientRect();
+          const viewportWidth = wrect.width;
+          const viewportHeight = wrect.height;
+
+          const scaleX = viewportWidth / contentWidth;
+          const scaleY = viewportHeight / contentHeight;
+          scale = Math.min(scaleX, scaleY, 1);
+
+          const centerX = minX + (maxX - minX) / 2;
+          const centerY = minY + (maxY - minY) / 2;
+
+          panX = viewportWidth / 2 - centerX * scale;
+          panY = viewportHeight / 2 - centerY * scale;
+
+          applyTransform();
+          Drawing.render?.();
+        });
+      }
+
+      // Show All Widgets
+      if (showAllWidgetsBtn) {
+        showAllWidgetsBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card').forEach(widget => {
+            widget.style.display = 'block';
+            widget.style.opacity = '1';
+          });
+        });
+      }
+
+      // Fullscreen
+      if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+              console.log('Fullscreen request failed:', err);
+            });
+          } else {
+            document.exitFullscreen();
+          }
+        });
+      }
+    </script>
+
+    <script>
+      // --- Realtime sync (Channels) ---
+
+      const lobbyCode = "{{ lobby_code|default:'' }}";
 
   // generate a stable-ish client id for this tab
   const clientId = (crypto?.randomUUID?.() || ("c" + Math.random().toString(16).slice(2)));
@@ -3902,60 +3904,60 @@ document.addEventListener('keydown', (e) => {
   let ws = null;
   let applyingRemote = false;
 
-  let reconnectDelay = 500;
+      let reconnectDelay = 500;
 
-  // One-time audio unlock for autoplay policies
-  window.__audioUnlocked = false;
+      // One-time audio unlock for autoplay policies
+      window.__audioUnlocked = false;
 
-  function unlockAudioOnce() {
-    if (window.__audioUnlocked) return;
-    window.__audioUnlocked = true;
+      function unlockAudioOnce() {
+        if (window.__audioUnlocked) return;
+        window.__audioUnlocked = true;
 
-    if (Array.isArray(window.__pendingRemoteSounds) && window.__pendingRemoteSounds.length) {
-      const queued = window.__pendingRemoteSounds.slice();
-      window.__pendingRemoteSounds.length = 0;
-      queued.forEach(m => window.soundboardRemotePlay?.(m));
-    }
-
-    // Create a silent audio element and attempt play/pause to unlock
-    const a = new Audio();
-    a.muted = true;
-
-    // A very short silent WAV data URI (works as a "no-op" unlock in many browsers)
-    a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
-
-    a.play().then(() => {
-      a.pause();
-      a.currentTime = 0;
-    }).catch(() => {
-      // Some browsers still require a more explicit user action; the flag is still useful
-    });
-  }
-
-  // Unlock on first user gesture anywhere on the page
-  document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
-  document.addEventListener("keydown", unlockAudioOnce, { once: true });
-
-
-  function connectWS() {
-    if (!lobbyCode) return;
-
-    const proto = (window.location.protocol === "https:") ? "wss" : "ws";
-    const url = `${proto}://${window.location.host}/ws/board/${lobbyCode}/`;
-
-    ws = new WebSocket(url);
-
-    window.__ws = ws;
-
-    window.sendLobbyMessage = function (payload) {
-      try {
-        if (window.__ws && window.__ws.readyState === WebSocket.OPEN) {
-          window.__ws.send(JSON.stringify(payload));
+        if (Array.isArray(window.__pendingRemoteSounds) && window.__pendingRemoteSounds.length) {
+          const queued = window.__pendingRemoteSounds.slice();
+          window.__pendingRemoteSounds.length = 0;
+          queued.forEach(m => window.soundboardRemotePlay?.(m));
         }
-      } catch (e) {
-        console.error("sendLobbyMessage failed", e);
+
+        // Create a silent audio element and attempt play/pause to unlock
+        const a = new Audio();
+        a.muted = true;
+
+        // A very short silent WAV data URI (works as a "no-op" unlock in many browsers)
+        a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
+        a.play().then(() => {
+          a.pause();
+          a.currentTime = 0;
+        }).catch(() => {
+          // Some browsers still require a more explicit user action; the flag is still useful
+        });
       }
-    };
+
+      // Unlock on first user gesture anywhere on the page
+      document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+      document.addEventListener("keydown", unlockAudioOnce, { once: true });
+
+
+      function connectWS() {
+        if (!lobbyCode) return;
+
+        const proto = (window.location.protocol === "https:") ? "wss" : "ws";
+        const url = `${proto}://${window.location.host}/ws/board/${lobbyCode}/`;
+
+        ws = new WebSocket(url);
+
+        window.__ws = ws;
+
+        window.sendLobbyMessage = function (payload) {
+          try {
+            if (window.__ws && window.__ws.readyState === WebSocket.OPEN) {
+              window.__ws.send(JSON.stringify(payload));
+            }
+          } catch (e) {
+            console.error("sendLobbyMessage failed", e);
+          }
+        };
 
     ws.onopen = () => {
       console.log("WS connected");
@@ -3966,21 +3968,21 @@ document.addEventListener('keydown', (e) => {
       });
     };
 
-    ws.onclose = (e) => {
-      console.log("WS closed", e.code, e.reason);
+        ws.onclose = (e) => {
+          console.log("WS closed", e.code, e.reason);
 
-      // try reconnect
-      setTimeout(() => {
-        reconnectDelay = Math.min(10000, reconnectDelay * 1.8);
-        connectWS();
-      }, reconnectDelay);
-    };
+          // try reconnect
+          setTimeout(() => {
+            reconnectDelay = Math.min(10000, reconnectDelay * 1.8);
+            connectWS();
+          }, reconnectDelay);
+        };
 
-    ws.onerror = (e) => {
-      console.error("WS error", e);
-      // force close so onclose triggers reconnect
-      try { ws.close(); } catch {}
-    };
+        ws.onerror = (e) => {
+          console.error("WS error", e);
+          // force close so onclose triggers reconnect
+          try { ws.close(); } catch { }
+        };
 
     ws.onmessage = (evt) => {
       try {
@@ -4064,8 +4066,81 @@ document.addEventListener('keydown', (e) => {
 
 
 
-  connectWS();
-</script>
+      connectWS();
+    </script>
+    <!-- Player Management -->
+    <div id="managePlayersModal" class="modal-hidden">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Players in Lobby</h3>
+          <button id="closeManagePlayersBtn">X</button>
+        </div>
+
+        <div class="modal-body">
+          <ul>
+            {% for member in members %}
+            <li>
+              {{ member.username }}
+
+              {% if member.is_host_member %}
+              (Host)
+              {% endif %}
+
+              {% if member.can_kick %}
+              <form method="post" action="{% url 'lobbies:kick_player' lobby.code member.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit">Kick</button>
+              </form>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const managePlayersModal = document.getElementById('managePlayersModal');
+      const managePlayersBtn = document.getElementById('managePlayersBtn');
+      const closeManagePlayersBtn = document.getElementById('closeManagePlayersBtn');
+
+      function openManagePlayersModal() {
+        if (!managePlayersModal) {
+          console.error('managePlayersModal not found');
+          return;
+        }
+        managePlayersModal.classList.remove('modal-hidden');
+        managePlayersModal.classList.add('modal-show');
+      }
+
+      function closeManagePlayersModal() {
+        if (!managePlayersModal) {
+          console.error('managePlayersModal not found');
+          return;
+        }
+        managePlayersModal.classList.remove('modal-show');
+        managePlayersModal.classList.add('modal-hidden');
+      }
+
+      if (managePlayersBtn) {
+        managePlayersBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          openManagePlayersModal();
+        });
+      }
+
+      if (closeManagePlayersBtn) {
+        closeManagePlayersBtn.addEventListener('click', closeManagePlayersModal);
+      }
+
+      if (managePlayersModal) {
+        managePlayersModal.addEventListener('click', (e) => {
+          if (e.target === managePlayersModal) {
+            closeManagePlayersModal();
+          }
+        });
+      }
+    </script>
 </body>
 
 
