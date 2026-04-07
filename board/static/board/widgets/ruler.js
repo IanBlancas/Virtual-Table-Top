@@ -134,7 +134,7 @@
       line.setAttribute('y1', pA.y - wrect.top);
       line.setAttribute('x2', pB.x - wrect.left);
       line.setAttribute('y2', pB.y - wrect.top);
-      line.setAttribute('stroke','#00e5ff');
+      line.setAttribute('stroke','#00ffc3');
       line.setAttribute('stroke-width','3');
       line.setAttribute('stroke-linecap','round');
       svg.appendChild(line);
@@ -150,7 +150,7 @@
       circle.setAttribute('cx', cx);
       circle.setAttribute('cy', cy);
       circle.setAttribute('r', 6);
-      circle.setAttribute('fill','#ff4081');
+      circle.setAttribute('fill','#ff0000');
       circle.setAttribute('stroke','#fff');
       circle.setAttribute('stroke-width','1');
       svg.appendChild(circle);
