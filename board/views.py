@@ -9,6 +9,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.conf import settings
 from functools import wraps
 import hashlib, os
+from django.shortcuts import get_object_or_404, redirect
+from lobbies.models import Lobby, LobbyMember
 
 from .models import CardImage
 from django.views.decorators.csrf import csrf_exempt
@@ -61,12 +63,46 @@ def register(request):
             'next': next_url,
         }
         return HttpResponse(template.render(ctx, request))
-
 @login_required
 def board(request, code=None):
-    template = loader.get_template('board/layout.html')
-    return HttpResponse(template.render({"lobby_code": code }, request))
+    lobby = get_object_or_404(Lobby, code=code)
 
+    is_member = LobbyMember.objects.filter(lobby=lobby, user=request.user).exists()
+    if not is_member:
+        return redirect("lobbies:home")
+
+    members = LobbyMember.objects.select_related("user").filter(lobby=lobby)
+
+    current_user_is_host = request.user.id == lobby.host_id
+
+    player_rows = []
+    for member in members:
+        player_rows.append({
+            "id": member.user.id,
+            "username": member.user.username,
+            "is_host_member": member.user.id == lobby.host_id,
+            "can_kick": current_user_is_host and member.user.id != lobby.host_id,
+        })
+
+    context = {
+        "lobby_code": code,
+        "lobby": lobby,
+        "members": player_rows,
+        "is_host": current_user_is_host,
+    }
+
+    template = loader.get_template("board/layout.html")
+    return HttpResponse(template.render(context, request))
+
+    context = {
+        "lobby_code": code,
+        "lobby": lobby,
+        "members": player_rows,
+        "is_host": request.user == lobby.host,
+    }
+
+    template = loader.get_template("board/layout.html")
+    return HttpResponse(template.render(context, request))
 @require_POST
 @ajax_login_required
 def upload_card_image(request):

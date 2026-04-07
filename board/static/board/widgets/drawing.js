@@ -162,9 +162,9 @@ function endStroke() {
     currentStroke.expireAt = performance.now() + laserLifetime;
   }
 
-  // If we just finished a normal stroke, sync it
   if (currentStroke && !currentStroke.isLaser) {
     if (typeof window.markBoardDirty === "function") window.markBoardDirty();
+    if (typeof window.emitDrawingSync === "function") window.emitDrawingSync();
   }
 
   currentStroke = null;
@@ -194,6 +194,7 @@ function eraseAt(x, y, radius = 20) {
 
   if (Drawing.strokes.length !== before) {
     if (typeof window.markBoardDirty === "function") window.markBoardDirty();
+    if (typeof window.emitDrawingSync === "function") window.emitDrawingSync();
   }
 
   needsRender = true;
