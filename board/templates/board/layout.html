@@ -100,7 +100,17 @@
       <button id="addNotesWidget">Notes</button>
       <button id="chatBtn">Chat</button>
     </div>
-  </aside>
+    
+    <div id="private-panel" class="private-panel">
+      <h3>Private Board <small>(only you see this)</small></h3>
+      <div class="private-controls">
+        <!-- Controls removed: creation via main widget buttons (choose Private when spawning) -->
+      </div>
+      <div id="private-board" class="private-board" style="position:relative; width:100%; height:260px; border:1px solid #ccc; background:#f7f7f7; overflow:auto; padding:6px; box-sizing:border-box;">
+        <!-- Private widgets will be placed here; they are not included in shared board state -->
+      </div>
+    </div>
+    </aside>
 
   <main class="mainBoard">
     <div class="toolbar">
@@ -115,7 +125,14 @@
       <canvas id="drawCanvas"></canvas>
     </div>
 
-    <script src="{% static 'board/widgets/drawing.js' %}"></script>
+<script src="{% static 'board/widgets/drawing.js' %}"></script>
+<script src="{% static 'board/widgets/privateBoard.js' %}"></script>
+
+<script>
+  window.addEventListener('load', () => {
+    if (window.PrivateBoard) PrivateBoard.init({ container: '#private-panel' });
+  });
+</script>
 
   <script>
     // --- minimal pan & zoom controller ---
@@ -680,7 +697,12 @@ drawButton.addEventListener("click", () => {
         closeBtn.addEventListener('touchend', handleCloseClick, { passive: false });
       }
       ensureItemId(el, props.id);
-      board.appendChild(el);
+      const target = container || board;
+      target.appendChild(el);
+      // mark items created into a non-public container as private
+      try {
+        if (container && container !== board) el.dataset.private = '1';
+      } catch (e) { /* ignore if DOM not available */ }
       return el;
     }
   };
@@ -700,13 +722,13 @@ if (!window._flatTopCardKeyHandlerInstalled) {
     if (typing) return;
 
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
+      document.querySelectorAll('.playing-card.draggable.selected:not([data-private="1"])').forEach(c => {
         const itemId = c.dataset.itemId;
         c.remove();
         emitItemRemove(itemId);
       });
 
-      document.querySelectorAll('.token.selected').forEach(t => {
+      document.querySelectorAll('.token.selected:not([data-private="1"])').forEach(t => {
         const itemId = t.dataset.itemId;
         t.remove();
         emitItemRemove(itemId);
@@ -920,10 +942,14 @@ Widget.builders.token = function(props = {}) {
         close.className = 'close';
         close.innerHTML = '&times;';
         token.appendChild(close);
+          function maybeMarkDirty() {
+            try { if (token.dataset && token.dataset.private === '1') return; } catch (e) {}
+            markBoardDirty();
+          }
         close.addEventListener('click', (e) => {
           e.stopPropagation();
           token.remove();
-          markBoardDirty();
+          maybeMarkDirty();
         });
 
         // Make the token accept image drops *and* stop the event from reaching the board
@@ -967,20 +993,20 @@ Widget.builders.token = function(props = {}) {
           const dt = e.dataTransfer;
           if (!dt) return;
 
-          if (dt.files && dt.files.length) {
-            const file = dt.files[0];
-            if (file && file.type && file.type.startsWith('image/')) {
-              await setTokenImageFromFile(file);
-              markBoardDirty();
-              return;
-            }
-          }
-          const url = extractUrlFromDataTransfer(dt);
-          if (url) {
-            setTokenImageFromUrl(url);
-            markBoardDirty();
-          }
-        });
+    if (dt.files && dt.files.length) {
+    const file = dt.files[0];
+    if (file && file.type && file.type.startsWith('image/')) {
+      await setTokenImageFromFile(file);
+        maybeMarkDirty();
+      return;
+    }
+  }
+  const url = extractUrlFromDataTransfer(dt);
+  if (url) {
+    setTokenImageFromUrl(url);
+    maybeMarkDirty();
+  }
+});
 
 
         // shape toggle (◯ / ◻)
@@ -995,85 +1021,85 @@ Widget.builders.token = function(props = {}) {
         }
         refreshShapeIcon();
 
-        shapeBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (token.classList.contains('square')) {
-            token.classList.replace('square', 'circle');
-          } else {
-            token.classList.replace('circle', 'square');
-          }
-          refreshShapeIcon();
-          markBoardDirty();
-        });
+  shapeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (token.classList.contains('square')) {
+      token.classList.replace('square','circle');
+    } else {
+      token.classList.replace('circle','square');
+    }
+    refreshShapeIcon();
+    maybeMarkDirty();
+  });
 
 
         // dragging (use the whole token as handle)
         makeDraggable(token, token);
 
-        // ----- resizing -----
-        let resizing = false, start = { x: 0, y: 0 }, baseSize = size;
-        let resizeTouchId = null;
-        handle.addEventListener('mousedown', (e) => {
-          e.stopPropagation();
-          resizing = true;
-          start = toBoardCoords(e.clientX, e.clientY);
-          baseSize = parseFloat(token.style.width) || size;
-          e.preventDefault();
-        });
-        window.addEventListener('mousemove', (e) => {
-          if (!resizing) return;
-          const cur = toBoardCoords(e.clientX, e.clientY);
-          const delta = Math.max(cur.x - start.x, cur.y - start.y);
-          const newSize = Math.max(24, baseSize + delta);
-          token.style.width = newSize + 'px';
-          token.style.height = newSize + 'px';
-          token.style.fontSize = Math.max(10, newSize / 3) + 'px';
-        });
-        window.addEventListener('mouseup', () => {
-          if (!resizing) return;
-          resizing = false;
-          const s = parseFloat(token.style.width);
-          const snapped = Math.max(CELL, snap(s));
-          token.style.width = snapped + 'px';
-          token.style.height = snapped + 'px';
-          resizeTouchId = null;
-          markBoardDirty();
-        });
-        // Touch events for resizing
-        handle.addEventListener('touchstart', (e) => {
-          if (e.touches.length > 0) {
-            const t = e.touches[0];
-            resizeTouchId = t.identifier;
-            resizing = true;
-            start = toBoardCoords(t.clientX, t.clientY);
-            baseSize = parseFloat(token.style.width) || size;
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }, { passive: false });
-        window.addEventListener('touchmove', (e) => {
-          if (!resizing || resizeTouchId === null) return;
-          for (let i = 0; i < e.touches.length; i++) {
-            if (e.touches[i].identifier === resizeTouchId) {
-              const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
-              const delta = Math.max(cur.x - start.x, cur.y - start.y);
-              const newSize = Math.max(24, baseSize + delta);
-              token.style.width = newSize + 'px';
-              token.style.height = newSize + 'px';
-              token.style.fontSize = Math.max(10, newSize / 3) + 'px';
-              break;
-            }
-          }
-        }, { passive: false });
-        window.addEventListener('touchend', (e) => {
-          if (!resizing || resizeTouchId === null) return;
-          resizing = false;
-          const s = parseFloat(token.style.width);
-          const snapped = Math.max(CELL, snap(s));
-          token.style.width = snapped + 'px';
-          token.style.height = snapped + 'px';
-          resizeTouchId = null;
-        });
+  // ----- resizing -----
+  let resizing = false, start = {x:0, y:0}, baseSize = size;
+  let resizeTouchId = null;
+  handle.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    resizing = true;
+    start = toBoardCoords(e.clientX, e.clientY);
+    baseSize = parseFloat(token.style.width) || size;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!resizing) return;
+    const cur = toBoardCoords(e.clientX, e.clientY);
+    const delta = Math.max(cur.x - start.x, cur.y - start.y);
+    const newSize = Math.max(24, baseSize + delta);
+    token.style.width  = newSize + 'px';
+    token.style.height = newSize + 'px';
+    token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!resizing) return;
+    resizing = false;
+    const s = parseFloat(token.style.width);
+    const snapped = Math.max(CELL, snap(s));
+    token.style.width  = snapped + 'px';
+    token.style.height = snapped + 'px';
+    resizeTouchId = null;
+    maybeMarkDirty();
+  });
+  // Touch events for resizing
+  handle.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) {
+      const t = e.touches[0];
+      resizeTouchId = t.identifier;
+      resizing = true;
+      start = toBoardCoords(t.clientX, t.clientY);
+      baseSize = parseFloat(token.style.width) || size;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { passive: false });
+  window.addEventListener('touchmove', (e) => {
+    if (!resizing || resizeTouchId === null) return;
+    for (let i = 0; i < e.touches.length; i++) {
+      if (e.touches[i].identifier === resizeTouchId) {
+        const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
+        const delta = Math.max(cur.x - start.x, cur.y - start.y);
+        const newSize = Math.max(24, baseSize + delta);
+        token.style.width  = newSize + 'px';
+        token.style.height = newSize + 'px';
+        token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+        break;
+      }
+    }
+  }, { passive: false });
+  window.addEventListener('touchend', (e) => {
+    if (!resizing || resizeTouchId === null) return;
+    resizing = false;
+    const s = parseFloat(token.style.width);
+    const snapped = Math.max(CELL, snap(s));
+    token.style.width  = snapped + 'px';
+    token.style.height = snapped + 'px';
+    resizeTouchId = null;
+  });
 
         // ----- rename on double-click (quick patch version) -----
         token.addEventListener('dblclick', () => {
@@ -1099,19 +1125,19 @@ Widget.builders.token = function(props = {}) {
           token.appendChild(shapeBtn);
 
 
-          input.focus();
-          input.addEventListener('blur', () => {
-            token.textContent = input.value || 'Token'; // put label back as text node
-            token.appendChild(handle);                  // re-attach again
-            token.appendChild(close);
-            token.appendChild(shapeBtn);
-            markBoardDirty();
-          });
-          input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') input.blur();
-            e.stopPropagation();
-          });
-        });
+    input.focus();
+    input.addEventListener('blur', () => {
+      token.textContent = input.value || 'Token'; // put label back as text node
+      token.appendChild(handle);                  // re-attach again
+      token.appendChild(close);
+      token.appendChild(shapeBtn);
+      maybeMarkDirty();
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') input.blur();
+      e.stopPropagation();
+    });
+  });
 
         // ----- selection outline -----
         token.addEventListener('click', (e) => {
@@ -1136,50 +1162,95 @@ Widget.builders.token = function(props = {}) {
 
   // ===== Hook the sidebar buttons =====
 diceBtn.addEventListener('click', ()=> {
-  const el = Widget.create('dice', 0, 0);
+  spawnWidget('dice', e.target);
   emitItemUpsert(el);
   markBoardDirty();
 });
 
 tokenBtn.addEventListener('click', ()=> {
-  const el = Widget.create('token', 0, 0);
+  spawnWidget('token', e.target);
   emitItemUpsert(el);
   markBoardDirty();
 });
 
 scoreBtn.addEventListener('click', ()=> {
-  const el = Widget.create('scorecard', 0, 0);
+  spawnWidget('scorecard', e.target);
   emitItemUpsert(el);
   markBoardDirty();
 });
   // new dropdown menu items
   cardsDeckBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    const el = Widget.create('cards', 0, 0);
+    spawnWidget('cards', e.target);
     emitItemUpsert(el);
     markBoardDirty();
 });
 cardsCustomBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  const el = Widget.create('customCards', 0, 0);
+  spawnWidget('customCards', e.target);
   emitItemUpsert(el);
   markBoardDirty();
 });
 soundBtn.addEventListener('click', ()=> {
-  const el = Widget.create('soundboard', 0, 0);
+  spawnWidget('soundboard', e.target);
   emitItemUpsert(el);
   markBoardDirty();
 });
 addNotesBtn.addEventListener('click', ()=> {
-  const el = Widget.create('notes', 0, 0);
+  spawnWidget('notes', e.target);
   emitItemUpsert(el);
   markBoardDirty();
 });
 chatBtn.addEventListener('click', () => {
-  const el = Widget.create('chat', 0, 0);
+  spawnWidget('chat', e.target);
   emitItemUpsert(el);
   markBoardDirty();
 });
+
+  function showSpawnChoice(anchorEl){
+    return new Promise((resolve) => {
+      // remove existing
+      const existing = document.getElementById('spawn-choice');
+      if (existing) existing.remove();
+
+      const box = document.createElement('div');
+      box.id = 'spawn-choice';
+      box.style.position = 'absolute';
+      box.style.padding = '6px';
+      box.style.background = '#fff';
+      box.style.border = '1px solid #ccc';
+      box.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+      box.style.zIndex = 9999;
+
+      const pub = document.createElement('button'); pub.textContent = 'Public';
+      const priv = document.createElement('button'); priv.textContent = 'Private';
+      pub.style.marginRight = '6px';
+      box.appendChild(pub); box.appendChild(priv);
+
+      document.body.appendChild(box);
+      const rect = anchorEl.getBoundingClientRect();
+      box.style.left = (rect.right + 6) + 'px';
+      box.style.top  = rect.top + 'px';
+
+      const cleanup = (choice) => { box.remove(); resolve(choice); };
+      pub.addEventListener('click', () => cleanup('public'));
+      priv.addEventListener('click', () => cleanup('private'));
+      // cancel on outside click
+      const onDoc = (ev) => { if (!box.contains(ev.target)) { document.removeEventListener('click', onDoc); cleanup('public'); } };
+      setTimeout(() => document.addEventListener('click', onDoc), 0);
+    });
+  }
+
+  async function spawnWidget(type, anchorEl){
+    const choice = await showSpawnChoice(anchorEl || document.body);
+    const container = (choice === 'private' && window.PrivateBoard && PrivateBoard.contentEl) ? PrivateBoard.contentEl : null;
+    try {
+      Widget.create(type, 0, 0, {}, container);
+      if (!container) markBoardDirty();
+    } catch (e) {
+      console.error('Failed to create widget', e);
+    }
+  }
 
 
       // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
@@ -1806,6 +1877,11 @@ chatBtn.addEventListener('click', () => {
   const rows = el.querySelector('.rows');
   const addBtn = el.querySelector('.add-row');
   const close  = el.querySelector('.close');
+  function maybeMarkDirtyCounters() {
+    try { if (el.dataset && el.dataset.private === '1') return; } catch (e) {}
+    markBoardDirty();
+  }
+  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); maybeMarkDirtyCounters(); });
 
         // helpers
         const clampInt = (v) => {
@@ -1834,27 +1910,27 @@ chatBtn.addEventListener('click', () => {
           const nameInput = row.querySelector('.name');
           const valueInput = row.querySelector('.value');
 
-          nameInput.addEventListener('blur', () => markBoardDirty());
+    nameInput.addEventListener('blur', () => maybeMarkDirtyCounters());
 
-          valueInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { valueInput.blur(); e.stopPropagation(); }
-            if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
-            if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); markBoardDirty(); e.preventDefault(); }
-            e.stopPropagation();
-          });
-          valueInput.addEventListener('blur', () => { set(n()); markBoardDirty(); });
-          valueInput.addEventListener('input', () => {
-            // live-clean non-digits except leading '-'
-            const m = valueInput.value.match(/^-?\d*/);
-            valueInput.value = m ? m[0] : '0';
-          });
+    valueInput.addEventListener('keydown', (e)=> {
+      if (e.key === 'Enter') { valueInput.blur(); e.stopPropagation(); }
+      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); maybeMarkDirtyCounters(); e.preventDefault(); }
+      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); maybeMarkDirtyCounters(); e.preventDefault(); }
+      e.stopPropagation();
+    });
+    valueInput.addEventListener('blur', () => { set(n()); maybeMarkDirtyCounters(); });
+    valueInput.addEventListener('input', ()=>{
+      // live-clean non-digits except leading '-'
+      const m = valueInput.value.match(/^-?\d*/);
+      valueInput.value = m ? m[0] : '0';
+    });
 
-          // delete this row
-          row.querySelector('.trash').addEventListener('click', (e) => {
-            e.stopPropagation();
-            row.remove();
-            markBoardDirty();
-          });
+    // delete this row
+    row.querySelector('.trash').addEventListener('click', (e)=> {
+      e.stopPropagation();
+      row.remove();
+      maybeMarkDirtyCounters();
+    });
 
           rows.appendChild(row);
         }
@@ -1863,11 +1939,11 @@ chatBtn.addEventListener('click', () => {
         const initial = Array.isArray(props.counters) && props.counters.length ? props.counters : [{}];
         initial.forEach(c => createRow(c));
 
-        addBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          createRow({});
-          markBoardDirty();
-        });
+  addBtn.addEventListener('click', (e)=> {
+    e.stopPropagation();
+    createRow({});
+    maybeMarkDirtyCounters();
+  });
 
         return el;
       };
@@ -2894,7 +2970,7 @@ const syncSoon = debounce((el) => {
         const items = [];
 
   // 1) Panel widgets (anything with #board > .widget)
-document.querySelectorAll('#board > .widget').forEach(el => {
+document.querySelectorAll('#board > .widget:not([data-private="1"])').forEach(el => {
   const kind  = el.dataset.type || 'widget';
   if (kind === 'drawOptions') return;
   const title = el.querySelector('.header div')?.textContent?.trim() || '';
@@ -2963,8 +3039,8 @@ document.querySelectorAll('#board > .widget').forEach(el => {
   });
 
 
-        // 2) Tokens
-        document.querySelectorAll('#board > .token').forEach(el => {
+  // 2) Tokens
+document.querySelectorAll('#board > .token:not([data-private="1"])').forEach(el => {
 
           // Prefer the persisted source if present
           let imageUrl = el.dataset.imageSrc || '';
@@ -3001,7 +3077,7 @@ document.querySelectorAll('#board > .widget').forEach(el => {
 
 
   // 3) Image widgets (note: rotation is on the IMG, not the wrapper)
-  document.querySelectorAll('#board > .image-widget').forEach(el => {
+  document.querySelectorAll('#board > .image-widget:not([data-private="1"])').forEach(el => {
     const img = el.querySelector('img.image');
     const src = img ? img.getAttribute('src') : '';
     const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
@@ -3018,14 +3094,14 @@ document.querySelectorAll('#board > .widget').forEach(el => {
     });
   });
 
-        // 4) Playing cards
-        document.querySelectorAll('#board > .playing-card.draggable').forEach(el => {
-          const img = el.querySelector('img');
-          const cardData =
-            el._cardData ? el._cardData : (
-              img ? { image: img.getAttribute('src') || '', label: '' } :
-                { label: (el.textContent || '').trim() }
-            );
+    // 4) Playing cards
+  document.querySelectorAll('#board > .playing-card.draggable:not([data-private="1"])').forEach(el => {
+    const img = el.querySelector('img');
+    const cardData =
+      el._cardData ? el._cardData : (
+        img ? { image: img.getAttribute('src') || '', label: '' } :
+              { label: (el.textContent || '').trim() }
+      );
 
     items.push({
       itemId: el.dataset.itemId || ensureItemId(el),
@@ -3080,7 +3156,7 @@ document.querySelectorAll('#board > .widget').forEach(el => {
       }
 
 function clearBoard(){
-  document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card, #board > .shape-widget')    .forEach(el => el.remove());
+  document.querySelectorAll('#board > .widget:not([data-private="1"]), #board > .token:not([data-private="1"]), #board > .image-widget:not([data-private="1"]), #board > .playing-card:not([data-private="1"]), #board > .shape-widget')    .forEach(el => el.remove());
 }
 
       function applyBoardState(state) {
@@ -3822,7 +3898,7 @@ fileLoadIn?.addEventListener('change', async (e) => {
       if (zoomFitBtn) {
         zoomFitBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          const widgets = document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card');
+          const widgets = document.querySelectorAll('#board > .widget:not([data-private="1"]), #board > .token:not([data-private="1"]), #board > .image-widget:not([data-private="1"]), #board > .playing-card:not([data-private="1"])');
           if (widgets.length === 0) {
             resetView();
             return;
@@ -3869,7 +3945,7 @@ fileLoadIn?.addEventListener('change', async (e) => {
       if (showAllWidgetsBtn) {
         showAllWidgetsBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          document.querySelectorAll('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card').forEach(widget => {
+          document.querySelectorAll('#board > .widget:not([data-private="1"]), #board > .token:not([data-private="1"]), #board > .image-widget:not([data-private="1"]), #board > .playing-card:not([data-private="1"])').forEach(widget => {
             widget.style.display = 'block';
             widget.style.opacity = '1';
           });

@@ -28,12 +28,14 @@ Widget.builders.notes = function (props = {}) {
   // Setup textarea to fill widget area
   const area = el.querySelector(".notes-area");
   const dirtySoon = debounce(() => {
+    try { if (el.dataset && el.dataset.private === '1') return; } catch (e) {}
     markBoardDirty();
     if (typeof queueItemUpsert === 'function') queueItemUpsert(el, 0);
   }, 300);
   
   area.addEventListener('input', dirtySoon);
   area.addEventListener('blur', () => {
+    try { if (el.dataset && el.dataset.private === '1') return; } catch (e) {}
     markBoardDirty();
     if (typeof queueItemUpsert === 'function') queueItemUpsert(el, 0);
   });

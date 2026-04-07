@@ -1,7 +1,13 @@
 # board/boardHandler.py
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+import logging
 
+logger = logging.getLogger(__name__)
+
+# In-memory store for the most recent public board state per lobby code.
+# NOTE: This is process-local; for multi-worker deployments use a shared cache/DB.
+BOARD_STATES = {}
 
 class BoardConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -10,6 +16,15 @@ class BoardConsumer(AsyncWebsocketConsumer):
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+        # If we have a stored public board state for this lobby, send it to the
+        # newly connected client so they get the current public board.
+        try:
+            state = BOARD_STATES.get(self.code)
+            if state:
+                await self.send(text_data=json.dumps({"type": "board_state", "state": state}))
+                logger.debug('Sent stored board_state to %s (items=%s)', self.channel_name, len(state.get('items',[]) if isinstance(state, dict) else 0))
+        except Exception:
+            logger.exception('Failed to send stored board_state on connect')
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
