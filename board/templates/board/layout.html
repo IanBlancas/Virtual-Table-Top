@@ -150,11 +150,6 @@
     const chatBtn = document.getElementById('chatBtn');
     const cardsDeckBtn = document.getElementById('cardsDeckBtn');
     const drawButton = document.getElementById('draw_Button');
-    counterBtn.addEventListener('click', () => {
-      const el = Widget.create('counters', 0, 0);
-      emitItemUpsert(el);
-      markBoardDirty();
-    });
 
       // lasso click and drag
       const lasso_Button = document.getElementById('lasso_Button');
@@ -577,8 +572,9 @@ drawButton.addEventListener("click", () => {
       });   
 
       dragTargets.forEach(t => {
+        if (t.el?.dataset?.private === '1') return;
         queueItemUpsert(t.el, 0);
-      });   
+      });  
 
       dragTargets = [];
       touchId = null;
@@ -646,66 +642,66 @@ drawButton.addEventListener("click", () => {
 
       // Tiny widget “registry”
       const Widget = {
-
         builders: {},
-        create(type, x = 0, y = 0, props = {}) {
+      
+        create(type, x = 0, y = 0, props = {}, container = null) {
           if (!this.builders[type]) throw new Error(`Unknown widget: ${type}`);
+        
           const el = this.builders[type](props);
           el.style.position = 'absolute';
           el.style.left = snap(x) + 'px';
           el.style.top = snap(y) + 'px';
-
-          // add lock button to header if widget supports it
+        
           const header = el.querySelector?.('.header');
           if (header) {
-            // create button container to keep lock and close together
             let btnContainer = header.querySelector('.button-group');
             if (!btnContainer) {
               btnContainer = document.createElement('div');
               btnContainer.className = 'button-group';
               header.appendChild(btnContainer);
             }
-
+          
             const lockBtn = document.createElement('button');
             lockBtn.className = 'lock';
             lockBtn.title = 'Lock/Unlock widget';
-            lockBtn.innerText = '🔓'; // unlocked by default
+            lockBtn.innerText = '🔓';
             btnContainer.appendChild(lockBtn);
-
+          
             const handleLockClick = (e) => {
               e.stopPropagation();
               toggleWidgetLock(el);
             };
             lockBtn.addEventListener('click', handleLockClick);
             lockBtn.addEventListener('touchend', handleLockClick, { passive: false });
-
-            // move close button to container if it exists
+          
             const closeBtn = header.querySelector('.close');
             if (closeBtn && closeBtn.parentElement !== btnContainer) {
               btnContainer.appendChild(closeBtn);
             }
           }
-
-      // common close button behavior if present
-      const closeBtn = el.querySelector?.('.close');
-      if (closeBtn) {
-        const handleCloseClick = (e) => {
-          e.stopPropagation();
-          removeWidgetAndSync(el);
-        };
-        closeBtn.addEventListener('click', handleCloseClick);
-        closeBtn.addEventListener('touchend', handleCloseClick, { passive: false });
-      }
-      ensureItemId(el, props.id);
-      const target = container || board;
-      target.appendChild(el);
-      // mark items created into a non-public container as private
-      try {
-        if (container && container !== board) el.dataset.private = '1';
-      } catch (e) { /* ignore if DOM not available */ }
-      return el;
-    }
-  };
+        
+          const closeBtn = el.querySelector?.('.close');
+          if (closeBtn) {
+            const handleCloseClick = (e) => {
+              e.stopPropagation();
+              removeWidgetAndSync(el);
+            };
+            closeBtn.addEventListener('click', handleCloseClick);
+            closeBtn.addEventListener('touchend', handleCloseClick, { passive: false });
+          }
+        
+          ensureItemId(el, props.id);
+        
+          const target = container || board;
+          target.appendChild(el);
+        
+          if (container && container !== board) {
+            el.dataset.private = '1';
+          }
+        
+          return el;
+        }
+      };
 
 // Global key for delete and flip. Uses the same semantics as the
 // original handler: Delete removes selected cards, F flips selected cards.
@@ -1161,55 +1157,53 @@ Widget.builders.token = function(props = {}) {
 
 
   // ===== Hook the sidebar buttons =====
-diceBtn.addEventListener('click', ()=> {
-  spawnWidget('dice', e.target);
-  emitItemUpsert(el);
-  markBoardDirty();
+diceBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  spawnWidget('dice', e.currentTarget);
 });
 
-tokenBtn.addEventListener('click', ()=> {
-  spawnWidget('token', e.target);
-  emitItemUpsert(el);
-  markBoardDirty();
+tokenBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  spawnWidget('token', e.currentTarget);
 });
 
-scoreBtn.addEventListener('click', ()=> {
-  spawnWidget('scorecard', e.target);
-  emitItemUpsert(el);
-  markBoardDirty();
+counterBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  spawnWidget('counters', e.currentTarget);
 });
-  // new dropdown menu items
-  cardsDeckBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    spawnWidget('cards', e.target);
-    emitItemUpsert(el);
-    markBoardDirty();
+
+scoreBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  spawnWidget('scorecard', e.currentTarget);
 });
+
+soundBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  spawnWidget('soundboard', e.currentTarget);
+});
+
+addNotesBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  spawnWidget('notes', e.currentTarget);
+});
+
+chatBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  spawnWidget('chat', e.currentTarget);
+});
+
+cardsDeckBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  spawnWidget('cards', e.currentTarget);
+});
+
 cardsCustomBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  spawnWidget('customCards', e.target);
-  emitItemUpsert(el);
-  markBoardDirty();
-});
-soundBtn.addEventListener('click', ()=> {
-  spawnWidget('soundboard', e.target);
-  emitItemUpsert(el);
-  markBoardDirty();
-});
-addNotesBtn.addEventListener('click', ()=> {
-  spawnWidget('notes', e.target);
-  emitItemUpsert(el);
-  markBoardDirty();
-});
-chatBtn.addEventListener('click', () => {
-  spawnWidget('chat', e.target);
-  emitItemUpsert(el);
-  markBoardDirty();
+  spawnWidget('customCards', e.currentTarget);
 });
 
-  function showSpawnChoice(anchorEl){
+  function showSpawnChoice(anchorEl) {
     return new Promise((resolve) => {
-      // remove existing
       const existing = document.getElementById('spawn-choice');
       if (existing) existing.remove();
 
@@ -1222,33 +1216,69 @@ chatBtn.addEventListener('click', () => {
       box.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
       box.style.zIndex = 9999;
 
-      const pub = document.createElement('button'); pub.textContent = 'Public';
-      const priv = document.createElement('button'); priv.textContent = 'Private';
-      pub.style.marginRight = '6px';
-      box.appendChild(pub); box.appendChild(priv);
+      const pub = document.createElement('button');
+      pub.textContent = 'Public';
 
+      const priv = document.createElement('button');
+      priv.textContent = 'Private';
+
+      pub.style.marginRight = '6px';
+
+      box.appendChild(pub);
+      box.appendChild(priv);
       document.body.appendChild(box);
+
       const rect = anchorEl.getBoundingClientRect();
       box.style.left = (rect.right + 6) + 'px';
-      box.style.top  = rect.top + 'px';
+      box.style.top = rect.top + 'px';
 
-      const cleanup = (choice) => { box.remove(); resolve(choice); };
-      pub.addEventListener('click', () => cleanup('public'));
-      priv.addEventListener('click', () => cleanup('private'));
-      // cancel on outside click
-      const onDoc = (ev) => { if (!box.contains(ev.target)) { document.removeEventListener('click', onDoc); cleanup('public'); } };
-      setTimeout(() => document.addEventListener('click', onDoc), 0);
+      let settled = false;
+
+      const finish = (choice) => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener('click', onDoc);
+        box.remove();
+        resolve(choice);
+      };
+
+      pub.addEventListener('click', (e) => {
+        e.stopPropagation();
+        finish('public');
+      });
+
+      priv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        finish('private');
+      });
+
+      const onDoc = (ev) => {
+        if (!box.contains(ev.target)) finish('public');
+      };
+
+      setTimeout(() => {
+        document.addEventListener('click', onDoc);
+      }, 0);
     });
   }
 
-  async function spawnWidget(type, anchorEl){
+  async function spawnWidget(type, anchorEl) {
     const choice = await showSpawnChoice(anchorEl || document.body);
-    const container = (choice === 'private' && window.PrivateBoard && PrivateBoard.contentEl) ? PrivateBoard.contentEl : null;
+
+    const targetContainer =
+      (choice === 'private' && window.PrivateBoard && PrivateBoard.contentEl)
+        ? PrivateBoard.contentEl
+        : null;
+
     try {
-      Widget.create(type, 0, 0, {}, container);
-      if (!container) markBoardDirty();
-    } catch (e) {
-      console.error('Failed to create widget', e);
+      const el = Widget.create(type, 0, 0, {}, targetContainer);
+
+      if (!targetContainer) {
+        emitItemUpsert(el);
+        markBoardDirty();
+      }
+    } catch (err) {
+      console.error('Failed to create widget', err);
     }
   }
 
@@ -2589,6 +2619,8 @@ function serializeOneItem(el) {
 
   function emitItemUpsert(el) {
     if (applyingRemotePatch) return;
+    if (!el) return;
+    if (el.dataset?.private === '1') return;
     if (!isPatchSyncable(el)) return;
 
     const item = serializeOneItem(el);
@@ -2603,25 +2635,24 @@ function serializeOneItem(el) {
 
   function removeWidgetAndSync(el) {
     if (!el) return;
-
-    const itemId = el.dataset.itemId;
+  
     const kind = el.dataset.type || '';
-
+    const itemId = el.dataset.itemId;
+    const isPrivate = el.dataset?.private === '1';
+  
     const pending = pendingUpserts.get(itemId);
     if (pending) {
       clearTimeout(pending);
       pendingUpserts.delete(itemId);
     }
-
+  
     el.remove();
-
-    if (kind !== 'drawOptions') {
+  
+    if (!isPrivate && kind !== 'drawOptions') {
       emitItemRemove(itemId);
+      markBoardDirty();
     }
-
-    markBoardDirty();
   }
-
   function emitItemRemove(itemId) {
     if (applyingRemotePatch) return;
     if (!itemId) return;
