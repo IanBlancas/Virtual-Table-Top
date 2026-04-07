@@ -2479,6 +2479,16 @@ function serializeOneItem(el) {
     window.__ws.send(JSON.stringify(payload));
   }
 
+  function emitBoardReplace(state) {
+    if (applyingRemotePatch) return;
+
+    emitLobbyMessage({
+      type: 'board_replace',
+      clientId: window.__clientId,
+      state
+    });
+  }
+
   function emitDrawingSync() {
     if (applyingRemotePatch) return;  
 
@@ -2730,6 +2740,13 @@ function serializeOneItem(el) {
     if (msg.type === 'item_remove') {
       applyingRemotePatch = true;
       removeItemById(msg.itemId);
+      applyingRemotePatch = false;
+      return;
+    }
+
+    if (msg.type === 'board_replace') {
+      applyingRemotePatch = true;
+      applyBoardState(msg.state);
       applyingRemotePatch = false;
       return;
     }
@@ -3317,9 +3334,18 @@ fileLoadBtn?.addEventListener('click', (e) => {
 fileLoadIn?.addEventListener('change', async (e) => {
   const f = e.target.files?.[0];
   if (!f) return;
+
   try {
     const text = await f.text();
-    applyBoardState(JSON.parse(text));
+    const state = JSON.parse(text);
+
+    // Apply locally first
+    applyBoardState(state);
+    markBoardDirty();
+
+    // Then broadcast to everyone else in the lobby
+    emitBoardReplace(state);
+
   } catch (err) {
     alert('Invalid save file.');
     console.error(err);
@@ -3962,7 +3988,11 @@ document.addEventListener('keydown', (e) => {
       
         if (msg.clientId && msg.clientId === clientId) return;
       
-        if (msg.type === "item_upsert" || msg.type === "item_remove") {
+        if (
+          msg.type === "item_upsert" ||
+          msg.type === "item_remove" ||
+          msg.type === "board_replace"
+        ) {
           applyRemoteMessage(msg);
           return;
         }
