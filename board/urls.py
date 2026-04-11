@@ -8,5 +8,6 @@ urlpatterns = [
     path('board/api/upload_card_image/', views.upload_card_image, name='upload_card_image'),
     path('board/api/upload_sound/', views.upload_sound_file, name='upload_sound_file'),
     path("board/<str:code>/", views.board, name="board_with_code"),
+    path('board/api/upload_board_image/', views.upload_board_image, name='upload_board_image'),
 ]
 

@@ -2359,6 +2359,57 @@ cardsCustomBtn.addEventListener('click', (e) => {
       ['dragenter', 'dragover'].forEach(evt =>
         wrap.addEventListener(evt, e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }, { passive: false })
       );
+
+      function getCookie(name) {
+        const v = document.cookie.split(';').map(c => c.trim()).filter(c => c.startsWith(name + '='));
+        if (v.length === 0) return null;
+        return decodeURIComponent(v[0].split('=')[1]);
+      }
+
+      function getCSRFToken() {
+        let token = getCookie('csrftoken');
+        if (!token) {
+          const meta = document.querySelector('meta[name="csrf-token"]');
+          token = meta ? meta.getAttribute('content') : '';
+        }
+        return token;
+      }
+
+      async function uploadBoardImage(file) {
+        const fd = new FormData();
+        fd.append('image', file);
+      
+        const res = await fetch('/board/api/upload_board_image/', {
+          method: 'POST',
+          body: fd,
+          headers: {
+            'X-CSRFToken': getCSRFToken()
+          }
+        });
+      
+        if (!res.ok) {
+          let errorMsg = `HTTP ${res.status}`;
+          try {
+            const txt = await res.text();
+            try {
+              const errorJson = JSON.parse(txt);
+              errorMsg = errorJson.error || errorMsg;
+            } catch {
+              if (txt.includes('<!doctype') || txt.includes('<html')) {
+                errorMsg = 'Please log in first';
+              } else {
+                errorMsg = txt.substring(0, 100);
+              }
+            }
+          } catch {
+          }
+          throw new Error(errorMsg);
+        }
+      
+        const j = await res.json();
+        return j.url;
+      }
+
       wrap.addEventListener('drop', async (e) => {
         e.preventDefault();
         // Drop position in BOARD coords
@@ -2368,13 +2419,28 @@ cardsCustomBtn.addEventListener('click', (e) => {
         const files = Array.from(e.dataTransfer.files || []);
         const imageFiles = files.filter(f => f.type && f.type.startsWith('image/'));
         if (imageFiles.length > 0) {
+          let offset = 0;
+        
           for (const file of imageFiles) {
-            const dataUrl = await fileToDataURL(file);
-            const el = Widget.create('image', x, y, { src: dataUrl, width: 240, height: 240 });
-            // small offset so multiple files don’t stack exactly
-            el.style.left = snap((parseFloat(el.style.left) || 0) + 10) + 'px';
-            el.style.top = snap((parseFloat(el.style.top) || 0) + 10) + 'px';
+            try {
+              const url = await uploadBoardImage(file);
+              const el = Widget.create('image', x + offset, y + offset, {
+                src: url,
+                width: 240,
+                height: 240
+              });
+            
+              if (typeof emitItemUpsert === 'function') {
+                emitItemUpsert(el);
+              }
+            
+              offset += 10;
+            } catch (err) {
+              console.error('Board image upload failed', err);
+              alert('Board image upload failed: ' + err.message);
+            }
           }
+        
           markBoardDirty();
           return;
         }
@@ -2392,21 +2458,13 @@ cardsCustomBtn.addEventListener('click', (e) => {
         }
 
         if (url && /^https?:/i.test(url)) {
-          // Create an image widget that hot-links the remote asset
-          Widget.create('image', x, y, { src: url, width: 320, height: 220 });
+          const el = Widget.create('image', x, y, { src: url, width: 320, height: 220 });
+          if (typeof emitItemUpsert === 'function') {
+            emitItemUpsert(el);
+          }
           markBoardDirty();
         }
       });
-
-// helper: file -> data URL
-function fileToDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error);
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
-}
 
 function matrixToDeg(mstr) {
   if (!mstr || mstr === 'none') return 0;

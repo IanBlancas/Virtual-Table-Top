@@ -145,6 +145,37 @@ def upload_card_image(request):
 
 @require_POST
 @ajax_login_required
+def upload_board_image(request):
+    f = request.FILES.get('image')
+    if not f:
+        return JsonResponse({'error': 'No file uploaded (field name should be "image").'}, status=400)
+
+    content_type = getattr(f, 'content_type', '')
+    if not content_type.startswith('image/'):
+        return JsonResponse({'error': 'Uploaded file is not an image.'}, status=400)
+
+    images_dir = os.path.join(settings.MEDIA_ROOT, 'board_images')
+    os.makedirs(images_dir, exist_ok=True)
+
+    import time, re
+    original = f.name
+    safe_name = re.sub(r'[^A-Za-z0-9._-]', '_', original)
+    filename = f"{int(time.time())}_{safe_name}"
+    dest_path = os.path.join(images_dir, filename)
+
+    with open(dest_path, 'wb') as out:
+        for chunk in f.chunks():
+            out.write(chunk)
+
+    media_url = settings.MEDIA_URL
+    if not media_url.endswith('/'):
+        media_url = media_url + '/'
+
+    url = f"{media_url}board_images/{filename}"
+    return JsonResponse({'url': url, 'name': original})
+
+@require_POST
+@ajax_login_required
 def upload_sound_file(request):
     """Accept a single audio file (field name 'audio'), save to MEDIA_ROOT/sounds/, and return its URL."""
     f = request.FILES.get('audio')
