@@ -908,16 +908,45 @@ Widget.builders.token = function(props = {}) {
           return null;
         }
 
-        async function setTokenImageFromFile(file) {
-          // Persist as data URL so it survives reloads
-          const reader = new FileReader();
-          const dataUrl = await new Promise((res, rej) => {
-            reader.onerror = () => rej(reader.error);
-            reader.onload = () => res(reader.result);
-            reader.readAsDataURL(file);
+        async function uploadTokenImage(file) {
+          const fd = new FormData();
+          fd.append('image', file);
+        
+          const res = await fetch('/board/api/upload_board_image/', {
+            method: 'POST',
+            body: fd,
+            headers: {
+              'X-CSRFToken': getCSRFToken()
+            }
           });
-          token.dataset.imageSrc = dataUrl;
-          token.style.backgroundImage = `url("${dataUrl}")`;
+        
+          if (!res.ok) {
+            let errorMsg = `HTTP ${res.status}`;
+            try {
+              const txt = await res.text();
+              try {
+                const errorJson = JSON.parse(txt);
+                errorMsg = errorJson.error || errorMsg;
+              } catch {
+                if (txt.includes('<!doctype') || txt.includes('<html')) {
+                  errorMsg = 'Please log in first';
+                } else {
+                  errorMsg = txt.substring(0, 100);
+                }
+              }
+            } catch {
+            }
+            throw new Error(errorMsg);
+          }
+        
+          const j = await res.json();
+          return j.url;
+        }
+
+        async function setTokenImageFromFile(file) {
+          const url = await uploadTokenImage(file);
+          token.dataset.imageSrc = url;
+          token.style.backgroundImage = `url("${url}")`;
           token.classList.add('has-image');
         }
 
@@ -985,26 +1014,34 @@ Widget.builders.token = function(props = {}) {
 
         token.addEventListener('drop', async (e) => {
           e.preventDefault();
-          e.stopPropagation();              // <-- critical: keep board handler from firing
+          e.stopPropagation();
           token.classList.remove('drop-target');
-
+        
           const dt = e.dataTransfer;
           if (!dt) return;
-
-    if (dt.files && dt.files.length) {
-    const file = dt.files[0];
-    if (file && file.type && file.type.startsWith('image/')) {
-      await setTokenImageFromFile(file);
-        maybeMarkDirty();
-      return;
-    }
-  }
-  const url = extractUrlFromDataTransfer(dt);
-  if (url) {
-    setTokenImageFromUrl(url);
-    maybeMarkDirty();
-  }
-});
+        
+          if (dt.files && dt.files.length) {
+            const file = dt.files[0];
+            if (file && file.type && file.type.startsWith('image/')) {
+              try {
+                await setTokenImageFromFile(file);
+                queueItemUpsert(token, 0);
+                maybeMarkDirty();
+              } catch (err) {
+                console.error('Token image upload failed', err);
+                alert('Token image upload failed: ' + err.message);
+              }
+              return;
+            }
+          }
+        
+          const url = extractUrlFromDataTransfer(dt);
+          if (url) {
+            setTokenImageFromUrl(url);
+            queueItemUpsert(token, 0);
+            maybeMarkDirty();
+          }
+        });
 
 
         // shape toggle (◯ / ◻)
