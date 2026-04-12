@@ -2,6 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 from .models import Lobby, LobbyMember
 
@@ -17,6 +20,7 @@ def create_lobby(request):
     # Host creates a NEW lobby each time (fresh slate)
     lobby = Lobby.objects.create(host=request.user)
     LobbyMember.objects.get_or_create(lobby=lobby, user=request.user)
+    broadcast_player_list(lobby)
 
     # go straight to the board with the code in the URL
     return redirect("board:board_with_code", code=lobby.code)
@@ -37,6 +41,8 @@ def join_lobby(request):
             return redirect("lobbies:home")
 
         LobbyMember.objects.get_or_create(lobby=lobby, user=request.user)
+
+        broadcast_player_list(lobby)
 
         # go straight to the board with that code
         return redirect("board:board_with_code", code=lobby.code)
@@ -66,6 +72,64 @@ def kick_player(request, code, user_id):
 
     if member:
         member.delete()
+        broadcast_player_list(lobby)
         messages.success(request, "Player kicked.")
 
     return redirect("board:board_with_code", code=code)
+
+
+@login_required
+def change_session_mode(request, code):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "POST required"}, status=400)
+
+    lobby = get_object_or_404(Lobby, code=code)
+
+    if request.user != lobby.host:
+        return JsonResponse(
+            {"success": False, "error": "Only the host can change session mode."},
+            status=403
+        )
+
+    new_mode = request.POST.get("session_mode")
+
+    if new_mode not in [Lobby.SessionMode.MONARCHY, Lobby.SessionMode.ANARCHY]:
+        return JsonResponse({"success": False, "error": "Invalid session mode."}, status=400)
+
+    lobby.session_mode = new_mode
+    lobby.save()
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"board_{lobby.code}",
+        {
+            "type": "session_mode_changed",
+            "session_mode": lobby.session_mode,
+        }
+    )
+
+    return JsonResponse({
+        "success": True,
+        "session_mode": lobby.session_mode
+    })
+
+def broadcast_player_list(lobby):
+    channel_layer = get_channel_layer()
+
+    members = LobbyMember.objects.select_related("user").filter(lobby=lobby)
+
+    players = []
+    for member in members:
+        players.append({
+            "id": member.user.id,
+            "username": member.user.username,
+            "is_host_member": member.user.id == lobby.host.id,
+        })
+
+    async_to_sync(channel_layer.group_send)(
+        f"board_{lobby.code}",
+        {
+            "type": "players_updated",
+            "players": players,
+        }
+    )

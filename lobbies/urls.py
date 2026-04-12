@@ -9,4 +9,5 @@ urlpatterns = [
     path("lobby/create/", views.create_lobby, name="create"),
     path("lobby/join/", views.join_lobby, name="join"),
     path("lobby/<str:code>/kick/<int:user_id>/", views.kick_player, name="kick_player"),
+    path("lobby/<str:code>/session-mode/", views.change_session_mode, name="change_session_mode"),
 ]
