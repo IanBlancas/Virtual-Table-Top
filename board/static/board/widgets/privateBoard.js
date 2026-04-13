@@ -164,9 +164,8 @@
     // ----- Pan / zoom for private board -----
     _attachPanZoom(){
       const el = this.boardEl;
+      // allow zoom with mouse wheel (match public board) and prevent page scroll
       el.addEventListener('wheel', (ev)=>{
-        // ctrl+wheel for zoom
-        if (!ev.ctrlKey) return;
         ev.preventDefault();
         const rect = el.getBoundingClientRect();
         const cx = ev.clientX - rect.left;
@@ -181,10 +180,20 @@
         this._applyTransform();
       }, { passive: false });
 
-      // middle-button pan
+      // middle-button pan and space+left-click pan (like public board)
       let panning = false, start = {x:0,y:0}, base = {x:0,y:0};
+      let spaceDown = false;
+      window.addEventListener('keydown', (e)=>{
+        if (e.code === 'Space' && (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA')) {
+          spaceDown = true;
+          e.preventDefault?.();
+        }
+      });
+      window.addEventListener('keyup', (e)=>{ if (e.code === 'Space') spaceDown = false; });
+
       el.addEventListener('pointerdown', (e)=>{
-        if (e.button !== 1) return;
+        // middle button OR space+left-click
+        if (e.button !== 1 && !(e.button === 0 && spaceDown)) return;
         panning = true; start.x = e.clientX; start.y = e.clientY; base.x = this.panX; base.y = this.panY;
         el.setPointerCapture?.(e.pointerId);
       });
@@ -195,6 +204,81 @@
         this._applyTransform();
       });
       window.addEventListener('pointerup', (e)=>{ panning = false; });
+
+      // ===== TOUCH PAN + PINCH ZOOM (match public board) =====
+      let isTouchPanning = false;
+      let isPinching = false;
+      let startPan = { x: 0, y: 0 };
+      let panOrigin = { x: 0, y: 0 };
+      let pinchStartDist = 0;
+      let pinchStartScale = 1;
+      let pinchCenter = { x: 0, y: 0 };
+
+      function dist(t1, t2) {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.hypot(dx, dy);
+      }
+
+      el.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          if (isPinching) return;
+          isTouchPanning = true;
+          const t = e.touches[0];
+          startPan.x = t.clientX; startPan.y = t.clientY;
+          panOrigin.x = this.panX; panOrigin.y = this.panY;
+        }
+
+        if (e.touches.length === 2) {
+          isTouchPanning = false;
+          isPinching = true;
+          pinchStartDist = dist(e.touches[0], e.touches[1]);
+          pinchStartScale = this.scale;
+          pinchCenter.x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          pinchCenter.y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        }
+      }, { passive: false });
+
+      el.addEventListener('touchmove', (e) => {
+        // Single finger pan
+        if (isTouchPanning && e.touches.length === 1) {
+          const t = e.touches[0];
+          this.panX = panOrigin.x + (t.clientX - startPan.x);
+          this.panY = panOrigin.y + (t.clientY - startPan.y);
+          this._applyTransform();
+          e.preventDefault();
+          return;
+        }
+
+        // Pinch zoom
+        if (isPinching && e.touches.length === 2) {
+          const newDist = dist(e.touches[0], e.touches[1]);
+          const zoomFactor = newDist / pinchStartDist;
+          const newScale = Math.max(0.3, Math.min(3, pinchStartScale * zoomFactor));
+
+          const rect = el.getBoundingClientRect();
+          const bx = (pinchCenter.x - rect.left - this.panX) / this.scale;
+          const by = (pinchCenter.y - rect.top - this.panY) / this.scale;
+
+          this.panX = pinchCenter.x - rect.left - bx * newScale;
+          this.panY = pinchCenter.y - rect.top - by * newScale;
+
+          this.scale = newScale;
+          this._applyTransform();
+          // if there's a drawing layer, re-render
+          if (window.Drawing && typeof window.Drawing.render === 'function') window.Drawing.render();
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      el.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+          isTouchPanning = false; isPinching = false;
+        }
+        if (e.touches.length === 1) {
+          isPinching = false; // one finger left -> go back to panning
+        }
+      });
     },
 
     _applyTransform(){
