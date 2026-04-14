@@ -99,7 +99,7 @@
       <button id="scoreBtn">Scorecard</button>
       <button id="soundBtn">Soundboard</button>
       <button id="addNotesWidget">Notes</button>
-      <button id="chatBtn">Chat</button>
+      <button id="chatBtn" title="Open chat (C)">Chat</button>
     </div>
     
     <div id="private-panel" class="private-panel">
@@ -137,6 +137,11 @@
 </script>
 
   <script>
+    // Set current user for chat
+    window.currentUser = {
+      username: '{{ current_user.username|escapejs }}'
+    };
+
     // --- minimal pan & zoom controller ---
     const wrap  = document.getElementById('wrap');
     const board = document.getElementById('board');
@@ -1228,7 +1233,9 @@ addNotesBtn.addEventListener('click', (e) => {
 
 chatBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  spawnWidget('chat', e.currentTarget);
+  if (typeof openChatPanel === 'function') {
+    openChatPanel();
+  }
 });
 
 cardsDeckBtn.addEventListener('click', (e) => {
@@ -3654,6 +3661,10 @@ fileLoadIn?.addEventListener('change', async (e) => {
               <tr>
                 <td class="shortcut-key">Shift+Arrow Up/Down</td>
                 <td class="shortcut-desc">Adjust counter by 5</td>
+              </tr>
+              <tr>
+                <td class="shortcut-key">C</td>
+                <td class="shortcut-desc">Open chat</td>
               </tr>
             </tbody>
           </table>

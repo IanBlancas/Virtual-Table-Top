@@ -89,6 +89,7 @@ def board(request, code=None):
         "lobby": lobby,
         "members": player_rows,
         "is_host": current_user_is_host,
+        "current_user": request.user,
     }
 
     template = loader.get_template("board/layout.html")
