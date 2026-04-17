@@ -724,6 +724,73 @@ if (!window._flatTopCardKeyHandlerInstalled) {
     // Don't treat typing in inputs as board shortcuts
     if (typing) return;
 
+    function movePublicCardToPrivate(cardEl) {
+      if (!cardEl || cardEl.dataset.private === '1') return;
+      if (!window.PrivateBoard || !PrivateBoard.contentEl || typeof PrivateBoard._createCard !== 'function') return;
+
+      const cardItem = {
+        itemId: cardEl.dataset.itemId || newItemId(),
+        x: parseFloat(cardEl.style.left) || 0,
+        y: parseFloat(cardEl.style.top) || 0,
+        w: parseFloat(cardEl.style.width) || cardEl.offsetWidth || 40,
+        h: parseFloat(cardEl.style.height) || cardEl.offsetHeight || 60,
+        z: parseFloat(cardEl.style.zIndex) || 1,
+        flipped: !!(cardEl._flipped ?? cardEl.classList.contains('back')),
+        card: cardEl._cardData || null
+      };
+
+      const privateX = 10;
+      const privateY = 10;
+
+      PrivateBoard._createCard(cardItem.card, {
+        itemId: cardItem.itemId,
+        x: privateX,
+        y: privateY,
+        w: cardItem.w,
+        h: cardItem.h,
+        z: cardItem.z,
+        flipped: cardItem.flipped
+      });
+
+      const itemId = cardEl.dataset.itemId;
+      cardEl.remove();
+      emitItemRemove(itemId);
+      markBoardDirty();
+    }
+
+    function movePrivateCardToPublic(cardEl) {
+      if (!cardEl || cardEl.dataset.private !== '1') return;
+
+      const cardItem = {
+        itemId: cardEl.dataset.itemId || newItemId(),
+        x: 0,
+        y: 0,
+        w: parseFloat(cardEl.style.width) || cardEl.offsetWidth || 40,
+        h: parseFloat(cardEl.style.height) || cardEl.offsetHeight || 60,
+        z: parseFloat(cardEl.style.zIndex) || 1,
+        flipped: !!(cardEl._flipped ?? cardEl.classList.contains('back')),
+        card: cardEl._cardData || null
+      };
+
+      const publicX = 80;
+      const publicY = 80;
+
+      const newEl = createPublicCardElement({
+        itemId: cardItem.itemId,
+        x: publicX,
+        y: publicY,
+        w: cardItem.w,
+        h: cardItem.h,
+        z: cardItem.z,
+        flipped: cardItem.flipped,
+        card: cardItem.card
+      });
+
+      cardEl.remove();
+      emitItemUpsert(newEl);
+      markBoardDirty();
+    }
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
       document.querySelectorAll('.playing-card.draggable.selected:not([data-private="1"])').forEach(c => {
         const itemId = c.dataset.itemId;
@@ -752,6 +819,20 @@ if (!window._flatTopCardKeyHandlerInstalled) {
       markBoardDirty();
       return;
     }
+
+    if (e.key === 'p' || e.key === 'P') {
+      const publicSelected = Array.from(document.querySelectorAll('.playing-card.draggable.selected:not([data-private="1"])'));
+      const privateSelected = Array.from(document.querySelectorAll('#private-board .playing-card.draggable.selected[data-private="1"]'));
+
+      publicSelected.forEach(movePublicCardToPrivate);
+      privateSelected.forEach(movePrivateCardToPublic);
+
+      if (publicSelected.length || privateSelected.length) {
+        e.preventDefault();
+        return;
+      }
+    }
+
   });
 
   window._flatTopCardKeyHandlerInstalled = true;
@@ -2516,6 +2597,77 @@ function matrixToDeg(mstr) {
   if (!m) return 0;
   const [a, b] = m[1].split(',').map(Number);
   return Math.round(Math.atan2(b, a) * 180 / Math.PI);
+}
+
+function createPublicCardElement(cardItem) { // for making public cards by pressing p on private cards
+  const el = document.createElement('div');
+  el.className = 'playing-card draggable';
+  el.dataset.itemId = cardItem.itemId || newItemId();
+  el.style.position = 'absolute';
+  el.style.left = snap(cardItem.x || 0) + 'px';
+  el.style.top = snap(cardItem.y || 0) + 'px';
+  el.style.width = (cardItem.w || 40) + 'px';
+  el.style.height = (cardItem.h || 60) + 'px';
+  el.style.zIndex = cardItem.z || 1;
+
+  el._cardData = cardItem.card || {};
+  el._flipped = !!cardItem.flipped;
+
+  function renderCardFace() {
+    el.textContent = '';
+    el.innerHTML = '';
+
+    if (el._flipped) {
+      el.classList.add('back');
+      el.classList.remove('red');
+      return;
+    }
+
+    el.classList.remove('back');
+
+    if (el._cardData?.image) {
+      const img = document.createElement('img');
+      img.src = el._cardData.image;
+      img.draggable = false;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      el.appendChild(img);
+      el.classList.remove('red');
+      return;
+    }
+
+    if (el._cardData?.rank && el._cardData?.suit) {
+      el.textContent = `${el._cardData.rank}${el._cardData.suit}`;
+      if (el._cardData.color === 'red') el.classList.add('red');
+      else el.classList.remove('red');
+      return;
+    }
+
+    el.textContent = el._cardData?.label || '';
+    el.classList.remove('red');
+  }
+
+  renderCardFace();
+  makeDraggable(el, el);
+
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.playing-card.draggable.selected').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+    el.classList.add('selected');
+  });
+
+  el.flipCard = function() {
+    el._flipped = !el._flipped;
+    renderCardFace();
+    if (typeof queueItemUpsert === 'function') {
+      queueItemUpsert(el, 0);
+    }
+  };
+
+  board.appendChild(el);
+  return el;
 }
 
 function serializeOneItem(el) {

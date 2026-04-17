@@ -91,6 +91,80 @@
       return el;
     },
 
+    _createCard(cardData = {}, opts = {}){
+      const el = document.createElement('div');
+      el.className = 'playing-card draggable private-widget';
+      el.dataset.type = 'card';
+      el.dataset.private = '1';
+      el.dataset.itemId = opts.itemId || (crypto?.randomUUID?.() || ('id-' + Math.random().toString(16).slice(2)));
+
+      const w = opts.w || 40;
+      const h = opts.h || 60;
+      const x = opts.x || 10;
+      const y = opts.y || 10;
+
+      el.style.position = 'absolute';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+      el.style.zIndex = opts.z || 1;
+
+      el._cardData = cardData || {};
+      el._flipped = !!opts.flipped;
+
+      function renderCardFace() {
+        el.textContent = '';
+        el.innerHTML = '';
+
+        if (el._flipped) {
+          el.classList.add('back');
+          el.classList.remove('red');
+          return;
+        }
+
+        el.classList.remove('back');
+
+        if (el._cardData?.image) {
+          const img = document.createElement('img');
+          img.src = el._cardData.image;
+          img.draggable = false;
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          el.appendChild(img);
+          el.classList.remove('red');
+          return;
+        }
+
+        if (el._cardData?.rank && el._cardData?.suit) {
+          el.textContent = `${el._cardData.rank}${el._cardData.suit}`;
+          if (el._cardData.color === 'red') el.classList.add('red');
+          else el.classList.remove('red');
+          return;
+        }
+
+        el.textContent = el._cardData?.label || '';
+        el.classList.remove('red');
+      }
+
+      el.flipCard = function() {
+        el._flipped = !el._flipped;
+        renderCardFace();
+      };
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.contentEl.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+
+      renderCardFace();
+      this.contentEl.appendChild(el);
+      this._makeDraggable(el);
+      return el;
+    },
+
     _makeDraggable(el){
       let dragging = false;
       let start = {x:0,y:0}, orig = {x:0,y:0};
