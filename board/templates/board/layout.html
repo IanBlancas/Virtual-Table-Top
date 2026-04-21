@@ -103,7 +103,7 @@
     </div>
     
     <div id="private-panel" class="private-panel">
-      <h3>Private Board <small>(only you see this)</small></h3>
+      <h3>Private Board </small></h3>
       <div class="private-controls">
         <!-- Controls removed: creation via main widget buttons (choose Private when spawning) -->
       </div>
@@ -4110,6 +4110,7 @@ fileLoadIn?.addEventListener('change', async (e) => {
       // --- Realtime sync (Channels) ---
 
       const lobbyCode = "{{ lobby_code|default:'' }}";
+      window.lobbyCode = lobbyCode; // Make it globally accessible
 
   // generate a stable-ish client id for this tab
   const clientId = (crypto?.randomUUID?.() || ("c" + Math.random().toString(16).slice(2)));
@@ -4237,6 +4238,20 @@ fileLoadIn?.addEventListener('change', async (e) => {
           applyingRemotePatch = true;
           applyBoardState(msg.state || { version: 1, cell: CELL, items: [], drawing: { strokes: [] } });
           applyingRemotePatch = false;
+          return;
+        }
+
+        if (msg.type === "chat_message") {
+          // Handle incoming chat messages
+          console.log('WebSocket: Received chat message:', msg);
+          if (window.ChatPanel && typeof window.ChatPanel.addMessage === 'function') {
+            // Only add if it's not from the current user (to avoid duplicate)
+            if (msg.username !== window.currentUser?.username) {
+              window.ChatPanel.addMessage(msg.username, msg.message, msg.timestamp);
+            }
+          } else {
+            console.error('ChatPanel not available');
+          }
           return;
         }
 

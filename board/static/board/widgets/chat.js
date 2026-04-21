@@ -6,6 +6,36 @@
   let messageHistory = [];
   let usernameValue = window.currentUser?.username || 'Player';
 
+  function addChatMessage(username, message, timestamp = null) {
+    if (!panel) return;
+    const messagesContainer = panel.querySelector('.chat-messages');
+    const messageEl = document.createElement('div');
+    messageEl.className = 'chat-message';
+    const ts = timestamp || getTimestamp();
+    messageEl.innerHTML = `
+      <div class="message-header">
+        <span class="username">${escapeHtml(username)}:</span>
+        <span class="message-text">${escapeHtml(message)}</span>
+        <span class="timestamp">${ts}</span>
+      </div>
+    `;
+    messagesContainer.appendChild(messageEl);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    messageHistory.push({ username, message, timestamp: timestamp || new Date().toISOString() });
+    
+    // Keep only the 3 most recent messages
+    if (messageHistory.length > 3) {
+      messageHistory = messageHistory.slice(-3);
+      // Update DOM to show only last 3 messages
+      const allMessages = messagesContainer.querySelectorAll('.chat-message, .system-message');
+      if (allMessages.length > 3) {
+        for (let i = 0; i < allMessages.length - 3; i++) {
+          allMessages[i].remove();
+        }
+      }
+    }
+  }
+
   function escapeHtml(unsafe) {
     return unsafe
       .replace(/&/g, '&amp;')
@@ -220,40 +250,35 @@
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    function addChatMessage(username, message) {
-      const messageEl = document.createElement('div');
-      messageEl.className = 'chat-message';
-      const timestamp = getTimestamp();
-      messageEl.innerHTML = `
-        <div class="message-header">
-          <span class="username">${escapeHtml(username)}:</span>
-          <span class="message-text">${escapeHtml(message)}</span>
-          <span class="timestamp">${timestamp}</span>
-        </div>
-      `;
-      messagesContainer.appendChild(messageEl);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      messageHistory.push({ username, message, timestamp: new Date().toISOString() });
-      
-      // Keep only the 3 most recent messages
-      if (messageHistory.length > 3) {
-        messageHistory = messageHistory.slice(-3);
-        // Update DOM to show only last 3 messages
-        const allMessages = messagesContainer.querySelectorAll('.chat-message, .system-message');
-        if (allMessages.length > 3) {
-          for (let i = 0; i < allMessages.length - 3; i++) {
-            allMessages[i].remove();
-          }
-        }
-      }
-    }
-
     function sendMessage() {
       const message = messageInput.value.trim();
       const username = usernameValue;
 
       if (!message) return;
+
+      console.log('Chat: Sending message:', { username, message });
+
+      // Send message via WebSocket
+      if (window.sendLobbyMessage) {
+        console.log('Chat: WebSocket available, sending message');
+        window.sendLobbyMessage({
+          type: "chat_message",
+          username: username,
+          message: message,
+          timestamp: getTimestamp()
+        });
+      } else {
+        console.error('Chat: WebSocket not available, falling back to local display');
+      }
+
+      // Always add the message locally for immediate feedback
       addChatMessage(username, message);
+
+      // Show the panel if not already open
+      if (!panel.classList.contains('open')) {
+        panel.classList.add('open');
+      }
+
       messageInput.value = '';
       messageInput.focus();
     }
@@ -296,8 +321,26 @@
     showPanel();
   }
 
+  // Expose functions globally
   window.openChatPanel = openChatPanel;
   window.closeChatPanel = hidePanel;
+  window.ChatPanel = {
+    addMessage: function(username, message, timestamp) {
+      console.log('Chat: Received message:', { username, message, timestamp });
+      // Create panel if it doesn't exist yet
+      if (!panel) createPanel();
+      addChatMessage(username, message, timestamp);
+      // Show the panel if it's not already open
+      if (!panel.classList.contains('open')) {
+        panel.classList.add('open');
+      }
+    }
+  };
+
+  // Initialize panel on load (but keep hidden)
+  document.addEventListener('DOMContentLoaded', () => {
+    createPanel();
+  });
 
   window.addEventListener('keydown', (e) => {
     const tag = (document.activeElement?.tagName || '').toLowerCase();
