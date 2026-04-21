@@ -99,7 +99,6 @@
       <button id="scoreBtn">Scorecard</button>
       <button id="soundBtn">Soundboard</button>
       <button id="addNotesWidget">Notes</button>
-      <button id="chatBtn" title="Open chat (C)">Chat</button>
     </div>
     
     <div id="private-panel" class="private-panel">
@@ -154,7 +153,6 @@
     const cardsCustomBtn = document.getElementById('cardsCustomBtn');
     const soundBtn = document.getElementById('soundBtn');
     const addNotesBtn = document.getElementById('addNotesWidget');
-    const chatBtn = document.getElementById('chatBtn');
     const cardsDeckBtn = document.getElementById('cardsDeckBtn');
     const drawButton = document.getElementById('draw_Button');
 
@@ -1310,13 +1308,6 @@ soundBtn.addEventListener('click', (e) => {
 addNotesBtn.addEventListener('click', (e) => {
   e.preventDefault();
   spawnWidget('notes', e.currentTarget);
-});
-
-chatBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  if (typeof openChatPanel === 'function') {
-    openChatPanel();
-  }
 });
 
 cardsDeckBtn.addEventListener('click', (e) => {
