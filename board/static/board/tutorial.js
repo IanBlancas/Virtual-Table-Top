@@ -43,6 +43,7 @@ function initBoardTour() {
     { element: '#lobbyMenuBtn', title: 'Lobby Menu', content: 'Use the Lobby menu to manage your game session and players.', position: 'bottom' },
     { element: '#lasso_Button', title: 'Toolbar Tools', content: 'Select tools like Lasso for multi-selection, Draw for freehand drawing, or Ruler for measurements.', position: 'right' },
     { element: '.widget-list', title: 'Widgets Sidebar', content: 'Add interactive elements like dice, cards, tokens, and counters to your game.', position: 'right' },
+    { element: '#private-panel', title: 'Private Board', content: 'Use this private board for your own hidden notes and tokens. Anything placed here is only visible to you, not the shared game board.', position: 'right' },
     { element: '#wrap', title: 'The Game Board', content: 'This is your main play area. Zoom with mouse wheel, pan with middle-click or space+click.', position: 'center' },
     { element: '.sharebtn', title: 'Share Button', content: 'Click here to copy the lobby link to your clipboard for sharing with other players.', position: 'left' }
   ];

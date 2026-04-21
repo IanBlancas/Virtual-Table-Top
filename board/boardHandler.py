@@ -38,6 +38,20 @@ class BoardConsumer(AsyncWebsocketConsumer):
         except json.JSONDecodeError:
             return
 
+        # Handle chat messages
+        if msg.get("type") == "chat_message":
+            logger.info(f'Chat message received: {msg}')
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    "type": "chat.broadcast",
+                    "username": msg.get("username", "Anonymous"),
+                    "message": msg.get("message", ""),
+                    "timestamp": msg.get("timestamp"),
+                }
+            )
+            return
+
         # Re-broadcast exactly what the sender sent.
         await self.channel_layer.group_send(
             self.group_name,
@@ -49,3 +63,12 @@ class BoardConsumer(AsyncWebsocketConsumer):
 
     async def board_broadcast(self, event):
         await self.send(text_data=json.dumps(event["payload"]))
+
+    async def chat_broadcast(self, event):
+        logger.info(f'Chat broadcast: {event}')
+        await self.send(text_data=json.dumps({
+            "type": "chat_message",
+            "username": event["username"],
+            "message": event["message"],
+            "timestamp": event["timestamp"],
+        }))
