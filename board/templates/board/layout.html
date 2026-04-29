@@ -32,7 +32,7 @@
         <div class="file dropdown">
           <button class="menubtn" id="lobbyMenuBtn">Lobby</button>
           <div class="dropdown-content">
-            <a href="#">Session Controls</a>
+            <a href="#" id="sessionManagementBtn">Session Controls</a>
             <a href="#" id="managePlayersBtn">Manage Players</a>
             <a href="#">Settings</a>
             <a href="#">Utility</a>
@@ -60,18 +60,18 @@
           </div>
         </div>
 
-                <div class="file dropdown">
-                    <button class="menubtn">Help</button>
-                    <div class="dropdown-content">
-                        <a href="#" id="shortcutsBtn">Shortcuts</a>
-                        <a href="#" id="tutorialBtn">Tutorial</a>
-                        <a href="#">Documentation</a>
-                        <a href="#">Report an issue</a>
-                        <a href="#">About</a>
-                    </div>
-                </div>
-            </div>
+        <div class="file dropdown">
+          <button class="menubtn">Help</button>
+          <div class="dropdown-content">
+            <a href="#" id="shortcutsBtn">Shortcuts</a>
+            <a href="#" id="tutorialBtn">Tutorial</a>
+            <a href="#">Documentation</a>
+            <a href="#">Report an issue</a>
+            <a href="#">About</a>
+          </div>
         </div>
+      </div>
+    </div>
 
     <div class="right">
       <div class="right-row">
@@ -100,17 +100,18 @@
       <button id="soundBtn">Soundboard</button>
       <button id="addNotesWidget">Notes</button>
     </div>
-    
+
     <div id="private-panel" class="private-panel">
       <h3>Private Board </small></h3>
       <div class="private-controls">
         <!-- Controls removed: creation via main widget buttons (choose Private when spawning) -->
       </div>
-      <div id="private-board" class="private-board" style="position:relative; width:100%; height:260px; border:1px solid #ccc; background:#f7f7f7; overflow:auto; padding:6px; box-sizing:border-box;">
+      <div id="private-board" class="private-board"
+        style="position:relative; width:100%; height:260px; border:1px solid #ccc; background:#f7f7f7; overflow:auto; padding:6px; box-sizing:border-box;">
         <!-- Private widgets will be placed here; they are not included in shared board state -->
       </div>
     </div>
-    </aside>
+  </aside>
 
   <main class="mainBoard">
     <div class="toolbar">
@@ -129,17 +130,21 @@
 <script src="{% static 'board/widgets/privateBoard.js' %}"></script>
 <script src="{% static 'board/widgets/ruler.js' %}"></script>
 
-<script>
-  window.addEventListener('load', () => {
-    if (window.PrivateBoard) PrivateBoard.init({ container: '#private-panel' });
-  });
-</script>
+    <script>
+      window.addEventListener('load', () => {
+        if (window.PrivateBoard) PrivateBoard.init({ container: '#private-panel' });
+      });
+    </script>
 
   <script>
     // Set current user for chat
     window.currentUser = {
       username: '{{ current_user.username|escapejs }}'
     };
+
+    window.SESSION_MODE = "{{ lobby.session_mode|default:'ANARCHY'|escapejs }}";
+    window.IS_HOST = {{ is_host|yesno:"true,false" }};
+    window.LOBBY_CODE = "{{ lobby_code|escapejs }}";
 
     // --- minimal pan & zoom controller ---
     const wrap  = document.getElementById('wrap');
@@ -179,24 +184,24 @@
         }
       });
 
-// Draw mode toggle
-drawButton.addEventListener("click", () => {
-  const active = Drawing.toggle();
-  drawButton.classList.toggle("active", active);
+      // Draw mode toggle
+      drawButton.addEventListener("click", () => {
+        const active = Drawing.toggle();
+        drawButton.classList.toggle("active", active);
 
-  if (active) {
-    usingLasso = false;
-    lasso_Button.classList.remove("active");
+        if (active) {
+          usingLasso = false;
+          lasso_Button.classList.remove("active");
 
-    // local only
-    Widget.create('drawOptions', 100, 100);
-  } else {
-    // local only
-    document.querySelectorAll('.draw-options-widget').forEach(w => w.remove());
-  }
+          // local only
+          Widget.create('drawOptions', 100, 100);
+        } else {
+          // local only
+          document.querySelectorAll('.draw-options-widget').forEach(w => w.remove());
+        }
 
-  markBoardDirty();
-});
+        markBoardDirty();
+      });
 
 
 
@@ -466,49 +471,49 @@ drawButton.addEventListener("click", () => {
 
 
 
-<script>
-  // ===== Shared constants/helpers =====
-  const CELL = 40; // match your CSS grid size in layoutStyle.css
-  function toBoardCoords(clientX, clientY) {
-    const rect = board.getBoundingClientRect();
-    return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
-  }
-  function snap(v) { return Math.round(v / CELL) * CELL; }
-  function pxToNum(v) { return v ? parseFloat(v) || 0 : 0; }
+    <script>
+      // ===== Shared constants/helpers =====
+      const CELL = 40; // match your CSS grid size in layoutStyle.css
+      function toBoardCoords(clientX, clientY) {
+        const rect = board.getBoundingClientRect();
+        return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
+      }
+      function snap(v) { return Math.round(v / CELL) * CELL; }
+      function pxToNum(v) { return v ? parseFloat(v) || 0 : 0; }
 
-  function newItemId() {
-    return (crypto?.randomUUID?.() || ('id-' + Math.random().toString(16).slice(2)));
-  }
+      function newItemId() {
+        return (crypto?.randomUUID?.() || ('id-' + Math.random().toString(16).slice(2)));
+      }
 
-  function ensureItemId(el, preferredId = null) {
-    if (!el.dataset.itemId) {
-      el.dataset.itemId = preferredId || newItemId();
-    }
-    return el.dataset.itemId;
-  }
+      function ensureItemId(el, preferredId = null) {
+        if (!el.dataset.itemId) {
+          el.dataset.itemId = preferredId || newItemId();
+        }
+        return el.dataset.itemId;
+      }
 
-  function getItemById(itemId) {
-    if (!itemId) return null;
-    return document.querySelector(`[data-item-id="${CSS.escape(itemId)}"]`);
-  }
+      function getItemById(itemId) {
+        if (!itemId) return null;
+        return document.querySelector(`[data-item-id="${CSS.escape(itemId)}"]`);
+      }
 
-  function getSyncRoot(node) {
-    if (!node) return null;
-    return node.closest('.widget, .token, .image-widget, .playing-card.draggable, .shape-widget');
-  }
+      function getSyncRoot(node) {
+        if (!node) return null;
+        return node.closest('.widget, .token, .image-widget, .playing-card.draggable, .shape-widget');
+      }
 
-  function isPatchSyncable(el) {
-    if (!el) return false;
-    if (el.dataset?.type === 'drawOptions') return false;
+      function isPatchSyncable(el) {
+        if (!el) return false;
+        if (el.dataset?.type === 'drawOptions') return false;
 
-    return (
-      el.classList.contains('widget') ||
-      el.classList.contains('token') ||
-      el.classList.contains('image-widget') ||
-      el.classList.contains('playing-card') ||
-      el.classList.contains('shape-widget')
-    );
-  }
+        return (
+          el.classList.contains('widget') ||
+          el.classList.contains('token') ||
+          el.classList.contains('image-widget') ||
+          el.classList.contains('playing-card') ||
+          el.classList.contains('shape-widget')
+        );
+      }
 
       // Bring-to-front counter
       let zTop = 1;
@@ -567,24 +572,24 @@ drawButton.addEventListener("click", () => {
           });
         }
 
-    function endDrag() {
-      if (!dragging) return;
-      dragging = false;   
+        function endDrag() {
+          if (!dragging) return;
+          dragging = false;
 
-      dragTargets.forEach(t => {
-        t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
-        t.el.style.top  = snap(parseFloat(t.el.style.top) || 0) + 'px';
-      });   
+          dragTargets.forEach(t => {
+            t.el.style.left = snap(parseFloat(t.el.style.left) || 0) + 'px';
+            t.el.style.top = snap(parseFloat(t.el.style.top) || 0) + 'px';
+          });
 
-      dragTargets.forEach(t => {
-        if (t.el?.dataset?.private === '1') return;
-        queueItemUpsert(t.el, 0);
-      });  
+          dragTargets.forEach(t => {
+            if (t.el?.dataset?.private === '1') return;
+            queueItemUpsert(t.el, 0);
+          });
 
-      dragTargets = [];
-      touchId = null;
-      markBoardDirty();
-    }
+          dragTargets = [];
+          touchId = null;
+          markBoardDirty();
+        }
 
         // Mouse events
         handle.addEventListener('mousedown', (e) => {
@@ -648,15 +653,15 @@ drawButton.addEventListener("click", () => {
       // Tiny widget “registry”
       const Widget = {
         builders: {},
-      
+
         create(type, x = 0, y = 0, props = {}, container = null) {
           if (!this.builders[type]) throw new Error(`Unknown widget: ${type}`);
-        
+
           const el = this.builders[type](props);
           el.style.position = 'absolute';
           el.style.left = snap(x) + 'px';
           el.style.top = snap(y) + 'px';
-        
+
           const header = el.querySelector?.('.header');
           if (header) {
             let btnContainer = header.querySelector('.button-group');
@@ -665,26 +670,26 @@ drawButton.addEventListener("click", () => {
               btnContainer.className = 'button-group';
               header.appendChild(btnContainer);
             }
-          
+
             const lockBtn = document.createElement('button');
             lockBtn.className = 'lock';
             lockBtn.title = 'Lock/Unlock widget';
             lockBtn.innerText = '🔓';
             btnContainer.appendChild(lockBtn);
-          
+
             const handleLockClick = (e) => {
               e.stopPropagation();
               toggleWidgetLock(el);
             };
             lockBtn.addEventListener('click', handleLockClick);
             lockBtn.addEventListener('touchend', handleLockClick, { passive: false });
-          
+
             const closeBtn = header.querySelector('.close');
             if (closeBtn && closeBtn.parentElement !== btnContainer) {
               btnContainer.appendChild(closeBtn);
             }
           }
-        
+
           const closeBtn = el.querySelector?.('.close');
           if (closeBtn) {
             const handleCloseClick = (e) => {
@@ -694,30 +699,30 @@ drawButton.addEventListener("click", () => {
             closeBtn.addEventListener('click', handleCloseClick);
             closeBtn.addEventListener('touchend', handleCloseClick, { passive: false });
           }
-        
+
           ensureItemId(el, props.id);
-        
+
           const target = container || board;
           target.appendChild(el);
-        
+
           if (container && container !== board) {
             el.dataset.private = '1';
           }
-        
+
           return el;
         }
       };
 
-// Global key for delete and flip. Uses the same semantics as the
-// original handler: Delete removes selected cards, F flips selected cards.
-// Global key for delete and flip.
-if (!window._flatTopCardKeyHandlerInstalled) {
-  window.addEventListener('keydown', (e) => {
-    const tag = (document.activeElement?.tagName || '').toLowerCase();
-    const typing =
-      tag === 'input' ||
-      tag === 'textarea' ||
-      document.activeElement?.isContentEditable;
+      // Global key for delete and flip. Uses the same semantics as the
+      // original handler: Delete removes selected cards, F flips selected cards.
+      // Global key for delete and flip.
+      if (!window._flatTopCardKeyHandlerInstalled) {
+        window.addEventListener('keydown', (e) => {
+          const tag = (document.activeElement?.tagName || '').toLowerCase();
+          const typing =
+            tag === 'input' ||
+            tag === 'textarea' ||
+            document.activeElement?.isContentEditable;
 
     // Don't treat typing in inputs as board shortcuts
     if (typing) return;
@@ -789,28 +794,28 @@ if (!window._flatTopCardKeyHandlerInstalled) {
       markBoardDirty();
     }
 
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      document.querySelectorAll('.playing-card.draggable.selected:not([data-private="1"])').forEach(c => {
-        const itemId = c.dataset.itemId;
-        c.remove();
-        emitItemRemove(itemId);
-      });
+          if (e.key === 'Delete' || e.key === 'Backspace') {
+            document.querySelectorAll('.playing-card.draggable.selected:not([data-private="1"])').forEach(c => {
+              const itemId = c.dataset.itemId;
+              c.remove();
+              emitItemRemove(itemId);
+            });
 
-      document.querySelectorAll('.token.selected:not([data-private="1"])').forEach(t => {
-        const itemId = t.dataset.itemId;
-        t.remove();
-        emitItemRemove(itemId);
-      });
+            document.querySelectorAll('.token.selected:not([data-private="1"])').forEach(t => {
+              const itemId = t.dataset.itemId;
+              t.remove();
+              emitItemRemove(itemId);
+            });
 
-      e.preventDefault();
-      markBoardDirty();
-      return;
-    }
+            e.preventDefault();
+            markBoardDirty();
+            return;
+          }
 
-    if (e.key === 'f' || e.key === 'F') {
-      document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
-        if (typeof c.flipCard === 'function') c.flipCard();
-      });
+          if (e.key === 'f' || e.key === 'F') {
+            document.querySelectorAll('.playing-card.draggable.selected').forEach(c => {
+              if (typeof c.flipCard === 'function') c.flipCard();
+            });
 
       e.preventDefault();
       
@@ -833,8 +838,8 @@ if (!window._flatTopCardKeyHandlerInstalled) {
 
   });
 
-  window._flatTopCardKeyHandlerInstalled = true;
-}
+        window._flatTopCardKeyHandlerInstalled = true;
+      }
 
       // ===== Dice Roller widget =====
       Widget.builders.dice = function (props = {}) {
@@ -854,111 +859,111 @@ if (!window._flatTopCardKeyHandlerInstalled) {
         <div class="results"><div class="muted">No rolls yet.</div></div>
       </div>
     `;
-    
-    makeDraggable(el, el.querySelector('.header'));
-    
-    const input = el.querySelector('.expr');
-    const rollBt = el.querySelector('.roll');
-    const out = el.querySelector('.results');
-    
-    // Persisted roll history for syncing + save/load
-    let rollHistory = Array.isArray(props.rolls) ? props.rolls.slice() : [];
-    
-    function fmtMod(m) {
-      if (!m) return '';
-      return m > 0 ? `+${m}` : `${m}`;
-    }
-  
-    function renderHistory() {
-      out.innerHTML = '';
-      if (!rollHistory.length) {
-        out.innerHTML = '<div class="muted">No rolls yet.</div>';
-        return;
-      }
-      for (let i = rollHistory.length - 1; i >= 0; i--) {
-        const r = rollHistory[i];
-        const detail = `${r.n}d${r.sides}${fmtMod(r.mod)}`;
-        const line = `<div>[${r.ts}] <b>${detail}</b> → <b>${r.total}</b> <span class="muted">(rolls: ${r.rolls.join(', ')})</span></div>`;
-        out.insertAdjacentHTML('beforeend', line);
-      }
-    }
-  
-    function getDiceData() {
-      return {
-        expr: (input.value || '').trim(),
-        rolls: rollHistory.slice()
-      };
-    }
-  
-    // Expose for collectBoardState()
-    el.getDiceData = getDiceData;
-  
-    // Render any restored history
-    renderHistory();
-  
-    rollBt.addEventListener('click', () => {
-      const text = (input.value || 'd20').trim();
-      const spec = parseDice(text);
-      if (!spec) {
-        out.insertAdjacentHTML('afterbegin', `<div>⚠️ Invalid: <code>${escapeHtml(text)}</code></div>`);
-        return;
-      }
-    
-      const rolls = roll(spec.n, spec.sides);
-      const total = rolls.reduce((a, b) => a + b, 0) + spec.mod;
-    
-      const entry = {
-        ts: new Date().toLocaleTimeString(),
-        n: spec.n,
-        sides: spec.sides,
-        mod: spec.mod,
-        rolls,
-        total
-      };
-    
-      rollHistory.push(entry);
-    
-      // Keep history bounded (optional)
-      const MAX_ROLLS = 50;
-      if (rollHistory.length > MAX_ROLLS) rollHistory = rollHistory.slice(-MAX_ROLLS);
-    
-      // Render newest-first at top (to match your current UX)
-      if (out.firstElementChild && out.firstElementChild.classList.contains('muted')) out.firstElementChild.remove();
-      const detail = `${spec.n}d${spec.sides}${fmtMod(spec.mod)}`;
-      out.insertAdjacentHTML(
-        'afterbegin',
-        `<div>[${entry.ts}] <b>${detail}</b> → <b>${total}</b> <span class="muted">(rolls: ${rolls.join(', ')})</span></div>`
-      );
-    
-      // This triggers your WS broadcast of board_state
-      queueItemUpsert(el, 0);
-      markBoardDirty();
-    });
-  
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') rollBt.click();
-    });
-  
-    return el;
-  };
-  
-  function parseDice(s){
-    const m = /^\s*(\d*)\s*[dD]\s*(\d+)\s*([+-]\s*\d+)?\s*$/.exec(s);
-    if (!m) return null;
-    const n = m[1]? parseInt(m[1],10):1;
-    const sides = parseInt(m[2],10);
-    const mod = m[3]? parseInt(m[3].replace(/\s+/g,''),10):0;
-    if (!(n>0 && sides>0)) return null;
-    return { n, sides, mod };
-  }
-  function roll(n, sides){ const out=[]; for(let i=0;i<n;i++) out.push(1+Math.floor(Math.random()*sides)); return out; }
-  function escapeHtml(t){ return t.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-  // ===== Token widget (simple circular token with resize handle and x) =====
-Widget.builders.token = function(props = {}) {
-  const token = document.createElement('div');
-  token.className = 'token circle'; // default circle; we’ll support square
-  token.dataset.type = 'token';
+        makeDraggable(el, el.querySelector('.header'));
+
+        const input = el.querySelector('.expr');
+        const rollBt = el.querySelector('.roll');
+        const out = el.querySelector('.results');
+
+        // Persisted roll history for syncing + save/load
+        let rollHistory = Array.isArray(props.rolls) ? props.rolls.slice() : [];
+
+        function fmtMod(m) {
+          if (!m) return '';
+          return m > 0 ? `+${m}` : `${m}`;
+        }
+
+        function renderHistory() {
+          out.innerHTML = '';
+          if (!rollHistory.length) {
+            out.innerHTML = '<div class="muted">No rolls yet.</div>';
+            return;
+          }
+          for (let i = rollHistory.length - 1; i >= 0; i--) {
+            const r = rollHistory[i];
+            const detail = `${r.n}d${r.sides}${fmtMod(r.mod)}`;
+            const line = `<div>[${r.ts}] <b>${detail}</b> → <b>${r.total}</b> <span class="muted">(rolls: ${r.rolls.join(', ')})</span></div>`;
+            out.insertAdjacentHTML('beforeend', line);
+          }
+        }
+
+        function getDiceData() {
+          return {
+            expr: (input.value || '').trim(),
+            rolls: rollHistory.slice()
+          };
+        }
+
+        // Expose for collectBoardState()
+        el.getDiceData = getDiceData;
+
+        // Render any restored history
+        renderHistory();
+
+        rollBt.addEventListener('click', () => {
+          const text = (input.value || 'd20').trim();
+          const spec = parseDice(text);
+          if (!spec) {
+            out.insertAdjacentHTML('afterbegin', `<div>⚠️ Invalid: <code>${escapeHtml(text)}</code></div>`);
+            return;
+          }
+
+          const rolls = roll(spec.n, spec.sides);
+          const total = rolls.reduce((a, b) => a + b, 0) + spec.mod;
+
+          const entry = {
+            ts: new Date().toLocaleTimeString(),
+            n: spec.n,
+            sides: spec.sides,
+            mod: spec.mod,
+            rolls,
+            total
+          };
+
+          rollHistory.push(entry);
+
+          // Keep history bounded (optional)
+          const MAX_ROLLS = 50;
+          if (rollHistory.length > MAX_ROLLS) rollHistory = rollHistory.slice(-MAX_ROLLS);
+
+          // Render newest-first at top (to match your current UX)
+          if (out.firstElementChild && out.firstElementChild.classList.contains('muted')) out.firstElementChild.remove();
+          const detail = `${spec.n}d${spec.sides}${fmtMod(spec.mod)}`;
+          out.insertAdjacentHTML(
+            'afterbegin',
+            `<div>[${entry.ts}] <b>${detail}</b> → <b>${total}</b> <span class="muted">(rolls: ${rolls.join(', ')})</span></div>`
+          );
+
+          // This triggers your WS broadcast of board_state
+          queueItemUpsert(el, 0);
+          markBoardDirty();
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') rollBt.click();
+        });
+
+        return el;
+      };
+
+      function parseDice(s) {
+        const m = /^\s*(\d*)\s*[dD]\s*(\d+)\s*([+-]\s*\d+)?\s*$/.exec(s);
+        if (!m) return null;
+        const n = m[1] ? parseInt(m[1], 10) : 1;
+        const sides = parseInt(m[2], 10);
+        const mod = m[3] ? parseInt(m[3].replace(/\s+/g, ''), 10) : 0;
+        if (!(n > 0 && sides > 0)) return null;
+        return { n, sides, mod };
+      }
+      function roll(n, sides) { const out = []; for (let i = 0; i < n; i++) out.push(1 + Math.floor(Math.random() * sides)); return out; }
+      function escapeHtml(t) { return t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+      // ===== Token widget (simple circular token with resize handle and x) =====
+      Widget.builders.token = function (props = {}) {
+        const token = document.createElement('div');
+        token.className = 'token circle'; // default circle; we’ll support square
+        token.dataset.type = 'token';
 
         // apply initial shape if provided
         if (props.shape === 'square') token.classList.replace('circle', 'square');
@@ -1053,10 +1058,10 @@ Widget.builders.token = function(props = {}) {
         close.className = 'close';
         close.innerHTML = '&times;';
         token.appendChild(close);
-          function maybeMarkDirty() {
-            try { if (token.dataset && token.dataset.private === '1') return; } catch (e) {}
-            markBoardDirty();
-          }
+        function maybeMarkDirty() {
+          try { if (token.dataset && token.dataset.private === '1') return; } catch (e) { }
+          markBoardDirty();
+        }
         close.addEventListener('click', (e) => {
           e.stopPropagation();
           token.remove();
@@ -1140,85 +1145,85 @@ Widget.builders.token = function(props = {}) {
         }
         refreshShapeIcon();
 
-  shapeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (token.classList.contains('square')) {
-      token.classList.replace('square','circle');
-    } else {
-      token.classList.replace('circle','square');
-    }
-    refreshShapeIcon();
-    maybeMarkDirty();
-  });
+        shapeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (token.classList.contains('square')) {
+            token.classList.replace('square', 'circle');
+          } else {
+            token.classList.replace('circle', 'square');
+          }
+          refreshShapeIcon();
+          maybeMarkDirty();
+        });
 
 
         // dragging (use the whole token as handle)
         makeDraggable(token, token);
 
-  // ----- resizing -----
-  let resizing = false, start = {x:0, y:0}, baseSize = size;
-  let resizeTouchId = null;
-  handle.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-    resizing = true;
-    start = toBoardCoords(e.clientX, e.clientY);
-    baseSize = parseFloat(token.style.width) || size;
-    e.preventDefault();
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!resizing) return;
-    const cur = toBoardCoords(e.clientX, e.clientY);
-    const delta = Math.max(cur.x - start.x, cur.y - start.y);
-    const newSize = Math.max(24, baseSize + delta);
-    token.style.width  = newSize + 'px';
-    token.style.height = newSize + 'px';
-    token.style.fontSize = Math.max(10, newSize / 3) + 'px';
-  });
-  window.addEventListener('mouseup', () => {
-    if (!resizing) return;
-    resizing = false;
-    const s = parseFloat(token.style.width);
-    const snapped = Math.max(CELL, snap(s));
-    token.style.width  = snapped + 'px';
-    token.style.height = snapped + 'px';
-    resizeTouchId = null;
-    maybeMarkDirty();
-  });
-  // Touch events for resizing
-  handle.addEventListener('touchstart', (e) => {
-    if (e.touches.length > 0) {
-      const t = e.touches[0];
-      resizeTouchId = t.identifier;
-      resizing = true;
-      start = toBoardCoords(t.clientX, t.clientY);
-      baseSize = parseFloat(token.style.width) || size;
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, { passive: false });
-  window.addEventListener('touchmove', (e) => {
-    if (!resizing || resizeTouchId === null) return;
-    for (let i = 0; i < e.touches.length; i++) {
-      if (e.touches[i].identifier === resizeTouchId) {
-        const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
-        const delta = Math.max(cur.x - start.x, cur.y - start.y);
-        const newSize = Math.max(24, baseSize + delta);
-        token.style.width  = newSize + 'px';
-        token.style.height = newSize + 'px';
-        token.style.fontSize = Math.max(10, newSize / 3) + 'px';
-        break;
-      }
-    }
-  }, { passive: false });
-  window.addEventListener('touchend', (e) => {
-    if (!resizing || resizeTouchId === null) return;
-    resizing = false;
-    const s = parseFloat(token.style.width);
-    const snapped = Math.max(CELL, snap(s));
-    token.style.width  = snapped + 'px';
-    token.style.height = snapped + 'px';
-    resizeTouchId = null;
-  });
+        // ----- resizing -----
+        let resizing = false, start = { x: 0, y: 0 }, baseSize = size;
+        let resizeTouchId = null;
+        handle.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          resizing = true;
+          start = toBoardCoords(e.clientX, e.clientY);
+          baseSize = parseFloat(token.style.width) || size;
+          e.preventDefault();
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!resizing) return;
+          const cur = toBoardCoords(e.clientX, e.clientY);
+          const delta = Math.max(cur.x - start.x, cur.y - start.y);
+          const newSize = Math.max(24, baseSize + delta);
+          token.style.width = newSize + 'px';
+          token.style.height = newSize + 'px';
+          token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+        });
+        window.addEventListener('mouseup', () => {
+          if (!resizing) return;
+          resizing = false;
+          const s = parseFloat(token.style.width);
+          const snapped = Math.max(CELL, snap(s));
+          token.style.width = snapped + 'px';
+          token.style.height = snapped + 'px';
+          resizeTouchId = null;
+          maybeMarkDirty();
+        });
+        // Touch events for resizing
+        handle.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) {
+            const t = e.touches[0];
+            resizeTouchId = t.identifier;
+            resizing = true;
+            start = toBoardCoords(t.clientX, t.clientY);
+            baseSize = parseFloat(token.style.width) || size;
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, { passive: false });
+        window.addEventListener('touchmove', (e) => {
+          if (!resizing || resizeTouchId === null) return;
+          for (let i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === resizeTouchId) {
+              const cur = toBoardCoords(e.touches[i].clientX, e.touches[i].clientY);
+              const delta = Math.max(cur.x - start.x, cur.y - start.y);
+              const newSize = Math.max(24, baseSize + delta);
+              token.style.width = newSize + 'px';
+              token.style.height = newSize + 'px';
+              token.style.fontSize = Math.max(10, newSize / 3) + 'px';
+              break;
+            }
+          }
+        }, { passive: false });
+        window.addEventListener('touchend', (e) => {
+          if (!resizing || resizeTouchId === null) return;
+          resizing = false;
+          const s = parseFloat(token.style.width);
+          const snapped = Math.max(CELL, snap(s));
+          token.style.width = snapped + 'px';
+          token.style.height = snapped + 'px';
+          resizeTouchId = null;
+        });
 
         // ----- rename on double-click (quick patch version) -----
         token.addEventListener('dblclick', () => {
@@ -1244,19 +1249,19 @@ Widget.builders.token = function(props = {}) {
           token.appendChild(shapeBtn);
 
 
-    input.focus();
-    input.addEventListener('blur', () => {
-      token.textContent = input.value || 'Token'; // put label back as text node
-      token.appendChild(handle);                  // re-attach again
-      token.appendChild(close);
-      token.appendChild(shapeBtn);
-      maybeMarkDirty();
-    });
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') input.blur();
-      e.stopPropagation();
-    });
-  });
+          input.focus();
+          input.addEventListener('blur', () => {
+            token.textContent = input.value || 'Token'; // put label back as text node
+            token.appendChild(handle);                  // re-attach again
+            token.appendChild(close);
+            token.appendChild(shapeBtn);
+            maybeMarkDirty();
+          });
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') input.blur();
+            e.stopPropagation();
+          });
+        });
 
         // ----- selection outline -----
         token.addEventListener('click', (e) => {
@@ -1279,126 +1284,141 @@ Widget.builders.token = function(props = {}) {
       };
 
 
-  // ===== Hook the sidebar buttons =====
-diceBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  spawnWidget('dice', e.currentTarget);
-});
+      // ===== Hook the sidebar buttons =====
+      diceBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        spawnWidget('dice', e.currentTarget);
+      });
 
-tokenBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  spawnWidget('token', e.currentTarget);
-});
+      tokenBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        spawnWidget('token', e.currentTarget);
+      });
 
-counterBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  spawnWidget('counters', e.currentTarget);
-});
+      counterBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        spawnWidget('counters', e.currentTarget);
+      });
 
-scoreBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  spawnWidget('scorecard', e.currentTarget);
-});
+      scoreBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        spawnWidget('scorecard', e.currentTarget);
+      });
 
-soundBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  spawnWidget('soundboard', e.currentTarget);
-});
+      soundBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        spawnWidget('soundboard', e.currentTarget);
+      });
 
 addNotesBtn.addEventListener('click', (e) => {
   e.preventDefault();
   spawnWidget('notes', e.currentTarget);
 });
 
-cardsDeckBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  spawnWidget('cards', e.currentTarget);
-});
-
-cardsCustomBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  spawnWidget('customCards', e.currentTarget);
-});
-
-  function showSpawnChoice(anchorEl) {
-    return new Promise((resolve) => {
-      const existing = document.getElementById('spawn-choice');
-      if (existing) existing.remove();
-
-      const box = document.createElement('div');
-      box.id = 'spawn-choice';
-      box.style.position = 'absolute';
-      box.style.padding = '6px';
-      box.style.background = '#fff';
-      box.style.border = '1px solid #ccc';
-      box.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
-      box.style.zIndex = 9999;
-
-      const pub = document.createElement('button');
-      pub.textContent = 'Public';
-
-      const priv = document.createElement('button');
-      priv.textContent = 'Private';
-
-      pub.style.marginRight = '6px';
-
-      box.appendChild(pub);
-      box.appendChild(priv);
-      document.body.appendChild(box);
-
-      const rect = anchorEl.getBoundingClientRect();
-      box.style.left = (rect.right + 6) + 'px';
-      box.style.top = rect.top + 'px';
-
-      let settled = false;
-
-      const finish = (choice) => {
-        if (settled) return;
-        settled = true;
-        document.removeEventListener('click', onDoc);
-        box.remove();
-        resolve(choice);
-      };
-
-      pub.addEventListener('click', (e) => {
-        e.stopPropagation();
-        finish('public');
+      cardsDeckBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        spawnWidget('cards', e.currentTarget);
       });
 
-      priv.addEventListener('click', (e) => {
-        e.stopPropagation();
-        finish('private');
+      cardsCustomBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        spawnWidget('customCards', e.currentTarget);
       });
 
-      const onDoc = (ev) => {
-        if (!box.contains(ev.target)) finish('public');
-      };
+      function showSpawnChoice(anchorEl) {
+        return new Promise((resolve) => {
+          const existing = document.getElementById('spawn-choice');
+          if (existing) existing.remove();
 
-      setTimeout(() => {
-        document.addEventListener('click', onDoc);
-      }, 0);
-    });
-  }
+          const box = document.createElement('div');
+          box.id = 'spawn-choice';
+          box.style.position = 'absolute';
+          box.style.padding = '6px';
+          box.style.background = '#fff';
+          box.style.border = '1px solid #ccc';
+          box.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+          box.style.zIndex = 9999;
 
-  async function spawnWidget(type, anchorEl) {
-    const choice = await showSpawnChoice(anchorEl || document.body);
+          const pub = document.createElement('button');
+          pub.textContent = 'Public';
 
-    const targetContainer =
-      (choice === 'private' && window.PrivateBoard && PrivateBoard.contentEl)
-        ? PrivateBoard.contentEl
-        : null;
+          const priv = document.createElement('button');
+          priv.textContent = 'Private';
 
-    try {
-      const el = Widget.create(type, 0, 0, {}, targetContainer);
+          pub.style.marginRight = '6px';
 
-      if (!targetContainer) {
-        emitItemUpsert(el);
-        markBoardDirty();
+          box.appendChild(pub);
+          box.appendChild(priv);
+          document.body.appendChild(box);
+
+          const rect = anchorEl.getBoundingClientRect();
+          box.style.left = (rect.right + 6) + 'px';
+          box.style.top = rect.top + 'px';
+
+          let settled = false;
+
+          const finish = (choice) => {
+            if (settled) return;
+            settled = true;
+            document.removeEventListener('click', onDoc);
+            box.remove();
+            resolve(choice);
+          };
+
+          pub.addEventListener('click', (e) => {
+            e.stopPropagation();
+            finish('public');
+          });
+
+          priv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            finish('private');
+          });
+
+          const onDoc = (ev) => {
+            if (!box.contains(ev.target)) finish('public');
+          };
+
+          setTimeout(() => {
+            document.addEventListener('click', onDoc);
+          }, 0);
+        });
       }
-    } catch (err) {
-      console.error('Failed to create widget', err);
-    }
-  }
+
+      function canCurrentUserAddWidgets() {
+        const mode = (window.SESSION_MODE || "ANARCHY").toUpperCase();
+      
+        if (mode === "ANARCHY") {
+          return true;
+        }
+      
+        return !!window.IS_HOST;
+      }
+
+      async function spawnWidget(type, anchorEl) {
+        if (!canCurrentUserAddWidgets()) {
+          alert("Only the host can add widgets in Monarchy mode.");
+          return;
+        }
+
+        const choice = await showSpawnChoice(anchorEl || document.body);
+
+        const targetContainer =
+          (choice === 'private' && window.PrivateBoard && PrivateBoard.contentEl)
+            ? PrivateBoard.contentEl
+            : null;
+
+        try {
+          const el = Widget.create(type, 0, 0, {}, targetContainer);
+
+          if (!targetContainer) {
+            emitItemUpsert(el);
+            markBoardDirty();
+          }
+        } catch (err) {
+          console.error('Failed to create widget', err);
+        }
+      }
 
 
       // ===== Standard Deck Widget (deck draw / shuffle / reset) =====
@@ -1498,16 +1518,16 @@ cardsCustomBtn.addEventListener('click', (e) => {
           updateFlipUi();
         }
 
-  function createDraggableCard(card, x, y) {
-    const cardDiv = document.createElement('div');
-    cardDiv.className = 'playing-card draggable';
-    cardDiv.dataset.itemId = newItemId();
-    cardDiv.style.position = 'absolute';
-    cardDiv.style.left = snap(x) + 'px';
-    cardDiv.style.top = snap(y) + 'px';
-    cardDiv.style.width = '40px';
-    cardDiv.style.height = '60px';
-    cardDiv.style.zIndex = 9999;
+        function createDraggableCard(card, x, y) {
+          const cardDiv = document.createElement('div');
+          cardDiv.className = 'playing-card draggable';
+          cardDiv.dataset.itemId = newItemId();
+          cardDiv.style.position = 'absolute';
+          cardDiv.style.left = snap(x) + 'px';
+          cardDiv.style.top = snap(y) + 'px';
+          cardDiv.style.width = '40px';
+          cardDiv.style.height = '60px';
+          cardDiv.style.zIndex = 9999;
 
           cardDiv._cardData = card;
           cardDiv._flipped = showBack;
@@ -1540,20 +1560,20 @@ cardsCustomBtn.addEventListener('click', (e) => {
             document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
           });
 
-    cardDiv.flipCard = function() {
-      cardDiv._flipped = !cardDiv._flipped;
-      renderCardFace();
-        if (typeof queueItemUpsert === 'function') {
-          queueItemUpsert(cardDiv, 0);
+          cardDiv.flipCard = function () {
+            cardDiv._flipped = !cardDiv._flipped;
+            renderCardFace();
+            if (typeof queueItemUpsert === 'function') {
+              queueItemUpsert(cardDiv, 0);
+            }
+          };
+
+          board.appendChild(cardDiv);
+
+          if (typeof emitItemUpsert === 'function') {
+            emitItemUpsert(cardDiv);
+          }
         }
-    };
-
-    board.appendChild(cardDiv);
-
-    if (typeof emitItemUpsert === 'function') {
-      emitItemUpsert(cardDiv);
-    }
-  }
 
         el.querySelector('.draw').addEventListener('click', () => {
           if (deck.length === 0) return;
@@ -1569,37 +1589,37 @@ cardsCustomBtn.addEventListener('click', (e) => {
           createDraggableCard(card, x, y);
           discard.push(card);
 
-    renderTop();
-    syncDeckStateToEl();
-    queueItemUpsert(el, 0);
-    markBoardDirty();
-  });
+          renderTop();
+          syncDeckStateToEl();
+          queueItemUpsert(el, 0);
+          markBoardDirty();
+        });
 
-  el.querySelector('.shuffle').addEventListener('click', () => {
-    deck = shuffle(deck);
-    renderTop();
-    syncDeckStateToEl();
-    queueItemUpsert(el, 0);
-    markBoardDirty();
-  });
+        el.querySelector('.shuffle').addEventListener('click', () => {
+          deck = shuffle(deck);
+          renderTop();
+          syncDeckStateToEl();
+          queueItemUpsert(el, 0);
+          markBoardDirty();
+        });
 
-  el.querySelector('.reset').addEventListener('click', () => {
-    deck = shuffle(buildDeck());
-    discard = [];
-    showBack = true;
-    renderTop();
-    syncDeckStateToEl();
-    queueItemUpsert(el, 0);
-    markBoardDirty();
-  });
+        el.querySelector('.reset').addEventListener('click', () => {
+          deck = shuffle(buildDeck());
+          discard = [];
+          showBack = true;
+          renderTop();
+          syncDeckStateToEl();
+          queueItemUpsert(el, 0);
+          markBoardDirty();
+        });
 
-  el.querySelector('.flip').addEventListener('click', () => {
-    showBack = !showBack;
-    renderTop();
-    syncDeckStateToEl();
-    queueItemUpsert(el, 0);
-    markBoardDirty();
-  });
+        el.querySelector('.flip').addEventListener('click', () => {
+          showBack = !showBack;
+          renderTop();
+          syncDeckStateToEl();
+          queueItemUpsert(el, 0);
+          markBoardDirty();
+        });
 
         cardEl.addEventListener('click', () => el.querySelector('.draw').click());
 
@@ -1814,29 +1834,29 @@ cardsCustomBtn.addEventListener('click', (e) => {
             label.style.minWidth = '0';
             label.addEventListener('change', () => { c.label = label.value; });
 
-      const remove = document.createElement('button'); remove.innerHTML = '🗑'; remove.title = 'Remove'; remove.className = 'trash'; remove.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        // If this item is an uploaded image, remove from uploadedImageCards; otherwise remove from textarea defs
-        if (c.image) {
-          const i = uploadedImageCards.findIndex(ic => ic.image === c.image && ic.label === c.label);
-          if (i !== -1) uploadedImageCards.splice(i, 1);
-        } else {
-          // remove the corresponding label line
-          const lines = defs.value.split('\n').map(s=>s.trim()).filter(Boolean);
-          const imageCount = uploadedImageCards.length;
-          const labelIndex = idx - imageCount;
-          if (labelIndex >= 0 && labelIndex < lines.length) {
-            lines.splice(labelIndex, 1);
-            defs.value = lines.join('\n');
-          }
-        }
-        buildFromDefs();
-        renderCardsList();
-        renderCount();
-        syncCustomStateToEl();
-        queueItemUpsert(el, 0);
-        markBoardDirty();
-      });
+            const remove = document.createElement('button'); remove.innerHTML = '🗑'; remove.title = 'Remove'; remove.className = 'trash'; remove.addEventListener('click', (e) => {
+              e.stopPropagation();
+              // If this item is an uploaded image, remove from uploadedImageCards; otherwise remove from textarea defs
+              if (c.image) {
+                const i = uploadedImageCards.findIndex(ic => ic.image === c.image && ic.label === c.label);
+                if (i !== -1) uploadedImageCards.splice(i, 1);
+              } else {
+                // remove the corresponding label line
+                const lines = defs.value.split('\n').map(s => s.trim()).filter(Boolean);
+                const imageCount = uploadedImageCards.length;
+                const labelIndex = idx - imageCount;
+                if (labelIndex >= 0 && labelIndex < lines.length) {
+                  lines.splice(labelIndex, 1);
+                  defs.value = lines.join('\n');
+                }
+              }
+              buildFromDefs();
+              renderCardsList();
+              renderCount();
+              syncCustomStateToEl();
+              queueItemUpsert(el, 0);
+              markBoardDirty();
+            });
 
             row.appendChild(thumb);
             row.appendChild(label);
@@ -1848,28 +1868,28 @@ cardsCustomBtn.addEventListener('click', (e) => {
 
         function renderCount() { countEl.textContent = `Deck: ${cards.length}`; }
 
-  // wire file input -> upload
-  fileInput.addEventListener('change', async (e)=>{
-    const files = Array.from(e.target.files || []);
-    for (const f of files) {
-      try {
-        const url = await uploadFile(f);
-        // persist uploaded images so Reset/rebuild uses them even after draws
-        uploadedImageCards.unshift({ label: f.name, image: url });
-        buildFromDefs();
-        renderCardsList();
-        renderCount();
-      } catch (err) {
-        console.error('Upload failed', err);
-        alert('Upload failed: ' + err.message);
-      }
-      syncCustomStateToEl();
-      queueItemUpsert(el, 0);
-      markBoardDirty();
-    }
-    // clear input
-    fileInput.value = '';
-  });
+        // wire file input -> upload
+        fileInput.addEventListener('change', async (e) => {
+          const files = Array.from(e.target.files || []);
+          for (const f of files) {
+            try {
+              const url = await uploadFile(f);
+              // persist uploaded images so Reset/rebuild uses them even after draws
+              uploadedImageCards.unshift({ label: f.name, image: url });
+              buildFromDefs();
+              renderCardsList();
+              renderCount();
+            } catch (err) {
+              console.error('Upload failed', err);
+              alert('Upload failed: ' + err.message);
+            }
+            syncCustomStateToEl();
+            queueItemUpsert(el, 0);
+            markBoardDirty();
+          }
+          // clear input
+          fileInput.value = '';
+        });
 
         // actions
         el.querySelector('.draw').addEventListener('click', () => {
@@ -1878,24 +1898,24 @@ cardsCustomBtn.addEventListener('click', (e) => {
           const wx = parseFloat(el.style.left) || 0;
           const wy = parseFloat(el.style.top) || 0;
 
-    // Spawn to the right of the widget, near the top
-    const x = wx + (el.offsetWidth || 260) + 20;
-    const y = wy + 20;
-    const cardDiv = document.createElement('div');
-    cardDiv.className = 'playing-card draggable';
-    cardDiv.dataset.itemId = newItemId();
-    cardDiv.style.position = 'absolute';
-    cardDiv.style.left = snap(x) + 'px';
-    cardDiv.style.top = snap(y) + 'px';
-    // use configured size values (fallbacks: 60x90)
-    const w = parseInt((el.querySelector('.card-width')?.value) || '60', 10) || 60;
-    const h = parseInt((el.querySelector('.card-height')?.value) || '90', 10) || 90;
-    cardDiv.style.width = w + 'px';
-    cardDiv.style.height = h + 'px';
-    cardDiv.style.zIndex = 9999;
-    // store card data and flip state similar to the standard deck cards
-    cardDiv._cardData = card;
-    cardDiv._flipped = !!showBack; // default to current showBack setting
+          // Spawn to the right of the widget, near the top
+          const x = wx + (el.offsetWidth || 260) + 20;
+          const y = wy + 20;
+          const cardDiv = document.createElement('div');
+          cardDiv.className = 'playing-card draggable';
+          cardDiv.dataset.itemId = newItemId();
+          cardDiv.style.position = 'absolute';
+          cardDiv.style.left = snap(x) + 'px';
+          cardDiv.style.top = snap(y) + 'px';
+          // use configured size values (fallbacks: 60x90)
+          const w = parseInt((el.querySelector('.card-width')?.value) || '60', 10) || 60;
+          const h = parseInt((el.querySelector('.card-height')?.value) || '90', 10) || 90;
+          cardDiv.style.width = w + 'px';
+          cardDiv.style.height = h + 'px';
+          cardDiv.style.zIndex = 9999;
+          // store card data and flip state similar to the standard deck cards
+          cardDiv._cardData = card;
+          cardDiv._flipped = !!showBack; // default to current showBack setting
 
           function renderCardFace() {
             if (cardDiv._flipped) {
@@ -1942,61 +1962,61 @@ cardsCustomBtn.addEventListener('click', (e) => {
           });
 
 
-    // flip method used by global key handler
-    cardDiv.flipCard = function() {
-      cardDiv._flipped = !cardDiv._flipped;
-      renderCardFace();
-      if (typeof queueItemUpsert === 'function') {
-        queueItemUpsert(cardDiv, 0);
-      }
-    };
+          // flip method used by global key handler
+          cardDiv.flipCard = function () {
+            cardDiv._flipped = !cardDiv._flipped;
+            renderCardFace();
+            if (typeof queueItemUpsert === 'function') {
+              queueItemUpsert(cardDiv, 0);
+            }
+          };
 
-    board.appendChild(cardDiv);
-    if (typeof emitItemUpsert === 'function') {
-      emitItemUpsert(cardDiv);
-    }
-    renderCount();
-    syncCustomStateToEl();
-    queueItemUpsert(el, 0);
-    markBoardDirty();
-  });
+          board.appendChild(cardDiv);
+          if (typeof emitItemUpsert === 'function') {
+            emitItemUpsert(cardDiv);
+          }
+          renderCount();
+          syncCustomStateToEl();
+          queueItemUpsert(el, 0);
+          markBoardDirty();
+        });
 
-  el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
-  el.querySelector('.reset').addEventListener('click', () => {
-    // Rebuild the deck from uploaded images + textarea, then shuffle — this restarts the deck
-    resetToDefs();
-    shuffleArr(cards);
-    renderCount();
-    syncCustomStateToEl();
-    queueItemUpsert(el, 0);
-    markBoardDirty();
-  });
+        el.querySelector('.shuffle').addEventListener('click', () => { shuffleArr(cards); renderCount(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
+        el.querySelector('.reset').addEventListener('click', () => {
+          // Rebuild the deck from uploaded images + textarea, then shuffle — this restarts the deck
+          resetToDefs();
+          shuffleArr(cards);
+          renderCount();
+          syncCustomStateToEl();
+          queueItemUpsert(el, 0);
+          markBoardDirty();
+        });
 
-  // flip button toggles whether new cards come out face-down (and updates preview)
-  const flipBtn = el.querySelector('.flip');
-  function updateFlipUi() {
-    flipBtn.textContent = showBack ? 'Flip: On' : 'Flip: Off';
-  }
-  flipBtn.addEventListener('click', (e)=>{
-    e.preventDefault();
-    showBack = !showBack;
-    updateFlipUi();
-    syncCustomStateToEl();
-    queueItemUpsert(el, 0);
-    markBoardDirty();
-  });
-  updateFlipUi();
+        // flip button toggles whether new cards come out face-down (and updates preview)
+        const flipBtn = el.querySelector('.flip');
+        function updateFlipUi() {
+          flipBtn.textContent = showBack ? 'Flip: On' : 'Flip: Off';
+        }
+        flipBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          showBack = !showBack;
+          updateFlipUi();
+          syncCustomStateToEl();
+          queueItemUpsert(el, 0);
+          markBoardDirty();
+        });
+        updateFlipUi();
 
-  // live update when defs change
-  defs.addEventListener('blur', () => { buildFromDefs(); renderCardsList(); renderCount(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
-  defs.addEventListener('keydown', (e)=>{ if (e.key==='Escape') defs.blur(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
+        // live update when defs change
+        defs.addEventListener('blur', () => { buildFromDefs(); renderCardsList(); renderCount(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
+        defs.addEventListener('keydown', (e) => { if (e.key === 'Escape') defs.blur(); syncCustomStateToEl(); queueItemUpsert(el, 0); markBoardDirty(); });
 
-  // init
-  if (!cards.length) buildFromDefs();   // don't overwrite restored state unnecessarily
-  shuffleArr(cards);
-  renderCardsList();                    
-  renderCount();
-  syncCustomStateToEl();                // keep element state consistent
+        // init
+        if (!cards.length) buildFromDefs();   // don't overwrite restored state unnecessarily
+        shuffleArr(cards);
+        renderCardsList();
+        renderCount();
+        syncCustomStateToEl();                // keep element state consistent
 
         return el;
       };
@@ -2022,14 +2042,14 @@ cardsCustomBtn.addEventListener('click', (e) => {
 
         makeDraggable(el, el.querySelector('.header'));
 
-  const rows = el.querySelector('.rows');
-  const addBtn = el.querySelector('.add-row');
-  const close  = el.querySelector('.close');
-  function maybeMarkDirtyCounters() {
-    try { if (el.dataset && el.dataset.private === '1') return; } catch (e) {}
-    markBoardDirty();
-  }
-  close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); maybeMarkDirtyCounters(); });
+        const rows = el.querySelector('.rows');
+        const addBtn = el.querySelector('.add-row');
+        const close = el.querySelector('.close');
+        function maybeMarkDirtyCounters() {
+          try { if (el.dataset && el.dataset.private === '1') return; } catch (e) { }
+          markBoardDirty();
+        }
+        close.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); maybeMarkDirtyCounters(); });
 
         // helpers
         const clampInt = (v) => {
@@ -2058,27 +2078,27 @@ cardsCustomBtn.addEventListener('click', (e) => {
           const nameInput = row.querySelector('.name');
           const valueInput = row.querySelector('.value');
 
-    nameInput.addEventListener('blur', () => maybeMarkDirtyCounters());
+          nameInput.addEventListener('blur', () => maybeMarkDirtyCounters());
 
-    valueInput.addEventListener('keydown', (e)=> {
-      if (e.key === 'Enter') { valueInput.blur(); e.stopPropagation(); }
-      if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); maybeMarkDirtyCounters(); e.preventDefault(); }
-      if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); maybeMarkDirtyCounters(); e.preventDefault(); }
-      e.stopPropagation();
-    });
-    valueInput.addEventListener('blur', () => { set(n()); maybeMarkDirtyCounters(); });
-    valueInput.addEventListener('input', ()=>{
-      // live-clean non-digits except leading '-'
-      const m = valueInput.value.match(/^-?\d*/);
-      valueInput.value = m ? m[0] : '0';
-    });
+          valueInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { valueInput.blur(); e.stopPropagation(); }
+            if (e.key === 'ArrowUp') { set(n() + (e.shiftKey ? 5 : 1)); maybeMarkDirtyCounters(); e.preventDefault(); }
+            if (e.key === 'ArrowDown') { set(n() - (e.shiftKey ? 5 : 1)); maybeMarkDirtyCounters(); e.preventDefault(); }
+            e.stopPropagation();
+          });
+          valueInput.addEventListener('blur', () => { set(n()); maybeMarkDirtyCounters(); });
+          valueInput.addEventListener('input', () => {
+            // live-clean non-digits except leading '-'
+            const m = valueInput.value.match(/^-?\d*/);
+            valueInput.value = m ? m[0] : '0';
+          });
 
-    // delete this row
-    row.querySelector('.trash').addEventListener('click', (e)=> {
-      e.stopPropagation();
-      row.remove();
-      maybeMarkDirtyCounters();
-    });
+          // delete this row
+          row.querySelector('.trash').addEventListener('click', (e) => {
+            e.stopPropagation();
+            row.remove();
+            maybeMarkDirtyCounters();
+          });
 
           rows.appendChild(row);
         }
@@ -2087,11 +2107,11 @@ cardsCustomBtn.addEventListener('click', (e) => {
         const initial = Array.isArray(props.counters) && props.counters.length ? props.counters : [{}];
         initial.forEach(c => createRow(c));
 
-  addBtn.addEventListener('click', (e)=> {
-    e.stopPropagation();
-    createRow({});
-    maybeMarkDirtyCounters();
-  });
+        addBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          createRow({});
+          maybeMarkDirtyCounters();
+        });
 
         return el;
       };
@@ -2121,23 +2141,23 @@ cardsCustomBtn.addEventListener('click', (e) => {
 
         makeDraggable(el, el.querySelector('.header'));
 
-  const tbl = el.querySelector('.score-table');
-  const addRowBtn = el.querySelector('.add-row');
-  const addColBtn = el.querySelector('.add-col');
-  const close = el.querySelector('.close');
-  // keyboard handler: Shift+ArrowUp/ArrowDown adjusts selected cell by ±5
-  const _scoreKeyHandler = (e) => {
-    if (!e.shiftKey) return;
-    if (e.key === 'ArrowUp') { e.preventDefault(); adjustSelected(5); }
-    if (e.key === 'ArrowDown') { e.preventDefault(); adjustSelected(-5); }
-  };
-  window.addEventListener('keydown', _scoreKeyHandler);
-  const expandBtn = el.querySelector('.expand');
-  expandBtn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    el.classList.toggle('expanded');
-    expandBtn.textContent = el.classList.contains('expanded') ? '⤡' : '⤢';
-  });
+        const tbl = el.querySelector('.score-table');
+        const addRowBtn = el.querySelector('.add-row');
+        const addColBtn = el.querySelector('.add-col');
+        const close = el.querySelector('.close');
+        // keyboard handler: Shift+ArrowUp/ArrowDown adjusts selected cell by ±5
+        const _scoreKeyHandler = (e) => {
+          if (!e.shiftKey) return;
+          if (e.key === 'ArrowUp') { e.preventDefault(); adjustSelected(5); }
+          if (e.key === 'ArrowDown') { e.preventDefault(); adjustSelected(-5); }
+        };
+        window.addEventListener('keydown', _scoreKeyHandler);
+        const expandBtn = el.querySelector('.expand');
+        expandBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          el.classList.toggle('expanded');
+          expandBtn.textContent = el.classList.contains('expanded') ? '⤡' : '⤢';
+        });
 
         // internal state: number of rows & cols (excluding header row/col)
         let rows = Math.max(1, (props.rowsCount || 2));
@@ -2317,20 +2337,20 @@ cardsCustomBtn.addEventListener('click', (e) => {
           }
         });
 
-  // CLEAR CANVAS
-  clearBtn.addEventListener("click", () => {
-    Drawing.strokes = [];
-    Drawing.render();
-    markBoardDirty();
-    if (typeof emitDrawingSync === "function") emitDrawingSync();
-  });
+        // CLEAR CANVAS
+        clearBtn.addEventListener("click", () => {
+          Drawing.strokes = [];
+          Drawing.render();
+          markBoardDirty();
+          if (typeof emitDrawingSync === "function") emitDrawingSync();
+        });
 
-  // CLOSE BUTTON
-  closeBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    Drawing.disable();
-    drawButton.classList.remove("active");
-  });
+        // CLOSE BUTTON
+        closeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          Drawing.disable();
+          drawButton.classList.remove("active");
+        });
 
         return el;
       };
@@ -2357,15 +2377,15 @@ cardsCustomBtn.addEventListener('click', (e) => {
         handle.className = 'resize-handle';
         el.appendChild(handle);
 
-  const close = document.createElement('button');
-  close.className = 'close';
-  close.innerHTML = '&times;';
-  close.title = 'Remove';
-  el.appendChild(close);
-  close.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const itemId = el.dataset.itemId; el.remove(); emitItemRemove(itemId); markBoardDirty();
-  });
+        const close = document.createElement('button');
+        close.className = 'close';
+        close.innerHTML = '&times;';
+        close.title = 'Remove';
+        el.appendChild(close);
+        close.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const itemId = el.dataset.itemId; el.remove(); emitItemRemove(itemId); markBoardDirty();
+        });
 
         // place on board (Widget.create handles left/top normally)
         makeDraggable(el, el); // drag anywhere on the image widget
@@ -2661,451 +2681,451 @@ function createPublicCardElement(cardItem) { // for making public cards by press
   return el;
 }
 
-function serializeOneItem(el) {
-  if (!el) return null;
+      function serializeOneItem(el) {
+        if (!el) return null;
 
-  ensureItemId(el);
+        ensureItemId(el);
 
-  if (el.classList.contains('widget')) {
-    const kind = el.dataset.type || 'widget';
-    if (kind === 'drawOptions') return null;
+        if (el.classList.contains('widget')) {
+          const kind = el.dataset.type || 'widget';
+          if (kind === 'drawOptions') return null;
 
-    const title = el.querySelector('.header div')?.textContent?.trim() || '';
+          const title = el.querySelector('.header div')?.textContent?.trim() || '';
 
-    const base = {
-      itemId: el.dataset.itemId,
-      kind,
-      label: title,
-      x: pxToNum(el.style.left),
-      y: pxToNum(el.style.top),
-      w: pxToNum(el.style.width) || el.offsetWidth,
-      h: pxToNum(el.style.height) || el.offsetHeight,
-      z: pxToNum(el.style.zIndex) || 1,
-      data: null,
-    };
+          const base = {
+            itemId: el.dataset.itemId,
+            kind,
+            label: title,
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1,
+            data: null,
+          };
 
-    if (kind === 'notes') {
-      const ta = el.querySelector('textarea, .notes-text, .note-text, .notes-area');
-      base.data = { text: ta ? ta.value : '' };
-    } else if (kind === 'counters') {
-      const rows = [];
-      el.querySelectorAll('.counter-row').forEach(r => {
-        const name = r.querySelector('.name')?.value ?? '';
-        const value = parseInt(r.querySelector('.value')?.value ?? '0', 10) || 0;
-        rows.push({ name, value });
-      });
-      base.data = { counters: rows };
-    } else if (kind === 'scorecard') {
-      const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
-      const rowHdrs = Array.from(el.querySelectorAll('tr.data-row th.row-hdr')).map(th => th.textContent.trim());
-      const values = {};
-      el.querySelectorAll('tr.data-row').forEach((tr, r) => {
-        tr.querySelectorAll('td.cell').forEach((td, c) => {
-          const v = parseInt(td.querySelector('input.cell-input')?.value ?? '0', 10) || 0;
-          values[`${r},${c}`] = v;
+          if (kind === 'notes') {
+            const ta = el.querySelector('textarea, .notes-text, .note-text, .notes-area');
+            base.data = { text: ta ? ta.value : '' };
+          } else if (kind === 'counters') {
+            const rows = [];
+            el.querySelectorAll('.counter-row').forEach(r => {
+              const name = r.querySelector('.name')?.value ?? '';
+              const value = parseInt(r.querySelector('.value')?.value ?? '0', 10) || 0;
+              rows.push({ name, value });
+            });
+            base.data = { counters: rows };
+          } else if (kind === 'scorecard') {
+            const colHdrs = Array.from(el.querySelectorAll('tr.hdr-row th.col-hdr')).map(th => th.textContent.trim());
+            const rowHdrs = Array.from(el.querySelectorAll('tr.data-row th.row-hdr')).map(th => th.textContent.trim());
+            const values = {};
+            el.querySelectorAll('tr.data-row').forEach((tr, r) => {
+              tr.querySelectorAll('td.cell').forEach((td, c) => {
+                const v = parseInt(td.querySelector('input.cell-input')?.value ?? '0', 10) || 0;
+                values[`${r},${c}`] = v;
+              });
+            });
+            base.data = {
+              rowsCount: rowHdrs.length,
+              colsCount: colHdrs.length,
+              rowLabels: rowHdrs,
+              colLabels: colHdrs,
+              values,
+            };
+          } else if (kind === 'cards') {
+            base.data = { deckState: el._deckState || null };
+          } else if (kind === 'customCards') {
+            base.data = { deckState: el._customDeckState || null };
+          } else if (kind === 'dice') {
+            if (typeof el.getDiceData === 'function') {
+              base.data = el.getDiceData();
+            } else {
+              const expr = el.querySelector('.expr')?.value || '';
+              base.data = { expr: expr.trim(), rolls: [] };
+            }
+          } else if (kind === 'chat') {
+            if (typeof el.getChatData === 'function') {
+              base.data = el.getChatData();
+            }
+          }
+
+          return base;
+        }
+
+        if (el.classList.contains('token')) {
+          let imageUrl = el.dataset.imageSrc || '';
+          if (!imageUrl) {
+            const bg = getComputedStyle(el).backgroundImage;
+            if (bg && bg !== 'none') {
+              const m = bg.match(/url\(["']?(.*?)["']?\)/i);
+              if (m && m[1] && !m[1].startsWith('blob:')) {
+                imageUrl = m[1];
+              }
+            }
+          }
+
+          let label = '';
+          const fc = el.firstChild;
+          if (fc && fc.nodeType === Node.TEXT_NODE) {
+            label = (fc.nodeValue || '').trim();
+          }
+
+          return {
+            itemId: el.dataset.itemId,
+            kind: 'token',
+            shape: el.classList.contains('square') ? 'square' : 'circle',
+            label,
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1,
+            imageUrl
+          };
+        }
+
+        if (el.classList.contains('image-widget')) {
+          const img = el.querySelector('img.image');
+          const src = img ? img.getAttribute('src') : '';
+          const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
+
+          return {
+            itemId: el.dataset.itemId,
+            kind: 'image',
+            src,
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1,
+            rotation
+          };
+        }
+
+        if (el.classList.contains('playing-card')) {
+          const img = el.querySelector('img');
+          const cardData =
+            el._cardData ? el._cardData : (
+              img ? { image: img.getAttribute('src') || '', label: '' }
+                : { label: (el.textContent || '').trim() }
+            );
+
+          return {
+            itemId: el.dataset.itemId,
+            kind: 'card',
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1,
+            flipped: !!(el._flipped ?? el.classList.contains('back')),
+            card: cardData
+          };
+        }
+
+        if (el.classList.contains('shape-widget')) {
+          ensureItemId(el);
+
+          return {
+            itemId: el.dataset.itemId,
+            kind: 'shape',
+            shapeKind: el.dataset.shapeKind || 'rectangle',
+            fill: el.dataset.fill || '#999999',
+            angle: parseFloat(el.dataset.angle || '0') || 0,
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1
+          };
+        }
+
+        return null;
+      }
+
+    </script>
+
+    <script>
+
+      function emitLobbyMessage(payload) {
+        if (!window.__ws || window.__ws.readyState !== WebSocket.OPEN) return;
+        window.__ws.send(JSON.stringify(payload));
+      }
+
+      function emitBoardReplace(state) {
+        if (applyingRemotePatch) return;
+
+        emitLobbyMessage({
+          type: 'board_replace',
+          clientId: window.__clientId,
+          state
         });
-      });
-      base.data = {
-        rowsCount: rowHdrs.length,
-        colsCount: colHdrs.length,
-        rowLabels: rowHdrs,
-        colLabels: colHdrs,
-        values,
-      };
-    } else if (kind === 'cards') {
-      base.data = { deckState: el._deckState || null };
-    } else if (kind === 'customCards') {
-      base.data = { deckState: el._customDeckState || null };
-    } else if (kind === 'dice') {
-      if (typeof el.getDiceData === 'function') {
-        base.data = el.getDiceData();
-      } else {
-        const expr = el.querySelector('.expr')?.value || '';
-        base.data = { expr: expr.trim(), rolls: [] };
       }
-    } else if (kind === 'chat') {
-      if (typeof el.getChatData === 'function') {
-        base.data = el.getChatData();
+
+      function emitDrawingSync() {
+        if (applyingRemotePatch) return;
+
+        emitLobbyMessage({
+          type: 'drawing_sync',
+          clientId: window.__clientId,
+          strokes: (window.Drawing?.strokes || [])
+            .filter(s => !s.isLaser)
+            .map(s => ({
+              color: s.color,
+              size: s.size,
+              points: s.points
+            }))
+        });
       }
-    }
 
-    return base;
-  }
+      window.emitDrawingSync = emitDrawingSync;
 
-  if (el.classList.contains('token')) {
-    let imageUrl = el.dataset.imageSrc || '';
-    if (!imageUrl) {
-      const bg = getComputedStyle(el).backgroundImage;
-      if (bg && bg !== 'none') {
-        const m = bg.match(/url\(["']?(.*?)["']?\)/i);
-        if (m && m[1] && !m[1].startsWith('blob:')) {
-          imageUrl = m[1];
+      window.sendLobbyMessage = emitLobbyMessage;
+
+      let applyingRemotePatch = false;
+
+      function emitItemUpsert(el) {
+        if (applyingRemotePatch) return;
+        if (!el) return;
+        if (el.dataset?.private === '1') return;
+        if (!isPatchSyncable(el)) return;
+
+        const item = serializeOneItem(el);
+        if (!item) return;
+
+        emitLobbyMessage({
+          type: 'item_upsert',
+          clientId: window.__clientId,
+          item,
+        });
+      }
+
+      function removeWidgetAndSync(el) {
+        if (!el) return;
+
+        const kind = el.dataset.type || '';
+        const itemId = el.dataset.itemId;
+        const isPrivate = el.dataset?.private === '1';
+
+        const pending = pendingUpserts.get(itemId);
+        if (pending) {
+          clearTimeout(pending);
+          pendingUpserts.delete(itemId);
+        }
+
+        el.remove();
+
+        if (!isPrivate && kind !== 'drawOptions') {
+          emitItemRemove(itemId);
+          markBoardDirty();
         }
       }
-    }
+      function emitItemRemove(itemId) {
+        if (applyingRemotePatch) return;
+        if (!itemId) return;
 
-    let label = '';
-    const fc = el.firstChild;
-    if (fc && fc.nodeType === Node.TEXT_NODE) {
-      label = (fc.nodeValue || '').trim();
-    }
+        emitLobbyMessage({
+          type: 'item_remove',
+          clientId: window.__clientId,
+          itemId,
+        });
+      }
 
-    return {
-      itemId: el.dataset.itemId,
-      kind: 'token',
-      shape: el.classList.contains('square') ? 'square' : 'circle',
-      label,
-      x: pxToNum(el.style.left),
-      y: pxToNum(el.style.top),
-      w: pxToNum(el.style.width) || el.offsetWidth,
-      h: pxToNum(el.style.height) || el.offsetHeight,
-      z: pxToNum(el.style.zIndex) || 1,
-      imageUrl
-    };
-  }
+      const pendingUpserts = new Map();
 
-  if (el.classList.contains('image-widget')) {
-    const img = el.querySelector('img.image');
-    const src = img ? img.getAttribute('src') : '';
-    const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
+      function queueItemUpsert(el, delay = 180) {
+        if (!el) return;
+        ensureItemId(el);
+        const itemId = el.dataset.itemId;
 
-    return {
-      itemId: el.dataset.itemId,
-      kind: 'image',
-      src,
-      x: pxToNum(el.style.left),
-      y: pxToNum(el.style.top),
-      w: pxToNum(el.style.width) || el.offsetWidth,
-      h: pxToNum(el.style.height) || el.offsetHeight,
-      z: pxToNum(el.style.zIndex) || 1,
-      rotation
-    };
-  }
+        const prior = pendingUpserts.get(itemId);
+        if (prior) clearTimeout(prior);
 
-  if (el.classList.contains('playing-card')) {
-    const img = el.querySelector('img');
-    const cardData =
-      el._cardData ? el._cardData : (
-        img ? { image: img.getAttribute('src') || '', label: '' }
-            : { label: (el.textContent || '').trim() }
-      );
+        const timer = setTimeout(() => {
+          pendingUpserts.delete(itemId);
+          emitItemUpsert(el);
+        }, delay);
 
-    return {
-      itemId: el.dataset.itemId,
-      kind: 'card',
-      x: pxToNum(el.style.left),
-      y: pxToNum(el.style.top),
-      w: pxToNum(el.style.width) || el.offsetWidth,
-      h: pxToNum(el.style.height) || el.offsetHeight,
-      z: pxToNum(el.style.zIndex) || 1,
-      flipped: !!(el._flipped ?? el.classList.contains('back')),
-      card: cardData
-    };
-  }
+        pendingUpserts.set(itemId, timer);
+      }
 
-  if (el.classList.contains('shape-widget')) {
-    ensureItemId(el);
+      function removeItemById(itemId) {
+        const el = getItemById(itemId);
+        if (el) el.remove();
+      }
 
-    return {
-      itemId: el.dataset.itemId,
-      kind: 'shape',
-      shapeKind: el.dataset.shapeKind || 'rectangle',
-      fill: el.dataset.fill || '#999999',
-      angle: parseFloat(el.dataset.angle || '0') || 0,
-      x: pxToNum(el.style.left),
-      y: pxToNum(el.style.top),
-      w: pxToNum(el.style.width) || el.offsetWidth,
-      h: pxToNum(el.style.height) || el.offsetHeight,
-      z: pxToNum(el.style.zIndex) || 1
-    };
-  }
+      function createOrReplaceItemFromPatch(item) {
+        if (!item || !item.kind || !item.itemId) return;
+        if (item.kind === 'drawOptions') return;
 
-  return null;
-}
+        const existing = getItemById(item.itemId);
+        if (existing) existing.remove();
 
-</script>
+        let el = null;
 
-<script>
+        if (item.kind === 'token') {
+          el = Widget.create('token', item.x, item.y, {
+            id: item.itemId,
+            size: Math.max(item.w || CELL, item.h || CELL),
+            label: item.label || '',
+            image: item.imageUrl || '',
+            shape: item.shape || 'circle',
+          });
+          el.style.width = (item.w || el.offsetWidth) + 'px';
+          el.style.height = (item.h || el.offsetHeight) + 'px';
+        }
+        else if (item.kind === 'image') {
+          el = Widget.create('image', item.x, item.y, {
+            id: item.itemId,
+            src: item.src || '',
+            width: item.w,
+            height: item.h,
+            rotation: item.rotation || 0,
+          });
+        }
+        else if (item.kind === 'shape') {
+          el = buildShapeElement({
+            itemId: item.itemId,
+            shapeKind: item.shapeKind,
+            fill: item.fill,
+            angle: item.angle,
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h,
+            z: item.z
+          });
+        }
+        else if (item.kind === 'card') {
+          el = document.createElement('div');
+          el.className = 'playing-card draggable';
+          el.dataset.itemId = item.itemId;
+          el.style.position = 'absolute';
+          el.style.left = snap(item.x || 0) + 'px';
+          el.style.top = snap(item.y || 0) + 'px';
+          el.style.width = (item.w || 120) + 'px';
+          el.style.height = (item.h || 180) + 'px';
+          el.style.zIndex = item.z || 1;
 
-  function emitLobbyMessage(payload) {
-    if (!window.__ws || window.__ws.readyState !== WebSocket.OPEN) return;
-    window.__ws.send(JSON.stringify(payload));
-  }
+          el._cardData = item.card || {};
+          el._flipped = !!item.flipped;
 
-  function emitBoardReplace(state) {
-    if (applyingRemotePatch) return;
+          function renderCardFace() {
+            el.textContent = '';
+            el.innerHTML = '';
 
-    emitLobbyMessage({
-      type: 'board_replace',
-      clientId: window.__clientId,
-      state
-    });
-  }
+            if (el._flipped) {
+              el.classList.add('back');
+              el.classList.remove('red');
+              return;
+            }
 
-  function emitDrawingSync() {
-    if (applyingRemotePatch) return;  
+            el.classList.remove('back');
 
-    emitLobbyMessage({
-      type: 'drawing_sync',
-      clientId: window.__clientId,
-      strokes: (window.Drawing?.strokes || [])
-        .filter(s => !s.isLaser)
-        .map(s => ({
-          color: s.color,
-          size: s.size,
-          points: s.points
-        }))
-    });
-  }
+            if (el._cardData?.image) {
+              const img = document.createElement('img');
+              img.src = el._cardData.image;
+              img.draggable = false;
+              img.style.width = '100%';
+              img.style.height = '100%';
+              img.style.objectFit = 'cover';
+              el.appendChild(img);
+              el.classList.remove('red');
+              return;
+            }
 
-  window.emitDrawingSync = emitDrawingSync;
+            if (el._cardData?.rank && el._cardData?.suit) {
+              el.textContent = `${el._cardData.rank}${el._cardData.suit}`;
+              if (el._cardData.color === 'red') el.classList.add('red');
+              else el.classList.remove('red');
+              return;
+            }
 
-  window.sendLobbyMessage = emitLobbyMessage;
+            el.textContent = el._cardData?.label || '';
+            el.classList.remove('red');
+          }
 
-  let applyingRemotePatch = false;
+          renderCardFace();
+          makeDraggable(el, el);
 
-  function emitItemUpsert(el) {
-    if (applyingRemotePatch) return;
-    if (!el) return;
-    if (el.dataset?.private === '1') return;
-    if (!isPatchSyncable(el)) return;
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.playing-card.selected').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+          });
 
-    const item = serializeOneItem(el);
-    if (!item) return;
+          el.flipCard = function () {
+            el._flipped = !el._flipped;
+            renderCardFace();
+            queueItemUpsert(el, 0);
+          };
 
-    emitLobbyMessage({
-      type: 'item_upsert',
-      clientId: window.__clientId,
-      item,
-    });
-  }
+          board.appendChild(el);
+        }
+        else {
+          const props = {
+            id: item.itemId,
+            width: item.w,
+            height: item.h,
+          };
 
-  function removeWidgetAndSync(el) {
-    if (!el) return;
-  
-    const kind = el.dataset.type || '';
-    const itemId = el.dataset.itemId;
-    const isPrivate = el.dataset?.private === '1';
-  
-    const pending = pendingUpserts.get(itemId);
-    if (pending) {
-      clearTimeout(pending);
-      pendingUpserts.delete(itemId);
-    }
-  
-    el.remove();
-  
-    if (!isPrivate && kind !== 'drawOptions') {
-      emitItemRemove(itemId);
-      markBoardDirty();
-    }
-  }
-  function emitItemRemove(itemId) {
-    if (applyingRemotePatch) return;
-    if (!itemId) return;
+          if (item.kind === 'notes') {
+            props.text = item.data?.text || '';
+          } else if (item.kind === 'dice') {
+            props.expr = item.data?.expr || '';
+            props.rolls = item.data?.rolls || [];
+          } else if (item.kind === 'cards' || item.kind === 'customCards') {
+            props.deckState = item.data?.deckState || null;
+          } else if (item.kind === 'chat') {
+            props.messages = item.data?.messages || [];
+          } else if (item.kind === 'scorecard') {
+            Object.assign(props, item.data || {});
+          } else if (item.kind === 'counters') {
+            props.counters = item.data?.counters || [];
+          }
 
-    emitLobbyMessage({
-      type: 'item_remove',
-      clientId: window.__clientId,
-      itemId,
-    });
-  }
+          el = Widget.create(item.kind, item.x, item.y, props);
 
-  const pendingUpserts = new Map();
+          if (item.kind === 'chat' && typeof el.setChatData === 'function' && item.data) {
+            el.setChatData(item.data);
+          }
+        }
 
-  function queueItemUpsert(el, delay = 180) {
-    if (!el) return;
-    ensureItemId(el);
-    const itemId = el.dataset.itemId;
+        if (!el) return;
 
-    const prior = pendingUpserts.get(itemId);
-    if (prior) clearTimeout(prior);
+        ensureItemId(el, item.itemId);
+        el.style.left = snap(item.x || 0) + 'px';
+        el.style.top = snap(item.y || 0) + 'px';
+        if (item.w) el.style.width = item.w + 'px';
+        if (item.h) el.style.height = item.h + 'px';
+        el.style.zIndex = item.z || 1;
+      }
 
-    const timer = setTimeout(() => {
-      pendingUpserts.delete(itemId);
-      emitItemUpsert(el);
-    }, delay);
+      function applyRemoteMessage(msg) {
+        if (!msg) return;
 
-    pendingUpserts.set(itemId, timer);
-  }
-
-  function removeItemById(itemId) {
-    const el = getItemById(itemId);
-    if (el) el.remove();
-  }
-
-  function createOrReplaceItemFromPatch(item) {
-    if (!item || !item.kind || !item.itemId) return;
-    if (item.kind === 'drawOptions') return;
-
-    const existing = getItemById(item.itemId);
-    if (existing) existing.remove();
-
-    let el = null;
-
-    if (item.kind === 'token') {
-      el = Widget.create('token', item.x, item.y, {
-        id: item.itemId,
-        size: Math.max(item.w || CELL, item.h || CELL),
-        label: item.label || '',
-        image: item.imageUrl || '',
-        shape: item.shape || 'circle',
-      });
-      el.style.width = (item.w || el.offsetWidth) + 'px';
-      el.style.height = (item.h || el.offsetHeight) + 'px';
-    }
-    else if (item.kind === 'image') {
-      el = Widget.create('image', item.x, item.y, {
-        id: item.itemId,
-        src: item.src || '',
-        width: item.w,
-        height: item.h,
-        rotation: item.rotation || 0,
-      });
-    }
-    else if (item.kind === 'shape') {
-      el = buildShapeElement({
-        itemId: item.itemId,
-        shapeKind: item.shapeKind,
-        fill: item.fill,
-        angle: item.angle,
-        x: item.x,
-        y: item.y,
-        w: item.w,
-        h: item.h,
-        z: item.z
-      });
-    }
-    else if (item.kind === 'card') {
-      el = document.createElement('div');
-      el.className = 'playing-card draggable';
-      el.dataset.itemId = item.itemId;
-      el.style.position = 'absolute';
-      el.style.left = snap(item.x || 0) + 'px';
-      el.style.top  = snap(item.y || 0) + 'px';
-      el.style.width = (item.w || 120) + 'px';
-      el.style.height = (item.h || 180) + 'px';
-      el.style.zIndex = item.z || 1;
-    
-      el._cardData = item.card || {};
-      el._flipped = !!item.flipped;
-    
-      function renderCardFace() {
-        el.textContent = '';
-        el.innerHTML = '';
-      
-        if (el._flipped) {
-          el.classList.add('back');
-          el.classList.remove('red');
+        if (msg.type === 'item_upsert') {
+          applyingRemotePatch = true;
+          createOrReplaceItemFromPatch(msg.item);
+          applyingRemotePatch = false;
           return;
         }
-      
-        el.classList.remove('back');
-      
-        if (el._cardData?.image) {
-          const img = document.createElement('img');
-          img.src = el._cardData.image;
-          img.draggable = false;
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'cover';
-          el.appendChild(img);
-          el.classList.remove('red');
+
+        if (msg.type === 'item_remove') {
+          applyingRemotePatch = true;
+          removeItemById(msg.itemId);
+          applyingRemotePatch = false;
           return;
         }
-      
-        if (el._cardData?.rank && el._cardData?.suit) {
-          el.textContent = `${el._cardData.rank}${el._cardData.suit}`;
-          if (el._cardData.color === 'red') el.classList.add('red');
-          else el.classList.remove('red');
+
+        if (msg.type === 'board_replace') {
+          applyingRemotePatch = true;
+          applyBoardState(msg.state);
+          applyingRemotePatch = false;
           return;
         }
-      
-        el.textContent = el._cardData?.label || '';
-        el.classList.remove('red');
       }
-    
-      renderCardFace();
-      makeDraggable(el, el);
-    
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('.playing-card.selected').forEach(c => c.classList.remove('selected'));
-        el.classList.add('selected');
-      });
-    
-      el.flipCard = function() {
-        el._flipped = !el._flipped;
-        renderCardFace();
-        queueItemUpsert(el, 0);
-      };
-    
-      board.appendChild(el);
-    }
-    else {
-      const props = {
-        id: item.itemId,
-        width: item.w,
-        height: item.h,
-      };
-
-      if (item.kind === 'notes') {
-        props.text = item.data?.text || '';
-      } else if (item.kind === 'dice') {
-        props.expr = item.data?.expr || '';
-        props.rolls = item.data?.rolls || [];
-      } else if (item.kind === 'cards' || item.kind === 'customCards') {
-        props.deckState = item.data?.deckState || null;
-      } else if (item.kind === 'chat') {
-        props.messages = item.data?.messages || [];
-      } else if (item.kind === 'scorecard') {
-        Object.assign(props, item.data || {});
-      } else if (item.kind === 'counters') {
-        props.counters = item.data?.counters || [];
-      }
-
-      el = Widget.create(item.kind, item.x, item.y, props);
-
-      if (item.kind === 'chat' && typeof el.setChatData === 'function' && item.data) {
-        el.setChatData(item.data);
-      }
-    }
-
-    if (!el) return;
-
-    ensureItemId(el, item.itemId);
-    el.style.left = snap(item.x || 0) + 'px';
-    el.style.top  = snap(item.y || 0) + 'px';
-    if (item.w) el.style.width = item.w + 'px';
-    if (item.h) el.style.height = item.h + 'px';
-    el.style.zIndex = item.z || 1;
-  }
-
-  function applyRemoteMessage(msg) {
-    if (!msg) return;
-
-    if (msg.type === 'item_upsert') {
-      applyingRemotePatch = true;
-      createOrReplaceItemFromPatch(msg.item);
-      applyingRemotePatch = false;
-      return;
-    }
-
-    if (msg.type === 'item_remove') {
-      applyingRemotePatch = true;
-      removeItemById(msg.itemId);
-      applyingRemotePatch = false;
-      return;
-    }
-
-    if (msg.type === 'board_replace') {
-      applyingRemotePatch = true;
-      applyBoardState(msg.state);
-      applyingRemotePatch = false;
-      return;
-    }
-  }
-</script>
+    </script>
 
     <script>
       // ===== SAVE / LOAD =====
@@ -3138,56 +3158,56 @@ function serializeOneItem(el) {
         await writable.close();
       }
 
-const dirtySoonGlobal = debounce(() => markBoardDirty(), 250);
+      const dirtySoonGlobal = debounce(() => markBoardDirty(), 250);
 
-const syncSoon = debounce((el) => {
-  if (!el) return;
-  if (typeof queueItemUpsert === 'function') {
-    queueItemUpsert(el, 0);
-  }
-}, 200);
+      const syncSoon = debounce((el) => {
+        if (!el) return;
+        if (typeof queueItemUpsert === 'function') {
+          queueItemUpsert(el, 0);
+        }
+      }, 200);
 
       document.addEventListener('input', (e) => {
         const board = document.getElementById('board');
         if (!board || !board.contains(e.target)) return;
 
-  if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
-    dirtySoonGlobal();
+        if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
+          dirtySoonGlobal();
 
-    if (typeof getSyncRoot === 'function') {
-      const root = getSyncRoot(e.target);
-      if (root) syncSoon(root);
-    }
-  }
-}, true);
+          if (typeof getSyncRoot === 'function') {
+            const root = getSyncRoot(e.target);
+            if (root) syncSoon(root);
+          }
+        }
+      }, true);
 
       document.addEventListener('change', (e) => {
         const board = document.getElementById('board');
         if (!board || !board.contains(e.target)) return;
 
-  if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
-    markBoardDirty();
+        if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
+          markBoardDirty();
 
-    if (typeof getSyncRoot === 'function' && typeof queueItemUpsert === 'function') {
-      const root = getSyncRoot(e.target);
-      if (root) queueItemUpsert(root, 0);
-    }
-  }
-}, true);
+          if (typeof getSyncRoot === 'function' && typeof queueItemUpsert === 'function') {
+            const root = getSyncRoot(e.target);
+            if (root) queueItemUpsert(root, 0);
+          }
+        }
+      }, true);
 
       document.addEventListener('blur', (e) => {
         const board = document.getElementById('board');
         if (!board || !board.contains(e.target)) return;
 
-  if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
-    markBoardDirty();
+        if (e.target.matches('input, textarea, select, [contenteditable="true"]')) {
+          markBoardDirty();
 
-    if (typeof getSyncRoot === 'function' && typeof queueItemUpsert === 'function') {
-      const root = getSyncRoot(e.target);
-      if (root) queueItemUpsert(root, 0);
-    }
-  }
-}, true);
+          if (typeof getSyncRoot === 'function' && typeof queueItemUpsert === 'function') {
+            const root = getSyncRoot(e.target);
+            if (root) queueItemUpsert(root, 0);
+          }
+        }
+      }, true);
 
       // Prompt the user once to pick a JSON file to autosave into
       async function chooseAutosaveFile() {
@@ -3229,7 +3249,7 @@ const syncSoon = debounce((el) => {
         boardDirty = false;
       }, AUTOSAVE_INTERVAL_MS);
 
-// ===== existing SAVE / LOAD utilities below =====
+      // ===== existing SAVE / LOAD utilities below =====
 
       // Keep JSON stable in "board pixels"
       function pxToNum(v) { return v ? parseFloat(v) || 0 : 0; }
@@ -3247,24 +3267,24 @@ const syncSoon = debounce((el) => {
       function collectBoardState() {
         const items = [];
 
-  // 1) Panel widgets (anything with #board > .widget)
-document.querySelectorAll('#board > .widget:not([data-private="1"])').forEach(el => {
-  const kind  = el.dataset.type || 'widget';
-  if (kind === 'drawOptions') return;
-  const title = el.querySelector('.header div')?.textContent?.trim() || '';
+        // 1) Panel widgets (anything with #board > .widget)
+        document.querySelectorAll('#board > .widget:not([data-private="1"])').forEach(el => {
+          const kind = el.dataset.type || 'widget';
+          if (kind === 'drawOptions') return;
+          const title = el.querySelector('.header div')?.textContent?.trim() || '';
 
-  // default payload
-  const base = {
-    itemId: el.dataset.itemId || ensureItemId(el),
-    kind,
-    label: title,
-    x: pxToNum(el.style.left),
-    y: pxToNum(el.style.top),
-    w: pxToNum(el.style.width)  || el.offsetWidth,
-    h: pxToNum(el.style.height) || el.offsetHeight,
-    z: pxToNum(el.style.zIndex) || 1,
-    data: null
-  };
+          // default payload
+          const base = {
+            itemId: el.dataset.itemId || ensureItemId(el),
+            kind,
+            label: title,
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1,
+            data: null
+          };
 
           // Capture per-widget state
           if (kind === 'notes') {
@@ -3313,12 +3333,12 @@ document.querySelectorAll('#board > .widget:not([data-private="1"])').forEach(el
             }
           }
 
-  items.push(base);
-  });
+          items.push(base);
+        });
 
 
-  // 2) Tokens
-document.querySelectorAll('#board > .token:not([data-private="1"])').forEach(el => {
+        // 2) Tokens
+        document.querySelectorAll('#board > .token:not([data-private="1"])').forEach(el => {
 
           // Prefer the persisted source if present
           let imageUrl = el.dataset.imageSrc || '';
@@ -3339,75 +3359,75 @@ document.querySelectorAll('#board > .token:not([data-private="1"])').forEach(el 
             label = (fc.nodeValue || '').trim();
           }
 
-  items.push({
-    itemId: el.dataset.itemId || ensureItemId(el),
-    kind: 'token',
-    shape: el.classList.contains('square') ? 'square' : 'circle',
-    label,
-    x: pxToNum(el.style.left),
-    y: pxToNum(el.style.top),
-    w: pxToNum(el.style.width)  || el.offsetWidth,
-    h: pxToNum(el.style.height) || el.offsetHeight,
-    z: pxToNum(el.style.zIndex) || 1,
-    imageUrl
-  });
-});
+          items.push({
+            itemId: el.dataset.itemId || ensureItemId(el),
+            kind: 'token',
+            shape: el.classList.contains('square') ? 'square' : 'circle',
+            label,
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1,
+            imageUrl
+          });
+        });
 
 
-  // 3) Image widgets (note: rotation is on the IMG, not the wrapper)
-  document.querySelectorAll('#board > .image-widget:not([data-private="1"])').forEach(el => {
-    const img = el.querySelector('img.image');
-    const src = img ? img.getAttribute('src') : '';
-    const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
-    items.push({
-      itemId: el.dataset.itemId || ensureItemId(el),
-      kind: 'image',
-      src,
-      x: pxToNum(el.style.left),
-      y: pxToNum(el.style.top),
-      w: pxToNum(el.style.width)  || el.offsetWidth,
-      h: pxToNum(el.style.height) || el.offsetHeight,
-      z: pxToNum(el.style.zIndex) || 1,
-      rotation
-    });
-  });
+        // 3) Image widgets (note: rotation is on the IMG, not the wrapper)
+        document.querySelectorAll('#board > .image-widget:not([data-private="1"])').forEach(el => {
+          const img = el.querySelector('img.image');
+          const src = img ? img.getAttribute('src') : '';
+          const rotation = img ? matrixToDeg(getComputedStyle(img).transform) : 0;
+          items.push({
+            itemId: el.dataset.itemId || ensureItemId(el),
+            kind: 'image',
+            src,
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1,
+            rotation
+          });
+        });
 
-    // 4) Playing cards
-  document.querySelectorAll('#board > .playing-card.draggable:not([data-private="1"])').forEach(el => {
-    const img = el.querySelector('img');
-    const cardData =
-      el._cardData ? el._cardData : (
-        img ? { image: img.getAttribute('src') || '', label: '' } :
-              { label: (el.textContent || '').trim() }
-      );
+        // 4) Playing cards
+        document.querySelectorAll('#board > .playing-card.draggable:not([data-private="1"])').forEach(el => {
+          const img = el.querySelector('img');
+          const cardData =
+            el._cardData ? el._cardData : (
+              img ? { image: img.getAttribute('src') || '', label: '' } :
+                { label: (el.textContent || '').trim() }
+            );
 
-    items.push({
-      itemId: el.dataset.itemId || ensureItemId(el),
-      kind: 'card',
-      x: pxToNum(el.style.left),
-      y: pxToNum(el.style.top),
-      w: pxToNum(el.style.width)  || el.offsetWidth,
-      h: pxToNum(el.style.height) || el.offsetHeight,
-      z: pxToNum(el.style.zIndex) || 1,
-      flipped: !!(el._flipped ?? el.classList.contains('back')),
-      card: cardData
-    });
-  });
+          items.push({
+            itemId: el.dataset.itemId || ensureItemId(el),
+            kind: 'card',
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1,
+            flipped: !!(el._flipped ?? el.classList.contains('back')),
+            card: cardData
+          });
+        });
 
-  document.querySelectorAll('#board > .shape-widget').forEach(el => {
-    items.push({
-      itemId: el.dataset.itemId || ensureItemId(el),
-      kind: 'shape',
-      shapeKind: el.dataset.shapeKind || 'rectangle',
-      fill: el.dataset.fill || '#999999',
-      angle: parseFloat(el.dataset.angle || '0') || 0,
-      x: pxToNum(el.style.left),
-      y: pxToNum(el.style.top),
-      w: pxToNum(el.style.width) || el.offsetWidth,
-      h: pxToNum(el.style.height) || el.offsetHeight,
-      z: pxToNum(el.style.zIndex) || 1
-    });
-  });
+        document.querySelectorAll('#board > .shape-widget').forEach(el => {
+          items.push({
+            itemId: el.dataset.itemId || ensureItemId(el),
+            kind: 'shape',
+            shapeKind: el.dataset.shapeKind || 'rectangle',
+            fill: el.dataset.fill || '#999999',
+            angle: parseFloat(el.dataset.angle || '0') || 0,
+            x: pxToNum(el.style.left),
+            y: pxToNum(el.style.top),
+            w: pxToNum(el.style.width) || el.offsetWidth,
+            h: pxToNum(el.style.height) || el.offsetHeight,
+            z: pxToNum(el.style.zIndex) || 1
+          });
+        });
 
         const strokes = (window.Drawing && Array.isArray(window.Drawing.strokes))
           ? window.Drawing.strokes
@@ -3433,9 +3453,9 @@ document.querySelectorAll('#board > .token:not([data-private="1"])').forEach(el 
         setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
       }
 
-function clearBoard(){
-  document.querySelectorAll('#board > .widget:not([data-private="1"]), #board > .token:not([data-private="1"]), #board > .image-widget:not([data-private="1"]), #board > .playing-card:not([data-private="1"]), #board > .shape-widget')    .forEach(el => el.remove());
-}
+      function clearBoard() {
+        document.querySelectorAll('#board > .widget:not([data-private="1"]), #board > .token:not([data-private="1"]), #board > .image-widget:not([data-private="1"]), #board > .playing-card:not([data-private="1"]), #board > .shape-widget').forEach(el => el.remove());
+      }
 
       function applyBoardState(state) {
         clearBoard();
@@ -3452,113 +3472,113 @@ function clearBoard(){
           window.Drawing.render?.();
         }
 
-  const items = state?.items || [];
-  for (const it of items) {
-    // Tokens
-    if (it.kind === 'token') {
-      // Widget.create(type, x, y, props)
-      if (typeof Widget?.create === 'function' && Widget.builders?.token) {
-        const el = Widget.create('token', it.x, it.y, {
-          id: it.itemId,
-          size: Math.max(it.w, it.h),
-          label: it.label || '',
-          image: it.imageUrl || '',
-          shape: it.shape || 'circle'
-        });
-        el.style.zIndex = it.z || '';
-      } else {
-        const el = document.createElement('div');
-        el.className = `token ${it.shape === 'square' ? 'square' : 'circle'}`;
-        el.style.left = it.x + 'px';
-        el.style.top  = it.y + 'px';
-        el.style.width  = it.w + 'px';
-        el.style.height = it.h + 'px';
-        el.style.zIndex = it.z || '';
-        if (it.imageUrl) { el.style.backgroundImage = `url("${it.imageUrl}")`; el.classList.add('has-image'); }
-        else { el.textContent = it.label || ''; }
-        board.appendChild(el);
-      }
-      continue;
-    }
+        const items = state?.items || [];
+        for (const it of items) {
+          // Tokens
+          if (it.kind === 'token') {
+            // Widget.create(type, x, y, props)
+            if (typeof Widget?.create === 'function' && Widget.builders?.token) {
+              const el = Widget.create('token', it.x, it.y, {
+                id: it.itemId,
+                size: Math.max(it.w, it.h),
+                label: it.label || '',
+                image: it.imageUrl || '',
+                shape: it.shape || 'circle'
+              });
+              el.style.zIndex = it.z || '';
+            } else {
+              const el = document.createElement('div');
+              el.className = `token ${it.shape === 'square' ? 'square' : 'circle'}`;
+              el.style.left = it.x + 'px';
+              el.style.top = it.y + 'px';
+              el.style.width = it.w + 'px';
+              el.style.height = it.h + 'px';
+              el.style.zIndex = it.z || '';
+              if (it.imageUrl) { el.style.backgroundImage = `url("${it.imageUrl}")`; el.classList.add('has-image'); }
+              else { el.textContent = it.label || ''; }
+              board.appendChild(el);
+            }
+            continue;
+          }
 
-    if (it.kind === 'shape') {
-      const el = buildShapeElement({
-        itemId: it.itemId,
-        shapeKind: it.shapeKind,
-        fill: it.fill,
-        angle: it.angle,
-        x: it.x,
-        y: it.y,
-        w: it.w,
-        h: it.h,
-        z: it.z
-      });
-      continue;
-    }
+          if (it.kind === 'shape') {
+            const el = buildShapeElement({
+              itemId: it.itemId,
+              shapeKind: it.shapeKind,
+              fill: it.fill,
+              angle: it.angle,
+              x: it.x,
+              y: it.y,
+              w: it.w,
+              h: it.h,
+              z: it.z
+            });
+            continue;
+          }
 
-    // Image widgets
-    if (it.kind === 'image') {
-      if (typeof Widget?.create === 'function' && Widget.builders?.image) {
-        const el = Widget.create('image', it.x, it.y, {
-          id: it.itemId,
-          src: it.src || '',
-          width: it.w,
-          height: it.h,
-          rotation: it.rotation || 0
-        });
-        el.style.zIndex = it.z || '';
-        // ensure the <img> picks up rotation if builder didn’t already
-        const img = el.querySelector('img.image');
-        if (img && (it.rotation || 0) !== 0) {
-          img.style.transformOrigin = 'center center';
-          img.style.transform = `rotate(${(it.rotation||0)%360}deg)`;
-        }
-      } else {
-        const el = document.createElement('div');
-        el.className = 'image-widget';
-        el.style.left = it.x + 'px';
-        el.style.top  = it.y + 'px';
-        el.style.width  = it.w + 'px';
-        el.style.height = it.h + 'px';
-        el.style.zIndex = it.z || '';
-        el.innerHTML = `<img class="image" src="${it.src || ''}" alt="">` +
-                       `<div class="resize-handle"></div>`;
-        const img = el.querySelector('img.image');
-        if (img && (it.rotation || 0) !== 0) {
-          img.style.transformOrigin = 'center center';
-          img.style.transform = `rotate(${(it.rotation||0)%360}deg)`;
-        }
-        board.appendChild(el);
-      }
-      continue;
-    }
+          // Image widgets
+          if (it.kind === 'image') {
+            if (typeof Widget?.create === 'function' && Widget.builders?.image) {
+              const el = Widget.create('image', it.x, it.y, {
+                id: it.itemId,
+                src: it.src || '',
+                width: it.w,
+                height: it.h,
+                rotation: it.rotation || 0
+              });
+              el.style.zIndex = it.z || '';
+              // ensure the <img> picks up rotation if builder didn’t already
+              const img = el.querySelector('img.image');
+              if (img && (it.rotation || 0) !== 0) {
+                img.style.transformOrigin = 'center center';
+                img.style.transform = `rotate(${(it.rotation || 0) % 360}deg)`;
+              }
+            } else {
+              const el = document.createElement('div');
+              el.className = 'image-widget';
+              el.style.left = it.x + 'px';
+              el.style.top = it.y + 'px';
+              el.style.width = it.w + 'px';
+              el.style.height = it.h + 'px';
+              el.style.zIndex = it.z || '';
+              el.innerHTML = `<img class="image" src="${it.src || ''}" alt="">` +
+                `<div class="resize-handle"></div>`;
+              const img = el.querySelector('img.image');
+              if (img && (it.rotation || 0) !== 0) {
+                img.style.transformOrigin = 'center center';
+                img.style.transform = `rotate(${(it.rotation || 0) % 360}deg)`;
+              }
+              board.appendChild(el);
+            }
+            continue;
+          }
 
-// Panel widgets — restore position/size/title + inner state if we know it
-if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
-  let props = {id: it.itemId};
+          // Panel widgets — restore position/size/title + inner state if we know it
+          if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
+            let props = { id: it.itemId };
 
-  if (it.kind === 'notes' && it.data) {
-    props.text = it.data.text || '';
-  } else if (it.kind === 'counters' && it.data) {
-    // our builder already supports props.counters
-    props.counters = Array.isArray(it.data.counters) ? it.data.counters : [];
-  } else if (it.kind === 'scorecard' && it.data) {
-      props = {
-        id: it.itemId,
-        rowsCount: it.data.rowsCount ?? 2,
-        colsCount: it.data.colsCount ?? 2,
-        rowLabels: it.data.rowLabels ?? null,
-        colLabels: it.data.colLabels ?? null,
-        values: it.data.values ?? {}
-      };
-  } else if (it.kind === 'cards' && it.data?.deckState) {
-    props.deckState = it.data.deckState;
-  } else if (it.kind === 'customCards' && it.data?.deckState) {
-    props.deckState = it.data.deckState;
-  } else if (it.kind === 'dice' && it.data) {
-      props.expr = it.data.expr || '';
-      props.rolls = Array.isArray(it.data.rolls) ? it.data.rolls : [];
-  }
+            if (it.kind === 'notes' && it.data) {
+              props.text = it.data.text || '';
+            } else if (it.kind === 'counters' && it.data) {
+              // our builder already supports props.counters
+              props.counters = Array.isArray(it.data.counters) ? it.data.counters : [];
+            } else if (it.kind === 'scorecard' && it.data) {
+              props = {
+                id: it.itemId,
+                rowsCount: it.data.rowsCount ?? 2,
+                colsCount: it.data.colsCount ?? 2,
+                rowLabels: it.data.rowLabels ?? null,
+                colLabels: it.data.colLabels ?? null,
+                values: it.data.values ?? {}
+              };
+            } else if (it.kind === 'cards' && it.data?.deckState) {
+              props.deckState = it.data.deckState;
+            } else if (it.kind === 'customCards' && it.data?.deckState) {
+              props.deckState = it.data.deckState;
+            } else if (it.kind === 'dice' && it.data) {
+              props.expr = it.data.expr || '';
+              props.rolls = Array.isArray(it.data.rolls) ? it.data.rolls : [];
+            }
 
             const el = Widget.create(it.kind, it.x, it.y, props);
             el.style.width = (it.w || el.offsetWidth) + 'px';
@@ -3577,16 +3597,16 @@ if (typeof Widget?.create === 'function' && Widget.builders?.[it.kind]) {
             continue;
           }
 
-if (it.kind === 'card') {
-  const cardDiv = document.createElement('div');
-  cardDiv.className = 'playing-card draggable';
-  cardDiv.dataset.itemId = it.itemId || newItemId();
-  cardDiv.style.position = 'absolute';
-  cardDiv.style.left = it.x + 'px';
-  cardDiv.style.top  = it.y + 'px';
-  cardDiv.style.width  = (it.w || 40) + 'px';
-  cardDiv.style.height = (it.h || 60) + 'px';
-  cardDiv.style.zIndex = it.z || '';
+          if (it.kind === 'card') {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'playing-card draggable';
+            cardDiv.dataset.itemId = it.itemId || newItemId();
+            cardDiv.style.position = 'absolute';
+            cardDiv.style.left = it.x + 'px';
+            cardDiv.style.top = it.y + 'px';
+            cardDiv.style.width = (it.w || 40) + 'px';
+            cardDiv.style.height = (it.h || 60) + 'px';
+            cardDiv.style.zIndex = it.z || '';
 
             const card = it.card || {};
             cardDiv._cardData = card;
@@ -3638,13 +3658,13 @@ if (it.kind === 'card') {
               cardDiv.classList.add('selected');
             });
 
-  cardDiv.flipCard = function() {
-    cardDiv._flipped = !cardDiv._flipped;
-    renderCardFace();
-    if (typeof queueItemUpsert === 'function') {
-      queueItemUpsert(cardDiv, 0);
-    }
-  };
+            cardDiv.flipCard = function () {
+              cardDiv._flipped = !cardDiv._flipped;
+              renderCardFace();
+              if (typeof queueItemUpsert === 'function') {
+                queueItemUpsert(cardDiv, 0);
+              }
+            };
 
             board.appendChild(cardDiv);
             continue;
@@ -3677,36 +3697,42 @@ if (it.kind === 'card') {
       const fileLoadIn = document.getElementById('menu-load-input');
       const fileAutosaveBtn = document.getElementById('menu-autosave-file');
 
-fileSaveBtn?.addEventListener('click', (e) => {
-  e.preventDefault();
-  downloadJSON(collectBoardState(), 'flattop-board.json');
-});
-fileLoadBtn?.addEventListener('click', (e) => {
-  e.preventDefault();
-  fileLoadIn?.click();
-});
-fileLoadIn?.addEventListener('change', async (e) => {
-  const f = e.target.files?.[0];
-  if (!f) return;
+      fileSaveBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        downloadJSON(collectBoardState(), 'flattop-board.json');
+      });
+      fileLoadBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
 
-  try {
-    const text = await f.text();
-    const state = JSON.parse(text);
+        if (!window.IS_HOST) {
+          alert('Only the host can load a saved board.');
+          return;
+        }
 
-    // Apply locally first
-    applyBoardState(state);
-    markBoardDirty();
+        fileLoadIn?.click();
+      });
+      fileLoadIn?.addEventListener('change', async (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
 
-    // Then broadcast to everyone else in the lobby
-    emitBoardReplace(state);
+        try {
+          const text = await f.text();
+          const state = JSON.parse(text);
 
-  } catch (err) {
-    alert('Invalid save file.');
-    console.error(err);
-  } finally {
-    fileLoadIn.value = '';
-  }
-});
+          // Apply locally first
+          applyBoardState(state);
+          markBoardDirty();
+
+          // Then broadcast to everyone else in the lobby
+          emitBoardReplace(state);
+
+        } catch (err) {
+          alert('Invalid save file.');
+          console.error(err);
+        } finally {
+          fileLoadIn.value = '';
+        }
+      });
 
       fileAutosaveBtn?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -3721,9 +3747,16 @@ fileLoadIn?.addEventListener('change', async (e) => {
         }
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
           e.preventDefault();
+        
+          if (!window.IS_HOST) {
+            alert('Only the host can load a saved board.');
+            return;
+          }
+        
           document.getElementById('menu-load-input')?.click();
         }
-      });
+      }
+      );
     </script>
     <script src="{% static 'board/widgets/chat.js' %}"></script>
     <script src="{% static 'board/widgets/notes.js' %}"></script>
@@ -3917,40 +3950,40 @@ fileLoadIn?.addEventListener('change', async (e) => {
         }
       });
 
-  function getShapeSvgInner(kind, color) {
-    if (kind === 'rectangle') {
-      return `<rect x="5" y="5" width="90" height="90" rx="0" ry="0" fill="${color}" stroke="#444" stroke-width="2"/>`;
-    } else if (kind === 'circle') {
-      return `<circle cx="50" cy="50" r="45" fill="${color}" stroke="#444" stroke-width="2"/>`;
-    } else if (kind === 'triangle') {
-      return `<polygon points="50,5 95,95 5,95" fill="${color}" stroke="#444" stroke-width="2"/>`;
-    } else if (kind === 'hexagon') {
-      return `<polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="${color}" stroke="#444" stroke-width="2"/>`;
-    } else if (kind === 'arrow') {
-      return `<polygon points="10,50 90,50 90,40 100,50 90,60 90,50" fill="${color}" stroke="#444" stroke-width="2"/>`;
-    } else if (kind === 'line') {
-      return `<rect x="5" y="48" width="90" height="4" fill="#000000" stroke="#000000" stroke-width="1"/>`;
-    } else if (kind === 'placeholder') {
-      return `<rect x="5" y="5" width="90" height="90" fill="${color}" stroke="#444" stroke-width="2"/>`;
-    }
-    return `<rect x="5" y="5" width="90" height="90" fill="${color}" stroke="#444" stroke-width="2"/>`;
-  }
+      function getShapeSvgInner(kind, color) {
+        if (kind === 'rectangle') {
+          return `<rect x="5" y="5" width="90" height="90" rx="0" ry="0" fill="${color}" stroke="#444" stroke-width="2"/>`;
+        } else if (kind === 'circle') {
+          return `<circle cx="50" cy="50" r="45" fill="${color}" stroke="#444" stroke-width="2"/>`;
+        } else if (kind === 'triangle') {
+          return `<polygon points="50,5 95,95 5,95" fill="${color}" stroke="#444" stroke-width="2"/>`;
+        } else if (kind === 'hexagon') {
+          return `<polygon points="50,5 95,25 95,75 50,95 5,75 5,25" fill="${color}" stroke="#444" stroke-width="2"/>`;
+        } else if (kind === 'arrow') {
+          return `<polygon points="10,50 90,50 90,40 100,50 90,60 90,50" fill="${color}" stroke="#444" stroke-width="2"/>`;
+        } else if (kind === 'line') {
+          return `<rect x="5" y="48" width="90" height="4" fill="#000000" stroke="#000000" stroke-width="1"/>`;
+        } else if (kind === 'placeholder') {
+          return `<rect x="5" y="5" width="90" height="90" fill="${color}" stroke="#444" stroke-width="2"/>`;
+        }
+        return `<rect x="5" y="5" width="90" height="90" fill="${color}" stroke="#444" stroke-width="2"/>`;
+      }
 
-  function buildShapeElement({ itemId=null, shapeKind='rectangle', fill='#999999', angle=0, x=0, y=0, w=160, h=160, z=1 }) {
-    const el = document.createElement('div');
-    el.className = 'shape-widget';
-    el.dataset.itemId = itemId || newItemId();
-    el.dataset.shapeKind = shapeKind;
-    el.dataset.fill = fill;
-    el.dataset.angle = String(angle);
+      function buildShapeElement({ itemId = null, shapeKind = 'rectangle', fill = '#999999', angle = 0, x = 0, y = 0, w = 160, h = 160, z = 1 }) {
+        const el = document.createElement('div');
+        el.className = 'shape-widget';
+        el.dataset.itemId = itemId || newItemId();
+        el.dataset.shapeKind = shapeKind;
+        el.dataset.fill = fill;
+        el.dataset.angle = String(angle);
 
-    el.style.position = 'absolute';
-    el.style.left = snap(x) + 'px';
-    el.style.top = snap(y) + 'px';
-    el.style.width = w + 'px';
-    el.style.height = h + 'px';
-    el.style.zIndex = z;
-    el.style.transform = `rotate(${angle}deg)`;
+        el.style.position = 'absolute';
+        el.style.left = snap(x) + 'px';
+        el.style.top = snap(y) + 'px';
+        el.style.width = w + 'px';
+        el.style.height = h + 'px';
+        el.style.zIndex = z;
+        el.style.transform = `rotate(${angle}deg)`;
 
         el.innerHTML = `
       <div class="shape-box">
@@ -3962,32 +3995,32 @@ fileLoadIn?.addEventListener('change', async (e) => {
       <div class="handle rotate-handle" title="Rotate"></div>
     `;
 
-    board.appendChild(el);
-    makeShapeInteractive(el);
-    return el;
-    }
+        board.appendChild(el);
+        makeShapeInteractive(el);
+        return el;
+      }
 
-    // Create and insert a shape widget on the board
-    function createShapeWidget(kind) {
-      const wrect = wrap.getBoundingClientRect();
-      const cxScreen = wrect.left + wrect.width / 2;
-      const cyScreen = wrect.top + wrect.height / 2;
-    
-      const x = (cxScreen - wrect.left - panX) / scale - 80;
-      const y = (cyScreen - wrect.top - panY) / scale - 80;
-    
-      const color = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
-    
-      const el = buildShapeElement({
-        shapeKind: kind,
-        fill: color,
-        angle: 0,
-        x, y, w: 160, h: 160, z: 1
-      });
-    
-      emitItemUpsert(el);
-      markBoardDirty();
-    }
+      // Create and insert a shape widget on the board
+      function createShapeWidget(kind) {
+        const wrect = wrap.getBoundingClientRect();
+        const cxScreen = wrect.left + wrect.width / 2;
+        const cyScreen = wrect.top + wrect.height / 2;
+
+        const x = (cxScreen - wrect.left - panX) / scale - 80;
+        const y = (cyScreen - wrect.top - panY) / scale - 80;
+
+        const color = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+
+        const el = buildShapeElement({
+          shapeKind: kind,
+          fill: color,
+          angle: 0,
+          x, y, w: 160, h: 160, z: 1
+        });
+
+        emitItemUpsert(el);
+        markBoardDirty();
+      }
 
       // Track currently selected shape globally
       let selectedShape = null;
@@ -4064,48 +4097,48 @@ fileLoadIn?.addEventListener('change', async (e) => {
           }
         });
 
-    window.addEventListener('pointerup', (e) => {
-      if (dragging && activePointer === e.pointerId) {
-        dragging = false;
-        try { box.releasePointerCapture(activePointer); } catch(_){}
-        activePointer = null;
-      
-        el.style.left = snap(parseFloat(el.style.left) || 0) + 'px';
-        el.style.top  = snap(parseFloat(el.style.top) || 0) + 'px';
-        queueItemUpsert(el, 0);
-        markBoardDirty();
-        return;
-      }
-    
-      if (resizing && activePointer === e.pointerId) {
-        resizing = false;
-        try { resizeHandle.releasePointerCapture(activePointer); } catch(_){}
-        activePointer = null;
-      
-        el.style.width  = Math.max(CELL, snap(parseFloat(el.style.width) || 0)) + 'px';
-        el.style.height = Math.max(CELL, snap(parseFloat(el.style.height) || 0)) + 'px';
-        queueItemUpsert(el, 0);
-        markBoardDirty();
-        return;
-      }
-    
-      if (rotating && activePointer === e.pointerId) {
-        rotating = false;
-        try { rotateHandle.releasePointerCapture(activePointer); } catch(_){}
-        activePointer = null;
-      
-        queueItemUpsert(el, 0);
-        markBoardDirty();
-        return;
-      }
-    });
-    resizeHandle.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); e.stopPropagation();
-      resizing = true; activePointer = e.pointerId; resizeHandle.setPointerCapture(activePointer);
-      resizeStart.x = e.clientX; resizeStart.y = e.clientY;
-      startW = parseFloat(getComputedStyle(el).width) || el.offsetWidth;
-      startH = parseFloat(getComputedStyle(el).height) || el.offsetHeight;
-    });
+        window.addEventListener('pointerup', (e) => {
+          if (dragging && activePointer === e.pointerId) {
+            dragging = false;
+            try { box.releasePointerCapture(activePointer); } catch (_) { }
+            activePointer = null;
+
+            el.style.left = snap(parseFloat(el.style.left) || 0) + 'px';
+            el.style.top = snap(parseFloat(el.style.top) || 0) + 'px';
+            queueItemUpsert(el, 0);
+            markBoardDirty();
+            return;
+          }
+
+          if (resizing && activePointer === e.pointerId) {
+            resizing = false;
+            try { resizeHandle.releasePointerCapture(activePointer); } catch (_) { }
+            activePointer = null;
+
+            el.style.width = Math.max(CELL, snap(parseFloat(el.style.width) || 0)) + 'px';
+            el.style.height = Math.max(CELL, snap(parseFloat(el.style.height) || 0)) + 'px';
+            queueItemUpsert(el, 0);
+            markBoardDirty();
+            return;
+          }
+
+          if (rotating && activePointer === e.pointerId) {
+            rotating = false;
+            try { rotateHandle.releasePointerCapture(activePointer); } catch (_) { }
+            activePointer = null;
+
+            queueItemUpsert(el, 0);
+            markBoardDirty();
+            return;
+          }
+        });
+        resizeHandle.addEventListener('pointerdown', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          resizing = true; activePointer = e.pointerId; resizeHandle.setPointerCapture(activePointer);
+          resizeStart.x = e.clientX; resizeStart.y = e.clientY;
+          startW = parseFloat(getComputedStyle(el).width) || el.offsetWidth;
+          startH = parseFloat(getComputedStyle(el).height) || el.offsetHeight;
+        });
 
         rotateHandle.addEventListener('pointerdown', (e) => {
           e.preventDefault(); e.stopPropagation();
@@ -4126,16 +4159,16 @@ fileLoadIn?.addEventListener('change', async (e) => {
         });
       });
 
-  // Delete key removes selected shape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Delete' && selectedShape) {
-      const itemId = selectedShape.dataset.itemId;
-      selectedShape.remove();
-      emitItemRemove(itemId);
-      markBoardDirty();
-      selectedShape = null;
-    }
-  });
+      // Delete key removes selected shape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Delete' && selectedShape) {
+          const itemId = selectedShape.dataset.itemId;
+          selectedShape.remove();
+          emitItemRemove(itemId);
+          markBoardDirty();
+          selectedShape = null;
+        }
+      });
 
       // ===== GRID TOGGLE =====
       let gridVisible = true;
@@ -4255,11 +4288,11 @@ fileLoadIn?.addEventListener('change', async (e) => {
       const lobbyCode = "{{ lobby_code|default:'' }}";
       window.lobbyCode = lobbyCode; // Make it globally accessible
 
-  // generate a stable-ish client id for this tab
-  const clientId = (crypto?.randomUUID?.() || ("c" + Math.random().toString(16).slice(2)));
-  window.__clientId = clientId;
-  let ws = null;
-  let applyingRemote = false;
+      // generate a stable-ish client id for this tab
+      const clientId = (crypto?.randomUUID?.() || ("c" + Math.random().toString(16).slice(2)));
+      window.__clientId = clientId;
+      let ws = null;
+      let applyingRemote = false;
 
       let reconnectDelay = 500;
 
@@ -4316,14 +4349,14 @@ fileLoadIn?.addEventListener('change', async (e) => {
           }
         };
 
-    ws.onopen = () => {
-      console.log("WS connected");
-      reconnectDelay = 500;
-      window.sendLobbyMessage({
-        type: "state_request",
-        clientId: window.__clientId
-      });
-    };
+        ws.onopen = () => {
+          console.log("WS connected");
+          reconnectDelay = 500;
+          window.sendLobbyMessage({
+            type: "state_request",
+            clientId: window.__clientId
+          });
+        };
 
         ws.onclose = (e) => {
           console.log("WS closed", e.code, e.reason);
@@ -4341,27 +4374,69 @@ fileLoadIn?.addEventListener('change', async (e) => {
           try { ws.close(); } catch { }
         };
 
-    ws.onmessage = (evt) => {
-      try {
-        const msg = JSON.parse(evt.data);
-      
-        if (msg.clientId && msg.clientId === clientId) return;
-      
-        if (
-          msg.type === "item_upsert" ||
-          msg.type === "item_remove" ||
-          msg.type === "board_replace"
-        ) {
-          applyRemoteMessage(msg);
-          return;
+        function updateManagePlayersList(players) {
+          const list = document.getElementById("managePlayersList");
+          if (!list) return;
+
+          list.innerHTML = "";
+
+          players.forEach((member) => {
+            const li = document.createElement("li");
+
+            let text = member.username;
+            if (member.is_host_member) {
+              text += " (Host)";
+            }
+
+            li.appendChild(document.createTextNode(text));
+
+            if (window.IS_HOST && !member.is_host_member) {
+              const form = document.createElement("form");
+              form.method = "post";
+              form.action = `/lobby/${window.LOBBY_CODE}/kick/${member.id}/`;
+              form.style.display = "inline";
+
+              const csrfInput = document.createElement("input");
+              csrfInput.type = "hidden";
+              csrfInput.name = "csrfmiddlewaretoken";
+              csrfInput.value = getCsrfToken();
+
+              const btn = document.createElement("button");
+              btn.type = "submit";
+              btn.textContent = "Kick";
+
+              form.appendChild(csrfInput);
+              form.appendChild(btn);
+              li.appendChild(document.createTextNode(" "));
+              li.appendChild(form);
+            }
+
+            list.appendChild(li);
+          });
         }
 
-        if (msg.type === "state_request") {
-          // Another client is asking for the current board snapshot.
-          // Reply only if we actually have something on the board.
-          const hasBoardContent =
-            document.querySelector('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card, #board > .shape-widget') ||
-            ((window.Drawing?.strokes || []).length > 0);
+        ws.onmessage = (evt) => {
+
+          try {
+            const msg = JSON.parse(evt.data);
+
+            if (msg.clientId && msg.clientId === clientId) return;
+
+            if (
+              msg.type === "item_upsert" ||
+              msg.type === "item_remove" ||
+              msg.type === "board_replace"
+            ) {
+              applyRemoteMessage(msg);
+              return;
+            }
+
+            if (msg.type === "state_request") {
+              // Another client is asking for the current board snapshot.
+              // Reply only if we actually have something on the board.
+              const hasBoardContent =
+                document.querySelector('#board > .widget, #board > .token, #board > .image-widget, #board > .playing-card, #board > .shape-widget') ||
+                ((window.Drawing?.strokes || []).length > 0);
 
           if (hasBoardContent) {
             window.sendLobbyMessage({
@@ -4381,6 +4456,11 @@ fileLoadIn?.addEventListener('change', async (e) => {
           applyingRemotePatch = true;
           applyBoardState(msg.state || { version: 1, cell: CELL, items: [], drawing: { strokes: [] } });
           applyingRemotePatch = false;
+          return;
+        }
+
+        if (msg.type === "players_updated") {
+          updateManagePlayersList(msg.players);
           return;
         }
 
@@ -4413,25 +4493,25 @@ fileLoadIn?.addEventListener('change', async (e) => {
           return;
         }
 
-        if (msg.type === "sound_play") {
-          if (typeof window.soundboardRemotePlay === "function") {
-            window.soundboardRemotePlay(msg);
+            if (msg.type === "sound_play") {
+              if (typeof window.soundboardRemotePlay === "function") {
+                window.soundboardRemotePlay(msg);
+              }
+              return;
+            }
+
+            if (msg.type === "sound_stop_all") {
+              if (typeof window.soundboardRemoteStopAll === "function") {
+                window.soundboardRemoteStopAll();
+              }
+              return;
+            }
+
+          } catch (err) {
+            console.error("Bad WS message", err);
           }
-          return;
-        }
-      
-        if (msg.type === "sound_stop_all") {
-          if (typeof window.soundboardRemoteStopAll === "function") {
-            window.soundboardRemoteStopAll();
-          }
-          return;
-        }
-      
-      } catch (err) {
-        console.error("Bad WS message", err);
+        };
       }
-    };
-  }
 
 
 
@@ -4440,22 +4520,22 @@ fileLoadIn?.addEventListener('change', async (e) => {
       connectWS();
     </script>
 
-<script>
-  // Share button
-  document.querySelector('.sharebtn').addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      const btn = document.querySelector('.sharebtn');
-      const originalText = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = originalText, 2000);
-    } catch (err) {
-      console.error('Failed to copy: ', err);
-    }
-  });
-</script>
+    <script>
+      // Share button
+      document.querySelector('.sharebtn').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          const btn = document.querySelector('.sharebtn');
+          const originalText = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = originalText, 2000);
+        } catch (err) {
+          console.error('Failed to copy: ', err);
+        }
+      });
+    </script>
 
-<script src="{% static 'board/tutorial.js' %}"></script>
+    <script src="{% static 'board/tutorial.js' %}"></script>
     <!-- Player Management -->
     <div id="managePlayersModal" class="modal-hidden">
       <div class="modal-box">
@@ -4465,7 +4545,7 @@ fileLoadIn?.addEventListener('change', async (e) => {
         </div>
 
         <div class="modal-body">
-          <ul>
+          <ul id="managePlayersList">
             {% for member in members %}
             <li>
               {{ member.username }}
@@ -4486,6 +4566,57 @@ fileLoadIn?.addEventListener('change', async (e) => {
         </div>
       </div>
     </div>
+
+    <script>
+      function getCsrfToken() {
+        const cookieValue = document.cookie
+          .split("; ")
+          .find(row => row.startsWith("csrftoken="));
+        return cookieValue ? cookieValue.split("=")[1] : "";
+      }
+
+      function updateManagePlayersList(players) {
+        const list = document.getElementById("managePlayersList");
+        if (!list) return;
+
+        list.innerHTML = "";
+
+        players.forEach((member) => {
+          const li = document.createElement("li");
+
+          let label = member.username;
+          if (member.is_host_member) {
+            label += " (Host)";
+          }
+
+          li.appendChild(document.createTextNode(label));
+
+          if (window.IS_HOST && !member.is_host_member) {
+            const form = document.createElement("form");
+            form.method = "post";
+            form.action = `/lobby/${window.LOBBY_CODE}/kick/${member.id}/`;
+            form.style.display = "inline";
+
+            const csrfInput = document.createElement("input");
+            csrfInput.type = "hidden";
+            csrfInput.name = "csrfmiddlewaretoken";
+            csrfInput.value = getCsrfToken();
+
+            const button = document.createElement("button");
+            button.type = "submit";
+            button.textContent = "Kick";
+
+            form.appendChild(csrfInput);
+            form.appendChild(button);
+
+            li.appendChild(document.createTextNode(" "));
+            li.appendChild(form);
+          }
+
+          list.appendChild(li);
+        });
+      }
+    </script>
 
     <script>
       const managePlayersModal = document.getElementById('managePlayersModal');
@@ -4528,6 +4659,127 @@ fileLoadIn?.addEventListener('change', async (e) => {
           }
         });
       }
+    </script>
+    <div id="sessionManagementModal" class="modal-hidden">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Session Management</h3>
+          <button type="button" id="closeSessionManagementBtn">X</button>
+        </div>
+
+        <div class="modal-body">
+          <p>
+            Current Mode:
+            <span id="currentSessionMode">{{ lobby.session_mode }}</span>
+          </p>
+
+          {% if is_host %}
+          <button type="button" id="setMonarchyBtn">Monarchy Mode</button>
+          <button type="button" id="setAnarchyBtn">Anarchy Mode</button>
+          <p id="sessionModeMessage"></p>
+          {% else %}
+          <p>Only the host can change the session mode.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const sessionManagementModal = document.getElementById("sessionManagementModal");
+        const sessionManagementBtn = document.getElementById("sessionManagementBtn");
+        const closeSessionManagementBtn = document.getElementById("closeSessionManagementBtn");
+
+        const setMonarchyBtn = document.getElementById("setMonarchyBtn");
+        const setAnarchyBtn = document.getElementById("setAnarchyBtn");
+        const currentSessionMode = document.getElementById("currentSessionMode");
+        const sessionModeMessage = document.getElementById("sessionModeMessage");
+
+        function openSessionManagementModal() {
+          if (!sessionManagementModal) return;
+          sessionManagementModal.classList.remove("modal-hidden");
+          sessionManagementModal.classList.add("modal-show");
+        }
+
+        function closeSessionManagementModal() {
+          if (!sessionManagementModal) return;
+          sessionManagementModal.classList.remove("modal-show");
+          sessionManagementModal.classList.add("modal-hidden");
+        }
+
+        if (sessionManagementBtn) {
+          sessionManagementBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+            openSessionManagementModal();
+          });
+        }
+
+        if (closeSessionManagementBtn) {
+          closeSessionManagementBtn.addEventListener("click", closeSessionManagementModal);
+        }
+
+        if (sessionManagementModal) {
+          sessionManagementModal.addEventListener("click", function (e) {
+            if (e.target === sessionManagementModal) {
+              closeSessionManagementModal();
+            }
+          });
+        }
+
+        function getCsrfToken() {
+          const cookieValue = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("csrftoken="));
+          return cookieValue ? cookieValue.split("=")[1] : "";
+        }
+
+        function changeSessionMode(mode) {
+          fetch("{% url 'lobbies:change_session_mode' lobby.code %}", {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": getCsrfToken(),
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              session_mode: mode
+            })
+          })
+            .then(async response => {
+              const text = await response.text();
+              console.log("session mode raw response:", text);
+
+              try {
+                return JSON.parse(text);
+              } catch (err) {
+                throw new Error("Response was not JSON: " + text);
+              }
+            })
+            .then(data => {
+              if (data.success) {
+                currentSessionMode.textContent = data.session_mode;
+                sessionModeMessage.textContent = "Mode changed to " + data.session_mode;
+                window.SESSION_MODE = data.session_mode;
+              } else {
+                sessionModeMessage.textContent = data.error || "Failed to change mode.";
+              }
+            })
+            .catch(error => {
+              console.error("Error changing session mode:", error);
+              sessionModeMessage.textContent = "Something went wrong.";
+            });
+        }
+
+        if (setMonarchyBtn) {
+          setMonarchyBtn.addEventListener("click", function () {
+            changeSessionMode("MONARCHY");
+          });
+        }
+
+        if (setAnarchyBtn) {
+          setAnarchyBtn.addEventListener("click", function () {
+            changeSessionMode("ANARCHY");
+          });
+        }
+      });
     </script>
 </body>
 

@@ -29,6 +29,18 @@ class BoardConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
+    async def session_mode_changed(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "session_mode_changed",
+            "session_mode": event["session_mode"],
+        }))
+
+    async def players_updated(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "players_updated",
+            "players": event["players"],
+        }))
+
     async def receive(self, text_data=None, bytes_data=None):
         if not text_data:
             return

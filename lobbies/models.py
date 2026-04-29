@@ -15,10 +15,21 @@ class Lobby(models.Model):
         OPEN = "OPEN", "Open"
         CLOSED = "CLOSED", "Closed"
 
+    class SessionMode(models.TextChoices):
+        MONARCHY = "MONARCHY", "Monarchy"
+        ANARCHY = "ANARCHY", "Anarchy"
+
+
     code = models.CharField(max_length=12, unique=True, db_index=True)
     host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hosted_lobbies")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
+    session_mode = models.CharField(
+        max_length=20,
+        choices=SessionMode.choices,
+        default=SessionMode.ANARCHY
+    )
     created_at = models.DateTimeField(default=timezone.now)
+
 
     @property
     def display_name(self):
