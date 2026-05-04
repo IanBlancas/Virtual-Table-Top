@@ -363,9 +363,10 @@
     }
   };
 
-  // Initialize panel on load (but keep hidden)
+  // Initialize panel on load and start minimized but visible
   document.addEventListener('DOMContentLoaded', () => {
     createPanel();
+    minimizePanel();
   });
 
   window.addEventListener('keydown', (e) => {

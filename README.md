@@ -1,14 +1,21 @@
-# FlatTop Virtual Tabletop (VTT)
+ FlatTop Virtual Tabletop (VTT)
 
-Technical & User Documentation Manual
+FlatTop is a web-based 2D Virtual Tabletop for board games, card games, tabletop RPGs, and collaborative interactive experiences. It provides a widget-based board where players can place tokens, cards, notes, dice, sounds, and more.
 
-1. Introduction
+ Quick Start
 
-FlatTop is a web-based 2D Virtual Tabletop (VTT) designed for board games, card games, tabletop RPGs, and collaborative interactive experiences. It provides a widget-driven interface that lets players and game masters place tokens, cards, notes, dice, and other interactive elements onto a shared or private board. Save-states, autosaving, snapping, multi-selection, and touch controls provide a robust and adaptable environment for tabletop-style gameplay.
+1. Install Python 3.11 or newer.
+2. Create and activate a virtual environment.
+3. Install dependencies with `pip install django==5.2.7 channels pillow`.
+4. Run database migrations with `python manage.py migrate`.
+5. Start the server with `python manage.py runserver`.
+6. Open `http://127.0.0.1:8000` in your browser.
 
-This manual outlines features, architecture, usage instructions, and developer guidelines.
+> See `USER_MANUAL.md` for full install steps and user instructions.
 
-To get started and run the program, simply download the files from this github into a single directory, open that directory in a command line window, then use the command "python manage.py runserver". You may, of course, need to install some dependencies first, like python itself, Django, and the Pillow library we used for the custom card widgets.
+ Project overview
+
+
 
 2. System Overview
 
@@ -18,7 +25,7 @@ Django Backend: Handles API endpoints, session management, board persistence, us
 
 Frontend (HTML/CSS/JS): Renders the board, widgets, drag-and-drop movement, snapping, selection boxes, and UI components.
 
-Database (MySQL): Stores user boards, metadata, save-states, and asset links.
+Database (SQLite): Stores user boards, metadata, save-states, and asset links.
 
 JSON-Based Save System: Represents all widgets and board states in a portable format for export/import.
 
@@ -60,7 +67,7 @@ Token Widget
 
 -An image can be dragged onto a token through the same methods as in the image widget below to change the token's background
 
--Changes to a circle or square byu using the button next to the x while the token is selected
+-Changes to a circle or square by using the button next to the x while the token is selected
 
 Counter Widget
 
@@ -138,11 +145,11 @@ The shared play surface where all players can interact.
 
 A player-specific hidden area intended for:
 
--Hand cards
+- Hand cards
+- Secret notes
+- Hidden tokens
 
--Secret notes
-
--Hidden tokens
+The private board is a per-user hidden workspace. Anything placed here is visible only to the current player and is not shown on the shared public board. This makes it useful for secret planning, private hand management, and hidden tokens during multiplayer sessions.
 
 5. Interaction Features
 
@@ -318,4 +325,4 @@ VTT: Virtual Tabletop
 
 14. Version
 
-This manual corresponds to FlatTop version: Fall 2025 Build
+This manual corresponds to FlatTop version: Spring 2026 Build
