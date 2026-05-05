@@ -1,0 +1,75 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FlatTop</title>
+
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .page {
+            width: 100vw;
+            height: 100vh;
+            background: url("{% static 'homePage/FlatTopPoster-1.png' %}") no-repeat center center;
+            background-size: cover;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .overlay {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.55);
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        h1 {
+            color: white;
+            font-size: 72px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            width: 180px;
+            padding: 15px;
+            margin: 10px;
+            font-size: 22px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            opacity: 0.85;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <div class="overlay">
+            <h1>FlatTop</h1>
+
+            <a href="{% url 'login' %}">
+                <button class="btn">Play</button>
+            </a>
+
+            <a href="{% url 'about' %}">
+                <button class="btn">About</button>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

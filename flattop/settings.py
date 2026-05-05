@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'board',
     'lobbies',
     'channels',
+    'homePage',
 ]
 
 ASGI_APPLICATION = "flattop.asgi.application"

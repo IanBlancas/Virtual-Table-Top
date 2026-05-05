@@ -9,6 +9,8 @@ from board import views as board_views
 urlpatterns = [
     path('admin/', admin.site.urls),
 
+    path('', include('homePage.urls')),
+
     path('accounts/login/',LoginView.as_view(template_name='board/login.html'),name='login'),
 
     path('accounts/register/', board_views.register, name='register'),
