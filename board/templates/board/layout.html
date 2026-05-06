@@ -3854,7 +3854,7 @@ function createPublicCardElement(cardItem) { // for making public cards by press
 
       const shortcutsModal = document.getElementById('shortcutsModal');
       const shortcutsBtn = document.getElementById('shortcutsBtn');
-      const shortcutsModalClose = document.querySelector('.shortcuts-modal-close');
+      const shortcutsModalClose = shortcutsModal?.querySelector('.shortcuts-modal-close');
 
       console.log('shortcutsModal:', shortcutsModal);
       console.log('shortcutsBtn:', shortcutsBtn);
