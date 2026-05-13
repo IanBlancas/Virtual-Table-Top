@@ -11,7 +11,11 @@
     const messagesContainer = panel.querySelector('.chat-messages');
     const messageEl = document.createElement('div');
     messageEl.className = 'chat-message';
-    const ts = timestamp || getTimestamp();
+    const rawTime = timestamp || new Date().toISOString();
+    const ts = new Date(rawTime).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     messageEl.innerHTML = `
       <div class="message-header">
         <span class="username">${escapeHtml(username)}:</span>
@@ -283,7 +287,7 @@
           type: "chat_message",
           username: username,
           message: message,
-          timestamp: getTimestamp()
+          timestamp: new Date().toISOString()
         });
       } else {
         console.error('Chat: WebSocket not available, falling back to local display');
