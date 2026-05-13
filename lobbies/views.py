@@ -71,8 +71,22 @@ def kick_player(request, code, user_id):
     member = LobbyMember.objects.filter(lobby=lobby, user_id=user_id).first()
 
     if member:
+        kicked_user_id = member.user.id
+
         member.delete()
+
+        channel_layer = get_channel_layer()
+
+        async_to_sync(channel_layer.group_send)(
+            f"board_{lobby.code}",
+            {
+                "type": "player_kicked",
+                "user_id": kicked_user_id,
+            }
+        )
+
         broadcast_player_list(lobby)
+
         messages.success(request, "Player kicked.")
 
     return redirect("board:board_with_code", code=code)

@@ -145,6 +145,7 @@
     window.SESSION_MODE = "{{ lobby.session_mode|default:'ANARCHY'|escapejs }}";
     window.IS_HOST = {{ is_host|yesno:"true,false" }};
     window.LOBBY_CODE = "{{ lobby_code|escapejs }}";
+    window.CURRENT_USER_ID = {{ request.user.id }};
 
     // --- minimal pan & zoom controller ---
     const wrap  = document.getElementById('wrap');
@@ -4445,6 +4446,14 @@ function createPublicCardElement(cardItem) { // for making public cards by press
               targetClientId: msg.clientId,
               state: collectBoardState()
             });
+          }
+          return;
+        }
+
+        if (msg.type === "player_kicked") {
+          if (Number(msg.user_id) === Number(window.CURRENT_USER_ID)) {
+            alert("You were kicked from the session.");
+            window.location.href = "/lobby/";
           }
           return;
         }
